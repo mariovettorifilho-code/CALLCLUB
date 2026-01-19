@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { User, Trophy, Fire, ChartBar } from "@phosphor-icons/react";
+import { User, Trophy, Fire, ChartBar, Target, Medal, CalendarBlank, SoccerBall, TrendUp, Check, X } from "@phosphor-icons/react";
+import { Link } from "react-router-dom";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function ProfilePage({ username }) {
   const [userData, setUserData] = useState(null);
+  const [allRounds, setAllRounds] = useState([]);
+  const [selectedRound, setSelectedRound] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,8 +18,12 @@ export default function ProfilePage({ username }) {
 
   const loadData = async () => {
     try {
-      const response = await axios.get(`${API}/user/${username}`);
-      setUserData(response.data);
+      const [profileRes, roundsRes] = await Promise.all([
+        axios.get(`${API}/user/${username}`),
+        axios.get(`${API}/rounds/all`)
+      ]);
+      setUserData(profileRes.data);
+      setAllRounds(roundsRes.data || []);
     } catch (error) {
       console.error("Erro ao carregar perfil:", error);
     } finally {
@@ -25,119 +32,321 @@ export default function ProfilePage({ username }) {
   };
 
   if (loading) {
-    return <div className="text-center py-20">Carregando perfil...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-pitch-green border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-text-secondary">Carregando perfil...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!userData) {
-    return <div className="text-center py-20 text-text-secondary">Perfil não encontrado</div>;
+    return (
+      <div className="text-center py-20">
+        <User size={64} className="mx-auto text-text-secondary mb-4" />
+        <p className="text-text-secondary">Perfil não encontrado</p>
+      </div>
+    );
   }
 
-  const user = userData.user;
-  const totalPredictions = userData.total_predictions || 0;
+  const { user, statistics, ranking, predictions } = userData;
+
+  // Filtra palpites por rodada
+  const filteredPredictions = selectedRound === "all" 
+    ? predictions 
+    : predictions.filter(p => p.round_number === parseInt(selectedRound));
+
+  // Agrupa por rodada para exibição
+  const groupedByRound = {};
+  filteredPredictions.forEach(pred => {
+    const rn = pred.round_number;
+    if (!groupedByRound[rn]) {
+      groupedByRound[rn] = [];
+    }
+    groupedByRound[rn].push(pred);
+  });
+
+  const getPointsBadgeStyle = (points) => {
+    if (points === 5) return "bg-yellow-500 text-white";
+    if (points >= 3) return "bg-pitch-green text-white";
+    if (points > 0) return "bg-blue-500 text-white";
+    return "bg-gray-300 text-gray-600";
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
 
   return (
     <div className="space-y-6">
       {/* Profile Header */}
-      <div className="bg-gradient-to-br from-pitch-green to-pitch-green/80 rounded-2xl p-8 text-bone shadow-xl">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 bg-bone/20 rounded-full flex items-center justify-center">
-            <User size={40} weight="fill" className="text-bone" />
-          </div>
-          <div>
-            <h1 className="font-heading text-3xl font-bold">{user.username}</h1>
-            <p className="text-bone/80">Membro do CallClub</p>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-bone/10 backdrop-blur rounded-lg p-4 text-center">
-            <Trophy size={28} weight="fill" className="mx-auto mb-2 text-terracotta" />
-            <p className="text-2xl font-mono font-bold">{user.total_points || 0}</p>
-            <p className="text-xs text-bone/80">Pontos Totais</p>
+      <div className="bg-gradient-to-br from-pitch-green to-pitch-green/80 rounded-2xl p-6 md:p-8 text-bone shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
+          {/* Avatar & Name */}
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 bg-bone/20 rounded-full flex items-center justify-center">
+              <User size={40} weight="fill" className="text-bone" />
+            </div>
+            <div>
+              <h1 className="font-heading text-3xl font-bold">{user.username}</h1>
+              <p className="text-bone/80 flex items-center gap-2">
+                <Medal size={16} weight="fill" />
+                #{ranking.position} de {ranking.total_users} membros
+              </p>
+            </div>
           </div>
 
-          <div className="bg-bone/10 backdrop-blur rounded-lg p-4 text-center">
-            <Fire size={28} weight="fill" className="mx-auto mb-2 text-warning" />
-            <p className="text-2xl font-mono font-bold">{user.max_perfect_streak || 0}</p>
-            <p className="text-xs text-bone/80">Sequência Máxima</p>
-          </div>
-
-          <div className="bg-bone/10 backdrop-blur rounded-lg p-4 text-center">
-            <ChartBar size={28} weight="fill" className="mx-auto mb-2 text-bone" />
-            <p className="text-2xl font-mono font-bold">{totalPredictions}</p>
-            <p className="text-xs text-bone/80">Palpites Feitos</p>
+          {/* Quick Stats */}
+          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+              <Trophy size={24} weight="fill" className="mx-auto mb-1 text-yellow-400" />
+              <p className="text-2xl font-mono font-bold">{user.total_points || 0}</p>
+              <p className="text-xs text-bone/80">Pontos</p>
+            </div>
+            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+              <Fire size={24} weight="fill" className="mx-auto mb-1 text-orange-400" />
+              <p className="text-2xl font-mono font-bold">{user.max_perfect_streak || 0}</p>
+              <p className="text-xs text-bone/80">Sequência</p>
+            </div>
+            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+              <Target size={24} weight="fill" className="mx-auto mb-1 text-terracotta" />
+              <p className="text-2xl font-mono font-bold">{statistics.perfect_scores || 0}</p>
+              <p className="text-xs text-bone/80">Placares Exatos</p>
+            </div>
+            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+              <ChartBar size={24} weight="fill" className="mx-auto mb-1 text-bone" />
+              <p className="text-2xl font-mono font-bold">{statistics.accuracy_rate || 0}%</p>
+              <p className="text-xs text-bone/80">Aproveitamento</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Predictions */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
-        <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
-          Histórico Recente
-        </h2>
+      {/* Statistics Cards */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-pitch-green/10 rounded-lg flex items-center justify-center">
+              <SoccerBall size={20} weight="fill" className="text-pitch-green" />
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Jogos Palpitados</p>
+              <p className="text-2xl font-bold text-text-primary">{statistics.games_played || 0}</p>
+            </div>
+          </div>
+          <div className="text-xs text-text-secondary">
+            em {statistics.rounds_played || 0} rodada(s)
+          </div>
+        </div>
 
-        {userData.predictions.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">
-            Você ainda não fez nenhum palpite. Comece agora!
+        <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-pitch-green/10 rounded-lg flex items-center justify-center">
+              <Check size={20} weight="bold" className="text-pitch-green" />
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Resultados Certos</p>
+              <p className="text-2xl font-bold text-text-primary">{statistics.correct_results || 0}</p>
+            </div>
+          </div>
+          <div className="text-xs text-text-secondary">
+            de {statistics.games_played || 0} jogos finalizados
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-pitch-green/10 rounded-lg flex items-center justify-center">
+              <TrendUp size={20} weight="bold" className="text-pitch-green" />
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Média por Jogo</p>
+              <p className="text-2xl font-bold text-text-primary">{statistics.avg_points_per_game || 0} pts</p>
+            </div>
+          </div>
+          <div className="text-xs text-text-secondary">
+            máximo possível: 5 pts
+          </div>
+        </div>
+      </div>
+
+      {/* Points by Round Chart */}
+      {statistics.points_by_round && Object.keys(statistics.points_by_round).length > 0 && (
+        <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
+          <h3 className="font-heading text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
+            <ChartBar size={20} weight="fill" className="text-pitch-green" />
+            Pontos por Rodada
+          </h3>
+          <div className="flex items-end gap-2 h-32">
+            {Object.entries(statistics.points_by_round)
+              .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+              .map(([round, points]) => {
+                const maxPoints = Math.max(...Object.values(statistics.points_by_round), 30);
+                const height = (points / maxPoints) * 100;
+                return (
+                  <div key={round} className="flex-1 flex flex-col items-center">
+                    <span className="text-xs font-bold text-pitch-green mb-1">{points}</span>
+                    <div 
+                      className="w-full bg-gradient-to-t from-pitch-green to-pitch-green/60 rounded-t-lg transition-all"
+                      style={{ height: `${Math.max(height, 10)}%` }}
+                    />
+                    <span className="text-xs text-text-secondary mt-1">R{round}</span>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Predictions History */}
+      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <h2 className="font-heading text-2xl font-bold text-text-primary flex items-center gap-2">
+            <CalendarBlank size={24} weight="fill" className="text-pitch-green" />
+            Histórico de Palpites
+          </h2>
+          
+          {/* Filter by Round */}
+          <select
+            value={selectedRound}
+            onChange={(e) => setSelectedRound(e.target.value)}
+            data-testid="round-filter"
+            className="px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-pitch-green"
+          >
+            <option value="all">Todas as Rodadas</option>
+            {allRounds.map((round) => (
+              <option key={round.round_number} value={round.round_number}>
+                Rodada {round.round_number}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {filteredPredictions.length === 0 ? (
+          <div className="text-center py-12">
+            <SoccerBall size={48} className="mx-auto text-text-secondary/50 mb-4" />
+            <p className="text-text-secondary mb-4">
+              {selectedRound === "all" 
+                ? "Você ainda não fez nenhum palpite."
+                : `Nenhum palpite na Rodada ${selectedRound}.`}
+            </p>
+            <Link
+              to="/predictions"
+              className="inline-flex items-center gap-2 bg-pitch-green text-bone px-6 py-3 rounded-lg font-semibold hover:bg-pitch-green/90 transition-all"
+            >
+              <Trophy size={18} weight="fill" />
+              Fazer Palpites
+            </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {userData.predictions.slice(0, 10).map((pred, index) => (
-              <div
-                key={index}
-                data-testid={`prediction-${index}`}
-                className="flex items-center justify-between p-4 bg-paper rounded-lg"
-              >
-                <div>
-                  <p className="text-sm text-text-secondary">
-                    Rodada {pred.round_number} - Jogo #{pred.match_id}
-                  </p>
-                  <p className="font-mono font-bold text-text-primary">
-                    {pred.home_prediction} × {pred.away_prediction}
-                  </p>
+          <div className="space-y-6">
+            {Object.entries(groupedByRound)
+              .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
+              .map(([roundNum, roundPreds]) => (
+                <div key={roundNum}>
+                  {/* Round Header */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="bg-pitch-green/10 text-pitch-green px-3 py-1 rounded-lg text-sm font-bold">
+                      Rodada {roundNum}
+                    </span>
+                    <span className="text-sm text-text-secondary">
+                      {roundPreds.length} {roundPreds.length === 1 ? 'palpite' : 'palpites'}
+                    </span>
+                    <span className="ml-auto text-sm font-bold text-pitch-green">
+                      {roundPreds.reduce((sum, p) => sum + (p.points || 0), 0)} pts
+                    </span>
+                  </div>
+
+                  {/* Predictions Grid */}
+                  <div className="grid gap-3">
+                    {roundPreds.map((pred, index) => (
+                      <div
+                        key={`${pred.match_id}-${index}`}
+                        data-testid={`prediction-${roundNum}-${index}`}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          pred.is_finished 
+                            ? pred.points === 5 
+                              ? "bg-yellow-50 border-yellow-400"
+                              : pred.points >= 3
+                              ? "bg-green-50 border-green-300"
+                              : pred.points > 0
+                              ? "bg-blue-50 border-blue-300"
+                              : "bg-gray-50 border-gray-200"
+                            : "bg-paper border-paper"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          {/* Teams */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-sm text-text-secondary mb-1">
+                              <CalendarBlank size={14} />
+                              {formatDate(pred.match_date)}
+                            </div>
+                            <p className="font-semibold text-text-primary truncate">
+                              {pred.home_team} <span className="text-text-secondary">vs</span> {pred.away_team}
+                            </p>
+                          </div>
+
+                          {/* Prediction */}
+                          <div className="text-center px-3">
+                            <p className="text-xs text-text-secondary mb-1">Palpite</p>
+                            <p className="font-mono text-lg font-bold text-text-primary">
+                              {pred.home_prediction} × {pred.away_prediction}
+                            </p>
+                          </div>
+
+                          {/* Result & Points */}
+                          <div className="text-center min-w-[80px]">
+                            {pred.is_finished ? (
+                              <>
+                                <p className="text-xs text-text-secondary mb-1">Resultado</p>
+                                <p className="font-mono text-lg font-bold text-pitch-green mb-1">
+                                  {pred.home_score} × {pred.away_score}
+                                </p>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${getPointsBadgeStyle(pred.points)}`}>
+                                  {pred.points === 5 ? "🎯 " : ""}{pred.points} pts
+                                </span>
+                              </>
+                            ) : (
+                              <div className="flex items-center justify-center gap-1 text-text-secondary">
+                                <div className="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
+                                <span className="text-sm">Aguardando</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="text-right">
-                  {pred.points !== null && pred.points !== undefined ? (
-                    <div>
-                      <p className={`font-mono text-xl font-bold ${
-                        pred.points === 5 ? "text-terracotta" :
-                        pred.points >= 3 ? "text-success" :
-                        pred.points > 0 ? "text-warning" : "text-text-secondary"
-                      }`}>
-                        {pred.points} pts
-                      </p>
-                      {pred.points === 5 && (
-                        <p className="text-xs text-terracotta">Perfeito!</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-text-secondary">Aguardando</p>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
       </div>
 
-      {/* Statistics */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
-        <h2 className="font-heading text-2xl font-bold text-text-primary mb-4">
-          Estatísticas
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-paper rounded-lg">
-            <p className="text-sm text-text-secondary mb-1">Sequência Atual</p>
-            <p className="text-2xl font-bold text-pitch-green">
-              {user.perfect_streak || 0}
-            </p>
+      {/* Legend */}
+      <div className="bg-paper rounded-lg p-4 border-2 border-paper">
+        <h4 className="font-semibold text-text-primary mb-3">Legenda de Pontuação</h4>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">5</span>
+            <span className="text-text-secondary">Placar exato</span>
           </div>
-          <div className="p-4 bg-paper rounded-lg">
-            <p className="text-sm text-text-secondary mb-1">Média por Rodada</p>
-            <p className="text-2xl font-bold text-pitch-green">
-              {totalPredictions > 0 ? (user.total_points / totalPredictions * 10).toFixed(1) : "0.0"}
-            </p>
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 bg-pitch-green rounded-full flex items-center justify-center text-white text-xs font-bold">3+</span>
+            <span className="text-text-secondary">Resultado certo</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">1-2</span>
+            <span className="text-text-secondary">Gol(s) certo(s)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold">0</span>
+            <span className="text-text-secondary">Nenhum acerto</span>
           </div>
         </div>
       </div>
