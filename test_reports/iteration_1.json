@@ -1,0 +1,79 @@
+{
+  "summary": "Frontend testing completed for CallClub - Football prediction site. All core features working correctly: login with authorized users (Mario, Marcos), predictions page with round dropdown (1-6), finished matches showing results and points, rankings page with General and Per Round tabs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_1.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100%"
+  },
+  "test_credentials": "Mario, Marcos (authorized users in whitelist)",
+  "seed_data_creation": "None - using existing data from TheSportsDB API",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 7 features tested and working: 1) Login with authorized names (Mario, Marcos) - PASS, 2) Predictions page round dropdown shows rounds 1-6 - PASS, 3) Predictions page shows matches for selected round - PASS, 4) Finished matches show 'Resultado Final' and points - PASS, 5) Rankings General tab shows classification with total points (Marcos 16pts, Mario 15pts) - PASS, 6) Rankings Per Round tab allows round selection and shows ranking - PASS, 7) Scoring system working correctly (3pts result + 1pt home + 1pt away = 5pts max) - PASS",
+  "tests_executed": [
+    {
+      "test": "Login with unauthorized user",
+      "result": "PASS - Error message shown: 'Nome não autorizado'",
+      "status": "✅"
+    },
+    {
+      "test": "Login with Mario (authorized)",
+      "result": "PASS - Successfully logged in, redirected to home",
+      "status": "✅"
+    },
+    {
+      "test": "Login with Marcos (authorized)",
+      "result": "PASS - Successfully logged in, redirected to home",
+      "status": "✅"
+    },
+    {
+      "test": "Predictions page - Round dropdown",
+      "result": "PASS - Shows all 6 rounds (Rodada 1-6), Round 3 marked as (Atual)",
+      "status": "✅"
+    },
+    {
+      "test": "Predictions page - Display matches",
+      "result": "PASS - 6 matches displayed for Round 1",
+      "status": "✅"
+    },
+    {
+      "test": "Predictions page - Finished matches show results",
+      "result": "PASS - Shows 'Resultado Final: X × Y' and points earned",
+      "status": "✅"
+    },
+    {
+      "test": "Rankings page - General tab",
+      "result": "PASS - Shows Marcos #1 (16 pts), Mario #2 (15 pts)",
+      "status": "✅"
+    },
+    {
+      "test": "Rankings page - Per Round tab",
+      "result": "PASS - Round selector appears, shows ranking for selected round",
+      "status": "✅"
+    },
+    {
+      "test": "Scoring system verification",
+      "result": "PASS - Marcos: Fluminense 2x1 prediction = 5pts (exact score), verified calculation",
+      "status": "✅"
+    },
+    {
+      "test": "Current user highlighting",
+      "result": "PASS - 'Você' badge shown next to logged-in user in rankings",
+      "status": "✅"
+    }
+  ]
+}
