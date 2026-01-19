@@ -81,16 +81,16 @@ Grupo de amigos quer fazer palpites de jogos de futebol de forma organizada, com
 ### ✅ Implementado (19/01/2026)
 1. Sistema de autenticação por whitelist
 2. Integração com TheSportsDB (6 rodadas, 36 jogos)
-3. Página de palpites completa
+3. Página de palpites completa com pontos
 4. Sistema de pontuação funcionando
 5. Rankings (geral e por rodada)
-6. Cálculo automático de pontos
+6. Widget "Próximo Jogo" com countdown na Home
+7. Página de Perfil completa com estatísticas e histórico
 
 ### 🔜 Próximas Tarefas
-1. **P1** - Página de Perfil do usuário (histórico de palpites)
-2. **P2** - Adicionar lista dos 80 usuários reais
-3. **P2** - Integrar Campeonato Brasileiro quando começar
-4. **P3** - Admin para gerenciar whitelist via interface
+1. **P2** - Adicionar lista dos 80 usuários reais (quando você tiver)
+2. **P2** - Integrar Campeonato Brasileiro (quando começar)
+3. **P3** - Admin para gerenciar whitelist via interface
 
 ### 🔧 Melhorias Futuras
 - Notificações de jogos próximos
