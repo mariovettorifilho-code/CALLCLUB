@@ -140,6 +140,32 @@ async def get_all_rounds():
     rounds = await db.rounds.find({}, {"_id": 0}).sort("round_number", 1).to_list(100)
     return rounds
 
+@api_router.get("/matches/next")
+async def get_next_match():
+    """Retorna o próximo jogo não finalizado"""
+    now = datetime.now(timezone.utc)
+    
+    # Busca o próximo jogo que ainda não começou
+    next_match = await db.matches.find_one(
+        {
+            "is_finished": False,
+            "match_date": {"$gt": now}
+        },
+        {"_id": 0},
+        sort=[("match_date", 1)]
+    )
+    
+    if not next_match:
+        # Se não encontrar, busca qualquer jogo não finalizado
+        next_match = await db.matches.find_one(
+            {"is_finished": False},
+            {"_id": 0},
+            sort=[("match_date", 1)]
+        )
+    
+    return next_match
+
+
 @api_router.get("/matches/{round_number}")
 async def get_matches(round_number: int):
     """Retorna os jogos de uma rodada"""
