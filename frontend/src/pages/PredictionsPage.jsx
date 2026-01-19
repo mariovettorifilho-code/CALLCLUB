@@ -205,14 +205,18 @@ export default function PredictionsPage({ username }) {
                       : "border-paper hover:border-pitch-green"
                   }`}
                 >
-                  {/* Data e Horário */}
+                  {/* Rodada, Data e Horário */}
                   <div className="flex items-center justify-between mb-4 pb-3 border-b border-paper">
-                    <div className="flex items-center gap-4 text-sm text-text-secondary">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-2 bg-pitch-green/10 px-3 py-1 rounded-lg">
+                        <Trophy size={14} weight="fill" className="text-pitch-green" />
+                        <span className="font-bold text-pitch-green">Rodada {match.round_number}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-text-secondary">
                         <CalendarBlank size={16} weight="bold" />
                         <span className="font-semibold">{date}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 text-text-secondary">
                         <Clock size={16} weight="bold" />
                         <span className="font-semibold">{time}</span>
                       </div>
