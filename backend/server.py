@@ -246,18 +246,77 @@ async def get_general_ranking():
 
 @api_router.get("/user/{username}")
 async def get_user_profile(username: str):
-    """Retorna perfil do usuário"""
+    """Retorna perfil completo do usuário com estatísticas"""
     user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        # Cria usuário se não existir
+        user = {"username": username, "total_points": 0, "max_perfect_streak": 0, "perfect_streak": 0}
     
     # Busca histórico de palpites
     predictions = await db.predictions.find({"username": username}, {"_id": 0}).to_list(1000)
     
+    # Busca matches para enriquecer os palpites
+    match_ids = [p['match_id'] for p in predictions]
+    matches = await db.matches.find({"match_id": {"$in": match_ids}}, {"_id": 0}).to_list(1000)
+    matches_dict = {m['match_id']: m for m in matches}
+    
+    # Enriquece palpites com dados dos jogos
+    enriched_predictions = []
+    for pred in predictions:
+        match = matches_dict.get(pred['match_id'], {})
+        enriched_predictions.append({
+            **pred,
+            "home_team": match.get("home_team", "?"),
+            "away_team": match.get("away_team", "?"),
+            "home_score": match.get("home_score"),
+            "away_score": match.get("away_score"),
+            "is_finished": match.get("is_finished", False),
+            "match_date": match.get("match_date")
+        })
+    
+    # Ordena por rodada (desc) e depois por data
+    enriched_predictions.sort(key=lambda x: (-x.get('round_number', 0), x.get('match_date') or ''))
+    
+    # Calcula estatísticas
+    total_predictions = len(predictions)
+    predictions_with_points = [p for p in predictions if p.get('points') is not None]
+    total_points_earned = sum(p.get('points', 0) for p in predictions_with_points)
+    perfect_scores = sum(1 for p in predictions_with_points if p.get('points') == 5)
+    correct_results = sum(1 for p in predictions_with_points if p.get('points', 0) >= 3)
+    
+    # Agrupa por rodada para estatísticas
+    rounds_played = set(p.get('round_number') for p in predictions)
+    points_by_round = {}
+    for pred in predictions:
+        rn = pred.get('round_number', 0)
+        if rn not in points_by_round:
+            points_by_round[rn] = 0
+        points_by_round[rn] += pred.get('points', 0) or 0
+    
+    # Calcula posição no ranking
+    all_users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    sorted_users = sorted(all_users, key=lambda x: (-x.get('total_points', 0), -x.get('max_perfect_streak', 0)))
+    ranking_position = next((i + 1 for i, u in enumerate(sorted_users) if u['username'] == username), 0)
+    total_users = len(sorted_users)
+    
     return {
         "user": user,
-        "total_predictions": len(predictions),
-        "predictions": predictions
+        "total_predictions": total_predictions,
+        "predictions": enriched_predictions,
+        "statistics": {
+            "total_points": total_points_earned,
+            "perfect_scores": perfect_scores,
+            "correct_results": correct_results,
+            "games_played": len(predictions_with_points),
+            "rounds_played": len(rounds_played),
+            "points_by_round": points_by_round,
+            "avg_points_per_game": round(total_points_earned / len(predictions_with_points), 2) if predictions_with_points else 0,
+            "accuracy_rate": round(correct_results / len(predictions_with_points) * 100, 1) if predictions_with_points else 0
+        },
+        "ranking": {
+            "position": ranking_position,
+            "total_users": total_users
+        }
     }
 
 async def recalculate_all_points():
