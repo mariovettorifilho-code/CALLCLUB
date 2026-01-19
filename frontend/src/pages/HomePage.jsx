@@ -53,7 +53,7 @@ export default function HomePage({ username }) {
           </h1>
         </div>
         <p className="text-bone/90 text-lg mb-6">
-          Rodada {currentRound?.round_number || 1} do Brasileirão está aberta para palpites!
+          Rodada {currentRound?.round_number || 1} do Campeonato Carioca 2026 está aberta para palpites!
         </p>
         <Link
           to="/predictions"
