@@ -34,14 +34,19 @@ async def seed_carioca_2026():
     all_teams = [team for group in teams.values() for team in group]
     
     # Cria 3 rodadas de exemplo
-    now = datetime.now(timezone.utc)
+    # Carioca 2026 começou em 11/01/2026
+    # Vamos usar datas reais baseadas no calendário atual
+    base_date = datetime(2026, 1, 19, 16, 0, tzinfo=timezone.utc)  # 19/01/2026 às 16h (horário comum no Carioca)
     
     rounds_data = []
     match_id = 1
     
     for round_num in range(1, 4):
-        # Data da rodada (cada rodada é 4 dias depois)
-        round_date = now + timedelta(days=(round_num - 1) * 4)
+        # Data da rodada (cada rodada é no final de semana)
+        # Rodada 1: 19/01 (domingo)
+        # Rodada 2: 26/01 (domingo)
+        # Rodada 3: 02/02 (domingo)
+        round_date = base_date + timedelta(days=(round_num - 1) * 7)
         
         # Cria rodada
         round_doc = {
@@ -52,37 +57,41 @@ async def seed_carioca_2026():
         await db.rounds.insert_one(round_doc)
         
         # Cria 6 jogos por rodada (combinações diferentes)
+        # Jogos acontecem em sábado e domingo
         matches = []
         
         if round_num == 1:
-            # Rodada 1 - Clássicos
+            # Rodada 1 - Clássicos (19/01/2026 - Domingo)
+            saturday = round_date - timedelta(days=1)  # 18/01 (sábado)
             matches = [
-                ("Flamengo", "Vasco", round_date),
-                ("Fluminense", "Botafogo", round_date + timedelta(hours=2)),
-                ("Nova Iguaçu", "Bangu", round_date + timedelta(hours=4)),
-                ("Madureira", "Boavista", round_date + timedelta(days=1)),
-                ("Portuguesa", "Volta Redonda", round_date + timedelta(days=1, hours=2)),
-                ("Sampaio Corrêa", "Audax", round_date + timedelta(days=1, hours=4))
+                ("Flamengo", "Vasco", saturday.replace(hour=16, minute=0)),  # Sábado 16h
+                ("Fluminense", "Botafogo", saturday.replace(hour=18, minute=30)),  # Sábado 18h30
+                ("Nova Iguaçu", "Bangu", round_date.replace(hour=11, minute=0)),  # Domingo 11h
+                ("Madureira", "Boavista", round_date.replace(hour=16, minute=0)),  # Domingo 16h
+                ("Portuguesa", "Volta Redonda", round_date.replace(hour=18, minute=30)),  # Domingo 18h30
+                ("Sampaio Corrêa", "Audax", round_date.replace(hour=20, minute=0))  # Domingo 20h
             ]
         elif round_num == 2:
-            # Rodada 2
+            # Rodada 2 (26/01/2026 - Domingo)
+            saturday = round_date - timedelta(days=1)
             matches = [
-                ("Botafogo", "Vasco", round_date),
-                ("Flamengo", "Fluminense", round_date + timedelta(hours=2)),
-                ("Bangu", "Madureira", round_date + timedelta(hours=4)),
-                ("Boavista", "Nova Iguaçu", round_date + timedelta(days=1)),
-                ("Volta Redonda", "Portuguesa", round_date + timedelta(days=1, hours=2)),
-                ("Audax", "Sampaio Corrêa", round_date + timedelta(days=1, hours=4))
+                ("Botafogo", "Vasco", saturday.replace(hour=16, minute=30)),
+                ("Flamengo", "Fluminense", saturday.replace(hour=19, minute=0)),
+                ("Bangu", "Madureira", round_date.replace(hour=11, minute=0)),
+                ("Boavista", "Nova Iguaçu", round_date.replace(hour=15, minute=0)),
+                ("Volta Redonda", "Portuguesa", round_date.replace(hour=17, minute=0)),
+                ("Audax", "Sampaio Corrêa", round_date.replace(hour=19, minute=30))
             ]
         else:
-            # Rodada 3
+            # Rodada 3 (02/02/2026 - Domingo)
+            saturday = round_date - timedelta(days=1)
             matches = [
-                ("Vasco", "Fluminense", round_date),
-                ("Botafogo", "Flamengo", round_date + timedelta(hours=2)),
-                ("Nova Iguaçu", "Portuguesa", round_date + timedelta(hours=4)),
-                ("Madureira", "Volta Redonda", round_date + timedelta(days=1)),
-                ("Bangu", "Boavista", round_date + timedelta(days=1, hours=2)),
-                ("Audax", "Sampaio Corrêa", round_date + timedelta(days=1, hours=4))
+                ("Vasco", "Fluminense", saturday.replace(hour=16, minute=0)),
+                ("Botafogo", "Flamengo", saturday.replace(hour=18, minute=30)),
+                ("Nova Iguaçu", "Portuguesa", round_date.replace(hour=11, minute=0)),
+                ("Madureira", "Volta Redonda", round_date.replace(hour=16, minute=0)),
+                ("Bangu", "Boavista", round_date.replace(hour=18, minute=0)),
+                ("Audax", "Sampaio Corrêa", round_date.replace(hour=20, minute=0))
             ]
         
         for home, away, match_date in matches:
