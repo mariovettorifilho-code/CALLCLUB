@@ -131,6 +131,12 @@ async def get_current_round():
         return new_round.model_dump()
     return current_round
 
+@api_router.get("/rounds/all")
+async def get_all_rounds():
+    """Retorna todas as rodadas"""
+    rounds = await db.rounds.find({}, {"_id": 0}).sort("round_number", 1).to_list(100)
+    return rounds
+
 @api_router.get("/matches/{round_number}")
 async def get_matches(round_number: int):
     """Retorna os jogos de uma rodada"""
