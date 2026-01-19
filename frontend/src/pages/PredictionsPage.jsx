@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Trophy, Clock } from "@phosphor-icons/react";
+import { Trophy, Clock, CalendarBlank } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -8,6 +8,8 @@ const API = `${BACKEND_URL}/api`;
 
 export default function PredictionsPage({ username }) {
   const [currentRound, setCurrentRound] = useState(null);
+  const [allRounds, setAllRounds] = useState([]);
+  const [selectedRound, setSelectedRound] = useState(null);
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
   const [loading, setLoading] = useState(true);
@@ -17,17 +19,40 @@ export default function PredictionsPage({ username }) {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedRound) {
+      loadMatchesForRound(selectedRound);
+    }
+  }, [selectedRound]);
+
   const loadData = async () => {
     try {
       const roundRes = await axios.get(`${API}/rounds/current`);
       const roundNum = roundRes.data.round_number;
       
+      setCurrentRound(roundRes.data);
+      setSelectedRound(roundNum);
+
+      // Busca todas as rodadas para o filtro
+      const allRoundsRes = await axios.get(`${API}/rounds/all`);
+      setAllRounds(allRoundsRes.data || []);
+
+      await loadMatchesForRound(roundNum);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+      toast.error("Erro ao carregar jogos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMatchesForRound = async (roundNum) => {
+    try {
       const [matchesRes, predsRes] = await Promise.all([
         axios.get(`${API}/matches/${roundNum}`),
         axios.get(`${API}/predictions/${username}?round_number=${roundNum}`)
       ]);
 
-      setCurrentRound(roundRes.data);
       setMatches(matchesRes.data);
 
       // Converte palpites existentes para objeto
@@ -40,10 +65,7 @@ export default function PredictionsPage({ username }) {
       });
       setPredictions(existingPreds);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      toast.error("Erro ao carregar jogos");
-    } finally {
-      setLoading(false);
+      console.error("Erro ao carregar jogos:", error);
     }
   };
 
@@ -66,7 +88,7 @@ export default function PredictionsPage({ username }) {
           return axios.post(`${API}/predictions`, {
             username,
             match_id: matchId,
-            round_number: currentRound.round_number,
+            round_number: selectedRound,
             home_prediction: pred.home,
             away_prediction: pred.away
           });
@@ -84,6 +106,35 @@ export default function PredictionsPage({ username }) {
     }
   };
 
+  const formatMatchDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return { date: `${day}/${month}`, time: `${hours}h${minutes}` };
+  };
+
+  const isMatchLocked = (matchDate) => {
+    return new Date(matchDate) <= new Date();
+  };
+
+  const getTimeUntilMatch = (matchDate) => {
+    const now = new Date();
+    const match = new Date(matchDate);
+    const diff = match - now;
+
+    if (diff <= 0) return "Jogo iniciado";
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `Falta ${days}d ${hours}h`;
+    if (hours > 0) return `Falta ${hours}h ${minutes}min`;
+    return `Falta ${minutes} minutos`;
+  };
+
   if (loading) {
     return <div className="text-center py-20">Carregando...</div>;
   }
@@ -91,14 +142,36 @@ export default function PredictionsPage({ username }) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
-        <div className="flex items-center gap-3 mb-6">
-          <Trophy size={32} weight="fill" className="text-pitch-green" />
-          <div>
-            <h1 className="font-heading text-3xl font-bold text-text-primary">
-              Rodada {currentRound?.round_number || 1}
-            </h1>
-            <p className="text-text-secondary">Faça seus palpites</p>
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <Trophy size={32} weight="fill" className="text-pitch-green" />
+            <div>
+              <h1 className="font-heading text-3xl font-bold text-text-primary">
+                Campeonato Carioca 2026
+              </h1>
+              <p className="text-text-secondary">Faça seus palpites</p>
+            </div>
           </div>
+
+          {/* Filtro de Rodadas */}
+          {allRounds.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-text-secondary">Rodada:</label>
+              <select
+                value={selectedRound || ''}
+                onChange={(e) => setSelectedRound(parseInt(e.target.value))}
+                data-testid="round-filter"
+                className="px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
+              >
+                {allRounds.map((round) => (
+                  <option key={round.round_number} value={round.round_number}>
+                    Rodada {round.round_number}
+                    {round.is_current && " (Atual)"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {matches.length === 0 ? (
@@ -117,64 +190,98 @@ export default function PredictionsPage({ username }) {
           </div>
         ) : (
           <div className="space-y-4">
-            {matches.map((match) => (
-              <div
-                key={match.match_id}
-                data-testid={`match-${match.match_id}`}
-                className="bg-paper rounded-lg p-6 border-2 border-paper hover:border-pitch-green transition-all"
-              >
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  {/* Time Casa */}
-                  <div className="flex-1 text-right">
-                    <p className="font-heading text-lg font-bold text-text-primary">
-                      {match.home_team}
-                    </p>
+            {matches.map((match) => {
+              const { date, time } = formatMatchDate(match.match_date);
+              const locked = isMatchLocked(match.match_date);
+              const timeRemaining = getTimeUntilMatch(match.match_date);
+
+              return (
+                <div
+                  key={match.match_id}
+                  data-testid={`match-${match.match_id}`}
+                  className={`bg-paper rounded-lg p-6 border-2 transition-all ${
+                    locked 
+                      ? "border-text-secondary/30 opacity-75" 
+                      : "border-paper hover:border-pitch-green"
+                  }`}
+                >
+                  {/* Data e Horário */}
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-paper">
+                    <div className="flex items-center gap-4 text-sm text-text-secondary">
+                      <div className="flex items-center gap-1">
+                        <CalendarBlank size={16} weight="bold" />
+                        <span className="font-semibold">{date}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock size={16} weight="bold" />
+                        <span className="font-semibold">{time}</span>
+                      </div>
+                    </div>
+                    <div className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                      locked 
+                        ? "bg-error/10 text-error" 
+                        : "bg-warning/10 text-warning"
+                    }`}>
+                      {locked ? "🔒 Palpites fechados" : timeRemaining}
+                    </div>
                   </div>
 
-                  {/* Inputs de Placar */}
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="number"
-                      min="0"
-                      data-testid={`home-score-${match.match_id}`}
-                      value={predictions[match.match_id]?.home ?? ""}
-                      onChange={(e) => handlePredictionChange(match.match_id, "home", e.target.value)}
-                      className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20"
-                      placeholder="0"
-                      disabled={match.is_finished}
-                    />
-                    <span className="text-2xl font-bold text-text-secondary">×</span>
-                    <input
-                      type="number"
-                      min="0"
-                      data-testid={`away-score-${match.match_id}`}
-                      value={predictions[match.match_id]?.away ?? ""}
-                      onChange={(e) => handlePredictionChange(match.match_id, "away", e.target.value)}
-                      className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20"
-                      placeholder="0"
-                      disabled={match.is_finished}
-                    />
+                  {/* Placar */}
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    {/* Time Casa */}
+                    <div className="flex-1 text-right">
+                      <p className="font-heading text-lg font-bold text-text-primary">
+                        {match.home_team}
+                      </p>
+                    </div>
+
+                    {/* Inputs de Placar */}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        data-testid={`home-score-${match.match_id}`}
+                        value={predictions[match.match_id]?.home ?? ""}
+                        onChange={(e) => handlePredictionChange(match.match_id, "home", e.target.value)}
+                        className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20 disabled:bg-text-secondary/10 disabled:cursor-not-allowed"
+                        placeholder="0"
+                        disabled={match.is_finished || locked}
+                      />
+                      <span className="text-2xl font-bold text-text-secondary">×</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        data-testid={`away-score-${match.match_id}`}
+                        value={predictions[match.match_id]?.away ?? ""}
+                        onChange={(e) => handlePredictionChange(match.match_id, "away", e.target.value)}
+                        className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20 disabled:bg-text-secondary/10 disabled:cursor-not-allowed"
+                        placeholder="0"
+                        disabled={match.is_finished || locked}
+                      />
+                    </div>
+
+                    {/* Time Visitante */}
+                    <div className="flex-1">
+                      <p className="font-heading text-lg font-bold text-text-primary">
+                        {match.away_team}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Time Visitante */}
-                  <div className="flex-1">
-                    <p className="font-heading text-lg font-bold text-text-primary">
-                      {match.away_team}
-                    </p>
-                  </div>
+                  {match.is_finished && (
+                    <div className="mt-3 pt-3 border-t border-paper text-center">
+                      <p className="text-sm text-text-secondary">
+                        Resultado Final: <span className="font-bold text-pitch-green">
+                          {match.home_score} × {match.away_score}
+                        </span>
+                      </p>
+                    </div>
+                  )}
                 </div>
-
-                {match.is_finished && (
-                  <div className="mt-3 pt-3 border-t border-paper text-center">
-                    <p className="text-sm text-text-secondary">
-                      Resultado: <span className="font-bold text-pitch-green">
-                        {match.home_score} × {match.away_score}
-                      </span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
