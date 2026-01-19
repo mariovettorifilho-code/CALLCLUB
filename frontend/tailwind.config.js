@@ -13,6 +13,19 @@ module.exports = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
+  			// CallClub "The Gentlemen's League" Colors
+  			'pitch-green': '#1A4D2E',
+  			'terracotta': '#C05621',
+  			'bone': '#F5F5F0',
+  			'paper': '#EBEBE6',
+  			'text-primary': '#2D3748',
+  			'text-secondary': '#4A5568',
+  			'text-inverse': '#F7FAFC',
+  			'success': '#2F855A',
+  			'warning': '#D69E2E',
+  			'error': '#C53030',
+  			
+  			// Shadcn compatibility
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {
@@ -53,6 +66,11 @@ module.exports = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
+  		},
+  		fontFamily: {
+  			'heading': ['Fraunces', 'Playfair Display', 'serif'],
+  			'body': ['Manrope', 'DM Sans', 'sans-serif'],
+  			'mono': ['Chivo Mono', 'JetBrains Mono', 'monospace']
   		},
   		keyframes: {
   			'accordion-down': {
