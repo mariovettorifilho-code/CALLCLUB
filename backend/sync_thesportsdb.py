@@ -70,11 +70,13 @@ async def sync_carioca_thesportsdb():
         
         # Rodada atual é a primeira que ainda não terminou
         has_unfinished = any(not m["is_finished"] for m in round_matches)
-        if has_unfinished and not any(await db.rounds.find_one({"is_current": True})):
+        current_round = await db.rounds.find_one({"is_current": True})
+        
+        if has_unfinished and not current_round:
             is_current = True
         
         # Se não tem nenhuma atual ainda, pega a última rodada disponível
-        if round_num == max(rounds.keys()) and not await db.rounds.find_one({"is_current": True}):
+        if round_num == max(rounds.keys()) and not current_round:
             is_current = True
         
         # Cria rodada
