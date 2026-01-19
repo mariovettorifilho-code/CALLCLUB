@@ -1,0 +1,130 @@
+{
+  "identity": {
+    "persona": "E1 - The Anti-AI Designer",
+    "mission": "Create a 'Digital Pub' for 70 friends - warm, cozy, revolutionary, and habit-forming.",
+    "principles": [
+      "Fusion: Classic Editorial (Serif) x Modern App Utility",
+      "Emotion: Camaraderie & Nostalgia over Betting/Gambling",
+      "Content: Every match is a story, every prediction is a stamp of confidence",
+      "Texture: Grain, paper, and leather over flat digital colors"
+    ]
+  },
+  "theme": {
+    "name": "The Gentlemen's League",
+    "mode": "light",
+    "vibe": "Warm Industrial / Modern Lounge",
+    "visual_metaphor": "A premium match-day ticket or a classic newspaper sports section brought to life."
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "name": "Pitch Deep Green",
+        "hex": "#1A4D2E",
+        "usage": "Primary Buttons, Active States, Brand Elements"
+      },
+      "secondary": {
+        "name": "Terracotta Clay",
+        "hex": "#C05621",
+        "usage": "Accents, Notifications, 'Hot' Items"
+      },
+      "background": {
+        "light": "#F5F5F0",
+        "dark": "#121212",
+        "paper": "#EBEBE6"
+      },
+      "text": {
+        "primary": "#2D3748",
+        "secondary": "#4A5568",
+        "inverse": "#F7FAFC"
+      },
+      "status": {
+        "success": "#2F855A",
+        "warning": "#D69E2E",
+        "error": "#C53030"
+      }
+    },
+    "gradients": "NONE. Use solid blocks of color or subtle noise textures.",
+    "forbidden": ["#7351B7", "#1B93A4", "Neon Green", "Pure Black #000000"]
+  },
+  "typography": {
+    "headings": {
+      "family": "Fraunces, 'Playfair Display', serif",
+      "weight": "700",
+      "usage": "Page Titles, Match Headers, Ranking Positions",
+      "tracking": "-0.02em"
+    },
+    "body": {
+      "family": "Manrope, 'DM Sans', sans-serif",
+      "weight": "400/500",
+      "usage": "General UI, Inputs, Descriptions"
+    },
+    "numbers": {
+      "family": "'Chivo Mono', 'JetBrains Mono', monospace",
+      "usage": "Scores, Points, Timer",
+      "weight": "600"
+    }
+  },
+  "layout": {
+    "grid_system": "Bento Grid (Mode A for Home, Mode B for Rankings)",
+    "spacing": "Generous. Use p-6 or p-8 for cards. Gap-6 for grids.",
+    "mobile_first": "True. Stacked cards for mobile, expanded grid for desktop.",
+    "container": "Max-width-5xl centered, but with full-bleed sections."
+  },
+  "components": {
+    "MatchCard": {
+      "concept": "Digital Ticket",
+      "style": "Rectangular with 'rip' edges or perforated lines. Serif typography for team names.",
+      "interaction": "Slide to predict or 'Stamp' the score."
+    },
+    "RankingTable": {
+      "concept": "League Ledger",
+      "style": "Clean rows with alternating subtle backgrounds. Top 3 highlighted with gold/silver/bronze accents (not gradients, but solid colors).",
+      "features": "Sticky header, user highlight."
+    },
+    "Navigation": {
+      "mobile": "Bottom Bar with glassmorphism (Crystal Glass style). Icons only or Icons + Label.",
+      "desktop": "Top minimal nav with 'Clubhouse' logo."
+    },
+    "Buttons": {
+      "style": "Pill-shaped or Sharp Rectangles (Brutalist).",
+      "hover": "Slight lift + shadow, or fill change."
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_bg": "https://images.unsplash.com/photo-1760890518049-47b9822e1c89?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "stadium_texture": "https://images.unsplash.com/photo-1766756499755-0ae763777974?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "friends_social": "https://images.unsplash.com/photo-1727334291228-188f30b43f1f?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "ball_accent": "https://images.unsplash.com/photo-1698277329466-2f14b1b5cb89?crop=entropy&cs=srgb&fm=jpg&q=85"
+    },
+    "icons": "Phosphor Icons (Duotone or Fill) for a premium feel."
+  },
+  "motion": {
+    "library": "Framer Motion",
+    "transitions": "Spring-based, snappy but smooth.",
+    "micro_interactions": "Button press scale (0.95), Input focus glow, Toast notifications slide in."
+  },
+  "tech_stack": {
+    "framework": "React (Vite)",
+    "language": "JavaScript (.jsx)",
+    "styling": "Tailwind CSS",
+    "ui_lib": "Shadcn/UI (Customized)",
+    "icons": "@phosphor-icons/react",
+    "state": "React Context or Zustand"
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL DEPENDENCIES: npm install @phosphor-icons/react framer-motion clsx tailwind-merge",
+    "2. SETUP FONTS: Add Fraunces and Manrope from Google Fonts to index.css.",
+    "3. CUSTOMIZE TAILWIND: Update tailwind.config.js with the 'Pitch Deep Green' and 'Terracotta' colors.",
+    "4. CREATE LAYOUT: Build a 'Layout.jsx' that handles the mobile-first container and navigation.",
+    "5. BUILD COMPONENTS: Create 'MatchCard.jsx', 'RankingRow.jsx', 'PredictionInput.jsx' using the design principles.",
+    "6. MOCK DATA: Create a 'data.js' file with mock matches and users to visualize the design immediately.",
+    "7. DO NOT use generic gradients. Use the provided images for texture/backgrounds.",
+    "8. ENSURE all interactive elements have data-testid attributes."
+  ],
+  "universal_guidelines": {
+    "anti_slop": "Avoid generic centered layouts. Use asymmetry. Use texture.",
+    "accessibility": "Ensure contrast ratios. Use semantic HTML.",
+    "testing": "Add data-testid to all buttons, inputs, and links."
+  }
+}
