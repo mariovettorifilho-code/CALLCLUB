@@ -234,9 +234,142 @@ async def get_user_profile(username: str):
         "predictions": predictions
     }
 
+async def recalculate_all_points():
+    """Recalcula pontos de TODOS os usuários baseado nos jogos finalizados"""
+    
+    # Busca todos os jogos finalizados
+    finished_matches = await db.matches.find({"is_finished": True}, {"_id": 0}).to_list(1000)
+    matches_dict = {m['match_id']: m for m in finished_matches}
+    
+    # Busca todos os palpites
+    all_predictions = await db.predictions.find({}, {"_id": 0}).to_list(10000)
+    
+    # Calcula pontos para cada palpite
+    user_stats = {}
+    
+    for pred in all_predictions:
+        username = pred['username']
+        match_id = pred['match_id']
+        
+        # Inicializa stats do usuário
+        if username not in user_stats:
+            user_stats[username] = {
+                'total_points': 0,
+                'predictions_by_round': {},
+                'perfect_sequence': []
+            }
+        
+        # Se o jogo terminou, calcula pontos
+        if match_id in matches_dict:
+            match = matches_dict[match_id]
+            points = calculate_points(pred, match)
+            
+            # Atualiza palpite com pontos
+            await db.predictions.update_one(
+                {"username": username, "match_id": match_id},
+                {"$set": {"points": points}}
+            )
+            
+            user_stats[username]['total_points'] += points
+            
+            # Rastreia acertos perfeitos para calcular sequência
+            round_num = pred.get('round_number', 1)
+            if round_num not in user_stats[username]['predictions_by_round']:
+                user_stats[username]['predictions_by_round'][round_num] = []
+            user_stats[username]['predictions_by_round'][round_num].append(points)
+    
+    # Calcula sequência máxima de acertos perfeitos para cada usuário
+    for username, stats in user_stats.items():
+        max_streak = 0
+        current_streak = 0
+        
+        # Ordena por rodada e calcula streak
+        for round_num in sorted(stats['predictions_by_round'].keys()):
+            for points in stats['predictions_by_round'][round_num]:
+                if points == 5:
+                    current_streak += 1
+                    max_streak = max(max_streak, current_streak)
+                else:
+                    current_streak = 0
+        
+        # Atualiza usuário no banco
+        await db.users.update_one(
+            {"username": username},
+            {"$set": {
+                "total_points": stats['total_points'],
+                "max_perfect_streak": max_streak
+            }},
+            upsert=True
+        )
+    
+    return len(user_stats)
+
+
+@api_router.post("/admin/sync-results")
+async def sync_results_from_api():
+    """Sincroniza resultados da API TheSportsDB e recalcula pontos"""
+    
+    LEAGUE_ID = "5688"
+    SEASON = "2026"
+    API_KEY = "3"
+    
+    updated_matches = 0
+    
+    async with httpx.AsyncClient() as client:
+        # Busca cada rodada
+        for round_num in range(1, 7):
+            url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
+            params = {"id": LEAGUE_ID, "r": round_num, "s": SEASON}
+            
+            try:
+                response = await client.get(url, params=params, timeout=15.0)
+                data = response.json()
+                
+                if data and "events" in data and data["events"]:
+                    for event in data["events"]:
+                        match_id = event["idEvent"]
+                        status = event.get("strStatus", "")
+                        
+                        # Se o jogo terminou
+                        if status in ["FT", "Match Finished", "Finished"]:
+                            home_score = event.get("intHomeScore")
+                            away_score = event.get("intAwayScore")
+                            
+                            if home_score is not None and away_score is not None:
+                                # Atualiza no banco
+                                result = await db.matches.update_one(
+                                    {"match_id": match_id},
+                                    {"$set": {
+                                        "home_score": int(home_score),
+                                        "away_score": int(away_score),
+                                        "is_finished": True
+                                    }}
+                                )
+                                if result.modified_count > 0:
+                                    updated_matches += 1
+            except Exception as e:
+                logging.error(f"Erro ao buscar rodada {round_num}: {e}")
+    
+    # Recalcula pontos de todos os usuários
+    users_updated = await recalculate_all_points()
+    
+    return {
+        "success": True, 
+        "matches_updated": updated_matches,
+        "users_recalculated": users_updated
+    }
+
+
+@api_router.post("/admin/recalculate-points")
+async def admin_recalculate_points():
+    """Força recálculo de pontos de todos os usuários"""
+    users_updated = await recalculate_all_points()
+    return {"success": True, "users_updated": users_updated}
+
+
 @api_router.post("/admin/update-results")
 async def update_match_results(match_id: str, home_score: int, away_score: int):
-    """Atualiza resultado do jogo e recalcula pontos"""
+    """Atualiza resultado de um jogo específico e recalcula pontos"""
     # Atualiza jogo
     await db.matches.update_one(
         {"match_id": match_id},
@@ -247,43 +380,10 @@ async def update_match_results(match_id: str, home_score: int, away_score: int):
         }}
     )
     
-    # Busca jogo atualizado
-    match = await db.matches.find_one({"match_id": match_id}, {"_id": 0})
+    # Recalcula pontos de todos os usuários
+    users_updated = await recalculate_all_points()
     
-    # Busca todos os palpites desse jogo
-    predictions = await db.predictions.find({"match_id": match_id}, {"_id": 0}).to_list(1000)
-    
-    # Recalcula pontos
-    for pred in predictions:
-        points = calculate_points(pred, match)
-        await db.predictions.update_one(
-            {"username": pred['username'], "match_id": match_id},
-            {"$set": {"points": points}}
-        )
-        
-        # Atualiza pontos totais do usuário
-        user = await db.users.find_one({"username": pred['username']}, {"_id": 0})
-        if user:
-            new_total = user.get('total_points', 0) + points
-            
-            # Atualiza streak de acertos perfeitos
-            if points == 5:
-                new_streak = user.get('perfect_streak', 0) + 1
-                new_max_streak = max(new_streak, user.get('max_perfect_streak', 0))
-            else:
-                new_streak = 0
-                new_max_streak = user.get('max_perfect_streak', 0)
-            
-            await db.users.update_one(
-                {"username": pred['username']},
-                {"$set": {
-                    "total_points": new_total,
-                    "perfect_streak": new_streak,
-                    "max_perfect_streak": new_max_streak
-                }}
-            )
-    
-    return {"success": True, "updated_predictions": len(predictions)}
+    return {"success": True, "users_recalculated": users_updated}
 
 # ==================== SEED DATA ====================
 @api_router.post("/admin/seed-data")
