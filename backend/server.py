@@ -22,11 +22,14 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # ==================== WHITELIST ====================
-# Lista dos 70 amigos autorizados (comece com 10, depois adiciona os outros)
+# Lista dos 70 amigos autorizados
 AUTHORIZED_USERS = [
     "Mario", "Marcos", "João", "Pedro", "Carlos", "Lucas", 
     "Rafael", "Bruno", "Fernando", "Ricardo", "Paulo",
-    # Adicione os outros 60 nomes aqui quando tiver todos
+    "Anderson", "Gabriel", "Felipe", "Rodrigo", "Thiago",
+    "Marcelo", "Diego", "Matheus", "Vinicius", "Gustavo",
+    "Leonardo", "André", "Alexandre", "Renato", "Fabio",
+    # Adicione os outros 45 nomes dos seus amigos aqui
 ]
 
 # ==================== MODELS ====================
