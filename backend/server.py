@@ -24,7 +24,7 @@ api_router = APIRouter(prefix="/api")
 # ==================== WHITELIST ====================
 # Lista dos 70 amigos autorizados (comece com 10, depois adiciona os outros)
 AUTHORIZED_USERS = [
-    "Mario", "João", "Pedro", "Carlos", "Lucas", 
+    "Mario", "Marcos", "João", "Pedro", "Carlos", "Lucas", 
     "Rafael", "Bruno", "Fernando", "Ricardo", "Paulo",
     # Adicione os outros 60 nomes aqui quando tiver todos
 ]
