@@ -275,12 +275,40 @@ export default function PredictionsPage({ username }) {
                   </div>
 
                   {match.is_finished && (
-                    <div className="mt-3 pt-3 border-t border-paper text-center">
-                      <p className="text-sm text-text-secondary">
-                        Resultado Final: <span className="font-bold text-pitch-green">
-                          {match.home_score} × {match.away_score}
-                        </span>
-                      </p>
+                    <div className="mt-3 pt-3 border-t border-paper">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-text-secondary">
+                          Resultado Final: <span className="font-bold text-pitch-green">
+                            {match.home_score} × {match.away_score}
+                          </span>
+                        </p>
+                        {predictions[match.match_id] && (
+                          <div className="text-right">
+                            {(() => {
+                              const pred = predictions[match.match_id];
+                              let points = 0;
+                              
+                              // Calcula resultado
+                              const realResult = match.home_score > match.away_score ? 'H' : (match.away_score > match.home_score ? 'A' : 'D');
+                              const predResult = pred.home > pred.away ? 'H' : (pred.away > pred.home ? 'A' : 'D');
+                              if (realResult === predResult) points += 3;
+                              if (match.home_score === pred.home) points += 1;
+                              if (match.away_score === pred.away) points += 1;
+                              
+                              return (
+                                <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                                  points === 5 ? 'bg-yellow-500/20 text-yellow-600' :
+                                  points >= 3 ? 'bg-pitch-green/20 text-pitch-green' :
+                                  points > 0 ? 'bg-blue-500/20 text-blue-600' :
+                                  'bg-error/20 text-error'
+                                }`}>
+                                  {points === 5 ? '🎯 ' : ''}{points} {points === 1 ? 'pt' : 'pts'}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
