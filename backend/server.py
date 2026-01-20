@@ -163,11 +163,16 @@ async def get_championships():
 
 @api_router.post("/auth/check-name")
 async def check_name(data: NameCheck):
-    """Verifica se o nome está na whitelist"""
+    """Verifica se o nome e PIN estão corretos"""
+    # Verifica se usuário existe
     if data.username not in AUTHORIZED_USERS:
         raise HTTPException(status_code=403, detail="Nome não autorizado. Entre em contato com o administrador.")
     
-    # Cria usuário se não existir
+    # Verifica se PIN está correto
+    if AUTHORIZED_USERS[data.username] != data.pin:
+        raise HTTPException(status_code=403, detail="PIN incorreto. Tente novamente.")
+    
+    # Cria usuário se não existir no banco
     user = await db.users.find_one({"username": data.username}, {"_id": 0})
     if not user:
         new_user = User(username=data.username)
