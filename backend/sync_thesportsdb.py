@@ -1,6 +1,6 @@
 """
-Sincroniza Campeonato Carioca 2026 com TheSportsDB (100% GRÁTIS)
-Usando endpoint eventsround.php para buscar TODAS as rodadas
+Sincroniza Campeonatos com TheSportsDB (100% GRÁTIS)
+Suporta: Campeonato Carioca e Brasileirão
 """
 
 import asyncio
@@ -21,17 +21,29 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Configurações
-LEAGUE_ID = "5688"  # Campeonato Carioca
-SEASON = "2026"
+# Configurações dos campeonatos
+CHAMPIONSHIPS = {
+    "carioca": {
+        "league_id": "5688",
+        "name": "Campeonato Carioca",
+        "season": "2026",
+        "total_rounds": 11  # Taça Guanabara (6) + Taça Rio (5) aproximadamente
+    },
+    "brasileirao": {
+        "league_id": "4351",
+        "name": "Campeonato Brasileiro",
+        "season": "2026",
+        "total_rounds": 38
+    }
+}
+
 API_KEY = "3"  # API Key pública
-TOTAL_ROUNDS = 6  # Total de rodadas da Taça Guanabara
 
 
-async def fetch_round_events(round_number: int) -> list:
+async def fetch_round_events(league_id: str, season: str, round_number: int) -> list:
     """Busca todos os jogos de uma rodada específica"""
     url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
-    params = {"id": LEAGUE_ID, "r": round_number, "s": SEASON}
+    params = {"id": league_id, "r": round_number, "s": season}
     
     async with httpx.AsyncClient() as client:
         try:
@@ -46,7 +58,7 @@ async def fetch_round_events(round_number: int) -> list:
             return []
 
 
-def parse_event(event: dict) -> dict:
+def parse_event(event: dict, championship: str) -> dict:
     """Converte evento TheSportsDB para formato CallClub"""
     
     # Extrai data/hora do jogo
@@ -84,6 +96,7 @@ def parse_event(event: dict) -> dict:
     
     return {
         "match_id": event["idEvent"],
+        "championship": championship,
         "round_number": round_number,
         "home_team": event.get("strHomeTeam", ""),
         "away_team": event.get("strAwayTeam", ""),
@@ -96,19 +109,24 @@ def parse_event(event: dict) -> dict:
     }
 
 
-async def sync_carioca_thesportsdb():
-    """Sincroniza Carioca 2026 com TheSportsDB - TODAS as rodadas"""
+async def sync_championship(championship_key: str):
+    """Sincroniza um campeonato específico"""
     
-    print("🏆 CALLCLUB - SINCRONIZANDO CARIOCA 2026 (TheSportsDB)\n")
-    print(f"📡 Buscando {TOTAL_ROUNDS} rodadas...\n")
+    config = CHAMPIONSHIPS.get(championship_key)
+    if not config:
+        print(f"❌ Campeonato '{championship_key}' não encontrado")
+        return
+    
+    print(f"\n🏆 SINCRONIZANDO: {config['name']} {config['season']}")
+    print(f"📡 Buscando até {config['total_rounds']} rodadas...\n")
     
     all_matches = []
     rounds_data = {}
     
     # Busca cada rodada individualmente
-    for round_num in range(1, TOTAL_ROUNDS + 1):
-        print(f"  Buscando Rodada {round_num}...", end=" ")
-        events = await fetch_round_events(round_num)
+    for round_num in range(1, config['total_rounds'] + 1):
+        print(f"  Rodada {round_num}...", end=" ")
+        events = await fetch_round_events(config['league_id'], config['season'], round_num)
         
         if events:
             print(f"✅ {len(events)} jogos")
@@ -116,27 +134,27 @@ async def sync_carioca_thesportsdb():
             
             for event in events:
                 try:
-                    parsed = parse_event(event)
+                    parsed = parse_event(event, championship_key)
                     all_matches.append(parsed)
                     rounds_data[round_num].append(parsed)
                 except Exception as e:
                     print(f"    ⚠️ Erro ao processar evento: {e}")
         else:
-            print("❌ Nenhum jogo")
+            print("- (sem jogos)")
     
     if not all_matches:
-        print("\n❌ Nenhum jogo encontrado em nenhuma rodada!")
+        print(f"\n❌ Nenhum jogo encontrado para {config['name']}!")
         return
     
-    print(f"\n✅ Total: {len(all_matches)} jogos em {len(rounds_data)} rodadas\n")
+    print(f"\n✅ Total: {len(all_matches)} jogos em {len(rounds_data)} rodadas")
     
-    # Limpa dados antigos
-    print("🗑️  Limpando dados antigos...")
-    await db.matches.delete_many({})
-    await db.rounds.delete_many({})
+    # Remove dados antigos deste campeonato
+    print(f"\n🗑️  Removendo dados antigos de {config['name']}...")
+    await db.matches.delete_many({"championship": championship_key})
+    await db.rounds.delete_many({"championship": championship_key})
     
     # Salva no banco
-    print("💾 Salvando no MongoDB...\n")
+    print("💾 Salvando no MongoDB...")
     
     current_round_set = False
     
@@ -158,6 +176,7 @@ async def sync_carioca_thesportsdb():
         
         # Cria rodada
         round_doc = {
+            "championship": championship_key,
             "round_number": round_num,
             "is_current": is_current,
             "deadline": first_match_date
@@ -167,35 +186,39 @@ async def sync_carioca_thesportsdb():
         # Salva jogos
         for match in round_matches:
             await db.matches.insert_one(match)
-        
-        # Status da rodada
-        finished_count = sum(1 for m in round_matches if m["is_finished"])
-        status_emoji = "✅" if finished_count == len(round_matches) else "⏳"
-        current_label = " (ATUAL)" if is_current else ""
-        
-        print(f"   {status_emoji} Rodada {round_num}{current_label}: {len(round_matches)} jogos ({finished_count} finalizados)")
-        
-        # Mostra alguns jogos
-        for match in round_matches[:3]:
-            home = match['home_team']
-            away = match['away_team']
-            date = match['match_date'].strftime("%d/%m %H:%M")
-            
-            if match['is_finished']:
-                result = f"{match['home_score']} x {match['away_score']}"
-                print(f"      ✓ {home} {result} {away} - {date}")
-            else:
-                print(f"      • {home} vs {away} - {date}")
-        
-        if len(round_matches) > 3:
-            print(f"      ... e mais {len(round_matches) - 3} jogos")
-        print()
     
-    print(f"🎉 SINCRONIZAÇÃO COMPLETA!")
-    print(f"   - {len(all_matches)} jogos salvos")
-    print(f"   - {len(rounds_data)} rodadas criadas")
-    print(f"\n🔥 CallClub atualizado com dados REAIS do Carioca 2026!")
+    print(f"🎉 {config['name']} sincronizado com sucesso!")
+    return len(all_matches)
+
+
+async def sync_all():
+    """Sincroniza todos os campeonatos"""
+    
+    print("=" * 60)
+    print("🏆 CALLCLUB - SINCRONIZAÇÃO DE CAMPEONATOS")
+    print("=" * 60)
+    
+    total_matches = 0
+    
+    for champ_key in CHAMPIONSHIPS.keys():
+        count = await sync_championship(champ_key)
+        if count:
+            total_matches += count
+    
+    print("\n" + "=" * 60)
+    print(f"✅ SINCRONIZAÇÃO COMPLETA!")
+    print(f"📊 Total geral: {total_matches} jogos")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
-    asyncio.run(sync_carioca_thesportsdb())
+    # Permite sincronizar um campeonato específico ou todos
+    if len(sys.argv) > 1:
+        champ = sys.argv[1].lower()
+        if champ in CHAMPIONSHIPS:
+            asyncio.run(sync_championship(champ))
+        else:
+            print(f"Uso: python sync_thesportsdb.py [carioca|brasileirao]")
+            print(f"Sem argumentos: sincroniza todos")
+    else:
+        asyncio.run(sync_all())
