@@ -1,75 +1,99 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Trophy, Clock, CalendarBlank } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { Trophy, Clock, Lock, Check, Fire, Users } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function PredictionsPage({ username }) {
-  const [currentRound, setCurrentRound] = useState(null);
+  const [championships, setChampionships] = useState([]);
+  const [selectedChampionship, setSelectedChampionship] = useState("carioca");
   const [allRounds, setAllRounds] = useState([]);
   const [selectedRound, setSelectedRound] = useState(null);
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
+  const [popularPredictions, setPopularPredictions] = useState({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState({});
 
   useEffect(() => {
-    loadData();
+    loadChampionships();
   }, []);
 
   useEffect(() => {
-    if (selectedRound) {
-      loadMatchesForRound(selectedRound);
+    if (selectedChampionship) {
+      loadRounds();
     }
-  }, [selectedRound]);
+  }, [selectedChampionship]);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (selectedRound) {
+      loadMatches();
+    }
+  }, [selectedRound, selectedChampionship]);
+
+  const loadChampionships = async () => {
     try {
-      const roundRes = await axios.get(`${API}/rounds/current`);
-      const roundNum = roundRes.data.round_number;
-      
-      setCurrentRound(roundRes.data);
-      setSelectedRound(roundNum);
-
-      // Busca todas as rodadas para o filtro
-      const allRoundsRes = await axios.get(`${API}/rounds/all`);
-      setAllRounds(allRoundsRes.data || []);
-
-      await loadMatchesForRound(roundNum);
+      const res = await axios.get(`${API}/championships`);
+      setChampionships(res.data || []);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      toast.error("Erro ao carregar jogos");
+      console.error("Erro ao carregar campeonatos:", error);
+    }
+  };
+
+  const loadRounds = async () => {
+    setLoading(true);
+    try {
+      const [roundsRes, currentRes] = await Promise.all([
+        axios.get(`${API}/rounds/all?championship=${selectedChampionship}`),
+        axios.get(`${API}/rounds/current?championship=${selectedChampionship}`)
+      ]);
+
+      setAllRounds(roundsRes.data || []);
+      const currentRoundNum = currentRes.data?.round_number || 1;
+      setSelectedRound(currentRoundNum);
+    } catch (error) {
+      console.error("Erro ao carregar rodadas:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMatchesForRound = async (roundNum) => {
+  const loadMatches = async () => {
     try {
-      const [matchesRes, predsRes] = await Promise.all([
-        axios.get(`${API}/matches/${roundNum}`),
-        axios.get(`${API}/predictions/${username}?round_number=${roundNum}`)
+      const [matchesRes, predictionsRes] = await Promise.all([
+        axios.get(`${API}/matches/${selectedRound}?championship=${selectedChampionship}`),
+        axios.get(`${API}/predictions/${username}?round_number=${selectedRound}&championship=${selectedChampionship}`)
       ]);
 
-      setMatches(matchesRes.data);
-
-      // Converte palpites existentes para objeto
-      const existingPreds = {};
-      predsRes.data.forEach(pred => {
-        existingPreds[pred.match_id] = {
-          home: pred.home_prediction,
-          away: pred.away_prediction
+      setMatches(matchesRes.data || []);
+      
+      // Converte palpites em objeto por match_id
+      const predsMap = {};
+      (predictionsRes.data || []).forEach(p => {
+        predsMap[p.match_id] = {
+          home: p.home_prediction,
+          away: p.away_prediction
         };
       });
-      setPredictions(existingPreds);
+      setPredictions(predsMap);
+
+      // Carrega palpites populares
+      if (matchesRes.data && matchesRes.data.length > 0) {
+        const matchIds = matchesRes.data.map(m => m.match_id).join(',');
+        try {
+          const popularRes = await axios.get(`${API}/matches/popular-predictions/batch?match_ids=${matchIds}`);
+          setPopularPredictions(popularRes.data || {});
+        } catch (err) {
+          console.error("Erro ao carregar palpites populares:", err);
+        }
+      }
     } catch (error) {
       console.error("Erro ao carregar jogos:", error);
     }
   };
 
-  const handlePredictionChange = (matchId, team, value) => {
+  const handlePrediction = (matchId, team, value) => {
     const numValue = parseInt(value) || 0;
     setPredictions(prev => ({
       ...prev,
@@ -80,30 +104,35 @@ export default function PredictionsPage({ username }) {
     }));
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const promises = Object.entries(predictions).map(([matchId, pred]) => {
-        if (pred.home !== undefined && pred.away !== undefined) {
-          return axios.post(`${API}/predictions`, {
-            username,
-            match_id: matchId,
-            round_number: selectedRound,
-            home_prediction: pred.home,
-            away_prediction: pred.away
-          });
-        }
-        return null;
-      }).filter(Boolean);
+  const savePrediction = async (match) => {
+    const pred = predictions[match.match_id];
+    if (pred?.home === undefined || pred?.away === undefined) return;
 
-      await Promise.all(promises);
-      toast.success("Palpites salvos com sucesso! 🎉");
+    setSaving(prev => ({ ...prev, [match.match_id]: true }));
+
+    try {
+      await axios.post(`${API}/predictions`, {
+        username,
+        match_id: match.match_id,
+        championship: selectedChampionship,
+        round_number: selectedRound,
+        home_prediction: pred.home,
+        away_prediction: pred.away
+      });
+      
+      // Recarrega palpites populares após salvar
+      setTimeout(() => loadMatches(), 500);
     } catch (error) {
-      console.error("Erro ao salvar:", error);
-      toast.error("Erro ao salvar palpites");
+      console.error("Erro ao salvar palpite:", error);
     } finally {
-      setSaving(false);
+      setSaving(prev => ({ ...prev, [match.match_id]: false }));
     }
+  };
+
+  const isMatchLocked = (match) => {
+    const now = new Date();
+    const matchDate = new Date(match.match_date);
+    return now >= matchDate || match.is_finished;
   };
 
   const formatMatchDate = (dateString) => {
@@ -112,220 +141,263 @@ export default function PredictionsPage({ username }) {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
-    return { date: `${day}/${month}`, time: `${hours}h${minutes}` };
+    return `${day}/${month} às ${hours}h${minutes}`;
   };
 
-  const isMatchLocked = (matchDate) => {
-    return new Date(matchDate) <= new Date();
-  };
-
-  const getTimeUntilMatch = (matchDate) => {
+  const getTimeRemaining = (dateString) => {
     const now = new Date();
-    const match = new Date(matchDate);
-    const diff = match - now;
+    const matchDate = new Date(dateString);
+    const diff = matchDate - now;
 
-    if (diff <= 0) return "Jogo iniciado";
+    if (diff <= 0) return null;
 
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-    if (days > 0) return `Falta ${days}d ${hours}h`;
-    if (hours > 0) return `Falta ${hours}h ${minutes}min`;
-    return `Falta ${minutes} minutos`;
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h`;
+    }
+    return `${hours}h ${minutes}m`;
   };
 
   if (loading) {
-    return <div className="text-center py-20">Carregando...</div>;
+    return (
+      <div className="text-center py-20">
+        <div className="animate-spin w-8 h-8 border-4 border-pitch-green border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-text-secondary">Carregando jogos...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header com Seletores */}
       <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <Trophy size={32} weight="fill" className="text-pitch-green" />
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-text-primary">
-                Campeonato Carioca 2026
-              </h1>
-              <p className="text-text-secondary">Faça seus palpites</p>
-            </div>
-          </div>
-
-          {/* Filtro de Rodadas */}
-          {allRounds.length > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-secondary">Rodada:</label>
-              <select
-                value={selectedRound || ''}
-                onChange={(e) => setSelectedRound(parseInt(e.target.value))}
-                data-testid="round-filter"
-                className="px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
-              >
-                {allRounds.map((round) => (
-                  <option key={round.round_number} value={round.round_number}>
-                    Rodada {round.round_number}
-                    {round.is_current && " (Atual)"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+        <div className="flex items-center gap-3 mb-6">
+          <Trophy size={32} weight="fill" className="text-pitch-green" />
+          <h1 className="font-heading text-3xl font-bold text-text-primary">
+            Palpites
+          </h1>
         </div>
 
-        {matches.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-text-secondary mb-4">Nenhum jogo disponível ainda.</p>
-            <button
-              onClick={async () => {
-                await axios.post(`${API}/admin/seed-data`);
-                toast.success("Dados criados!");
-                loadData();
-              }}
-              className="bg-pitch-green text-bone px-6 py-2 rounded-lg"
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Seletor de Campeonato */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Campeonato
+            </label>
+            <select
+              value={selectedChampionship}
+              onChange={(e) => setSelectedChampionship(e.target.value)}
+              data-testid="championship-filter"
+              className="w-full px-4 py-3 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
             >
-              Criar Jogos de Exemplo
-            </button>
+              {championships.map((champ) => (
+                <option key={champ.id} value={champ.id}>
+                  {champ.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Seletor de Rodada */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Rodada
+            </label>
+            <select
+              value={selectedRound || ''}
+              onChange={(e) => setSelectedRound(parseInt(e.target.value))}
+              data-testid="round-filter"
+              className="w-full px-4 py-3 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
+            >
+              {allRounds.map((round) => (
+                <option key={round.round_number} value={round.round_number}>
+                  Rodada {round.round_number}
+                  {round.is_current && " (Atual)"}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Jogos */}
+      <div className="space-y-4">
+        {matches.length === 0 ? (
+          <div className="bg-white rounded-xl p-8 text-center">
+            <p className="text-text-secondary">
+              Nenhum jogo encontrado para esta rodada.
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {matches.map((match) => {
-              const { date, time } = formatMatchDate(match.match_date);
-              const locked = isMatchLocked(match.match_date);
-              const timeRemaining = getTimeUntilMatch(match.match_date);
+          matches.map((match) => {
+            const locked = isMatchLocked(match);
+            const pred = predictions[match.match_id] || {};
+            const hasPrediction = pred.home !== undefined && pred.away !== undefined;
+            const timeRemaining = getTimeRemaining(match.match_date);
+            const popular = popularPredictions[match.match_id];
 
-              return (
-                <div
-                  key={match.match_id}
-                  data-testid={`match-${match.match_id}`}
-                  className={`bg-paper rounded-lg p-6 border-2 transition-all ${
-                    locked 
-                      ? "border-text-secondary/30 opacity-75" 
-                      : "border-paper hover:border-pitch-green"
-                  }`}
-                >
-                  {/* Rodada, Data e Horário */}
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-paper">
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2 bg-pitch-green/10 px-3 py-1 rounded-lg">
-                        <Trophy size={14} weight="fill" className="text-pitch-green" />
-                        <span className="font-bold text-pitch-green">Rodada {match.round_number}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-text-secondary">
-                        <CalendarBlank size={16} weight="bold" />
-                        <span className="font-semibold">{date}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-text-secondary">
-                        <Clock size={16} weight="bold" />
-                        <span className="font-semibold">{time}</span>
-                      </div>
-                    </div>
-                    <div className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                      locked 
-                        ? "bg-error/10 text-error" 
-                        : "bg-warning/10 text-warning"
-                    }`}>
-                      {locked ? "🔒 Palpites fechados" : timeRemaining}
-                    </div>
+            return (
+              <div
+                key={match.match_id}
+                data-testid={`match-${match.match_id}`}
+                className={`bg-white rounded-xl p-6 shadow-lg border-2 transition-all ${
+                  locked ? "border-gray-200 bg-gray-50" : "border-paper hover:border-pitch-green"
+                }`}
+              >
+                {/* Header do Jogo */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <Clock size={16} />
+                    <span>{formatMatchDate(match.match_date)}</span>
                   </div>
-
-                  {/* Placar */}
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    {/* Time Casa */}
-                    <div className="flex-1 text-right">
-                      <p className="font-heading text-lg font-bold text-text-primary">
-                        {match.home_team}
-                      </p>
+                  
+                  {locked ? (
+                    <div className="flex items-center gap-1 text-error text-sm font-medium">
+                      <Lock size={16} weight="bold" />
+                      <span>Palpites fechados</span>
                     </div>
-
-                    {/* Inputs de Placar */}
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        data-testid={`home-score-${match.match_id}`}
-                        value={predictions[match.match_id]?.home ?? ""}
-                        onChange={(e) => handlePredictionChange(match.match_id, "home", e.target.value)}
-                        className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20 disabled:bg-text-secondary/10 disabled:cursor-not-allowed"
-                        placeholder="0"
-                        disabled={match.is_finished || locked}
-                      />
-                      <span className="text-2xl font-bold text-text-secondary">×</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        data-testid={`away-score-${match.match_id}`}
-                        value={predictions[match.match_id]?.away ?? ""}
-                        onChange={(e) => handlePredictionChange(match.match_id, "away", e.target.value)}
-                        className="w-16 h-16 text-center text-2xl font-mono font-bold border-2 border-paper rounded-lg focus:border-pitch-green focus:ring-2 focus:ring-pitch-green/20 disabled:bg-text-secondary/10 disabled:cursor-not-allowed"
-                        placeholder="0"
-                        disabled={match.is_finished || locked}
-                      />
-                    </div>
-
-                    {/* Time Visitante */}
-                    <div className="flex-1">
-                      <p className="font-heading text-lg font-bold text-text-primary">
-                        {match.away_team}
-                      </p>
-                    </div>
-                  </div>
-
-                  {match.is_finished && (
-                    <div className="mt-3 pt-3 border-t border-paper">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-text-secondary">
-                          Resultado Final: <span className="font-bold text-pitch-green">
-                            {match.home_score} × {match.away_score}
-                          </span>
-                        </p>
-                        {predictions[match.match_id] && (
-                          <div className="text-right">
-                            {(() => {
-                              const pred = predictions[match.match_id];
-                              let points = 0;
-                              
-                              // Calcula resultado
-                              const realResult = match.home_score > match.away_score ? 'H' : (match.away_score > match.home_score ? 'A' : 'D');
-                              const predResult = pred.home > pred.away ? 'H' : (pred.away > pred.home ? 'A' : 'D');
-                              if (realResult === predResult) points += 3;
-                              if (match.home_score === pred.home) points += 1;
-                              if (match.away_score === pred.away) points += 1;
-                              
-                              return (
-                                <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                                  points === 5 ? 'bg-yellow-500/20 text-yellow-600' :
-                                  points >= 3 ? 'bg-pitch-green/20 text-pitch-green' :
-                                  points > 0 ? 'bg-blue-500/20 text-blue-600' :
-                                  'bg-error/20 text-error'
-                                }`}>
-                                  {points === 5 ? '🎯 ' : ''}{points} {points === 1 ? 'pt' : 'pts'}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
+                  ) : timeRemaining && (
+                    <div className="flex items-center gap-1 text-warning text-sm font-medium">
+                      <Fire size={16} weight="fill" />
+                      <span>Fecha em {timeRemaining}</span>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
 
-        {matches.length > 0 && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            data-testid="save-predictions-button"
-            className="mt-6 w-full bg-pitch-green text-bone font-bold py-4 rounded-lg hover:bg-pitch-green/90 disabled:opacity-50 transition-all transform hover:scale-105 active:scale-95"
-          >
-            {saving ? "Salvando..." : "Salvar Palpites"}
-          </button>
+                {/* Times e Placar */}
+                <div className="flex items-center justify-between gap-4">
+                  {/* Time Casa */}
+                  <div className="flex-1 text-center">
+                    <p className="font-heading font-bold text-text-primary text-lg mb-2">
+                      {match.home_team}
+                    </p>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={pred.home ?? ''}
+                      onChange={(e) => handlePrediction(match.match_id, 'home', e.target.value)}
+                      disabled={locked}
+                      data-testid={`home-score-${match.match_id}`}
+                      className={`w-16 h-16 text-center text-2xl font-mono font-bold rounded-lg border-2 ${
+                        locked 
+                          ? "bg-gray-100 border-gray-200 text-gray-500" 
+                          : "border-paper focus:border-pitch-green focus:ring-2 focus:ring-pitch-green"
+                      }`}
+                    />
+                  </div>
+
+                  {/* VS */}
+                  <div className="text-2xl font-bold text-text-secondary">×</div>
+
+                  {/* Time Fora */}
+                  <div className="flex-1 text-center">
+                    <p className="font-heading font-bold text-text-primary text-lg mb-2">
+                      {match.away_team}
+                    </p>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      value={pred.away ?? ''}
+                      onChange={(e) => handlePrediction(match.match_id, 'away', e.target.value)}
+                      disabled={locked}
+                      data-testid={`away-score-${match.match_id}`}
+                      className={`w-16 h-16 text-center text-2xl font-mono font-bold rounded-lg border-2 ${
+                        locked 
+                          ? "bg-gray-100 border-gray-200 text-gray-500" 
+                          : "border-paper focus:border-pitch-green focus:ring-2 focus:ring-pitch-green"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Palpite mais votado */}
+                {popular && !locked && (
+                  <div className="mt-4 pt-4 border-t border-paper">
+                    <div className="flex items-center justify-center gap-2 text-sm">
+                      <Users size={16} className="text-pitch-green" />
+                      <span className="text-text-secondary">Palpite mais votado:</span>
+                      <span className="font-bold text-pitch-green">
+                        {popular.home_prediction} × {popular.away_prediction}
+                      </span>
+                      <span className="text-text-secondary">
+                        ({popular.count} {popular.count === 1 ? 'pessoa' : 'pessoas'})
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Resultado Final e Pontos */}
+                {match.is_finished && (
+                  <div className="mt-4 pt-4 border-t border-paper">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-text-secondary">
+                        Resultado Final: <span className="font-bold text-pitch-green">
+                          {match.home_score} × {match.away_score}
+                        </span>
+                      </p>
+                      {predictions[match.match_id] && (
+                        <div className="text-right">
+                          {(() => {
+                            const predMatch = predictions[match.match_id];
+                            let points = 0;
+                            
+                            // Calcula resultado
+                            const realResult = match.home_score > match.away_score ? 'H' : (match.away_score > match.home_score ? 'A' : 'D');
+                            const predResult = predMatch.home > predMatch.away ? 'H' : (predMatch.away > predMatch.home ? 'A' : 'D');
+                            if (realResult === predResult) points += 3;
+                            if (match.home_score === predMatch.home) points += 1;
+                            if (match.away_score === predMatch.away) points += 1;
+                            
+                            return (
+                              <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                                points === 5 ? 'bg-yellow-500/20 text-yellow-600' :
+                                points >= 3 ? 'bg-pitch-green/20 text-pitch-green' :
+                                points > 0 ? 'bg-blue-500/20 text-blue-600' :
+                                'bg-error/20 text-error'
+                              }`}>
+                                {points === 5 ? '🎯 ' : ''}{points} {points === 1 ? 'pt' : 'pts'}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botão Salvar */}
+                {!locked && (
+                  <button
+                    onClick={() => savePrediction(match)}
+                    disabled={!hasPrediction || saving[match.match_id]}
+                    data-testid={`save-${match.match_id}`}
+                    className={`mt-4 w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                      hasPrediction
+                        ? "bg-pitch-green text-bone hover:bg-pitch-green/90"
+                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    {saving[match.match_id] ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-bone border-t-transparent rounded-full animate-spin"></div>
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={20} weight="bold" />
+                        {predictions[match.match_id]?.home !== undefined ? "Atualizar Palpite" : "Salvar Palpite"}
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
