@@ -180,10 +180,140 @@ def calculate_points(prediction: dict, match: dict) -> int:
 async def get_championships():
     """Retorna lista de campeonatos disponíveis"""
     return [
-        {"id": "carioca", "name": "Campeonato Carioca 2026"},
-        {"id": "brasileirao", "name": "Campeonato Brasileiro 2026"}
+        {"id": "carioca", "name": "Campeonato Carioca 2026", "premium": False},
+        {"id": "brasileirao", "name": "Campeonato Brasileiro 2026", "premium": True}
     ]
 
+# ========== SISTEMA PREMIUM ==========
+@api_router.get("/premium/status/{username}")
+async def get_premium_status(username: str):
+    """Verifica se usuário é premium"""
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    is_premium = user.get("is_premium", False) if user else False
+    return {"username": username, "is_premium": is_premium}
+
+@api_router.post("/premium/activate")
+async def activate_premium(data: PremiumKeyActivation):
+    """Ativa chave premium para usuário"""
+    key = data.key.upper().strip()
+    username = data.username
+    
+    # Verifica se a chave existe
+    if key not in PREMIUM_KEYS:
+        # Loga tentativa de chave inválida
+        await db.security_logs.insert_one({
+            "type": "invalid_key",
+            "username": username,
+            "attempted_key": key,
+            "timestamp": datetime.now(timezone.utc)
+        })
+        raise HTTPException(status_code=403, detail="Chave inválida. Verifique e tente novamente.")
+    
+    # Verifica se a chave pertence ao usuário correto
+    key_owner = PREMIUM_KEYS[key]
+    if key_owner != username:
+        # ALERTA DE SEGURANÇA: Tentativa de usar chave de outro!
+        await db.security_logs.insert_one({
+            "type": "stolen_key_attempt",
+            "username": username,
+            "attempted_key": key,
+            "key_owner": key_owner,
+            "timestamp": datetime.now(timezone.utc),
+            "severity": "HIGH"
+        })
+        raise HTTPException(
+            status_code=403, 
+            detail=f"🚫 ACESSO NEGADO. Esta chave pertence a outro membro. Tentativa registrada."
+        )
+    
+    # Ativa premium para o usuário
+    await db.users.update_one(
+        {"username": username},
+        {"$set": {"is_premium": True, "premium_activated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    # Loga ativação bem-sucedida
+    await db.security_logs.insert_one({
+        "type": "premium_activated",
+        "username": username,
+        "key": key,
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": "🎉 Premium ativado com sucesso! Bem-vindo ao Brasileirão!"}
+
+# ========== PAINEL ADMIN ==========
+@api_router.post("/admin/login")
+async def admin_login(data: AdminLogin):
+    """Verifica senha do admin"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Senha incorreta")
+    return {"success": True}
+
+@api_router.get("/admin/users")
+async def admin_get_users(password: str):
+    """Lista todos os usuários (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+    
+    # Adiciona info de chave premium para cada usuário
+    for user in users:
+        username = user.get("username")
+        # Procura se tem chave
+        user_key = None
+        for key, owner in PREMIUM_KEYS.items():
+            if owner == username:
+                user_key = key
+                break
+        user["premium_key"] = user_key
+    
+    return users
+
+@api_router.get("/admin/security-logs")
+async def admin_get_security_logs(password: str):
+    """Lista logs de segurança (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    logs = await db.security_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(100)
+    return logs
+
+@api_router.post("/admin/ban-user")
+async def admin_ban_user(password: str, username: str):
+    """Bane um usuário (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    await db.users.update_one(
+        {"username": username},
+        {"$set": {"is_banned": True, "banned_at": datetime.now(timezone.utc)}}
+    )
+    
+    await db.security_logs.insert_one({
+        "type": "user_banned",
+        "username": username,
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": f"Usuário {username} banido com sucesso"}
+
+@api_router.post("/admin/unban-user")
+async def admin_unban_user(password: str, username: str):
+    """Remove ban de um usuário (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    await db.users.update_one(
+        {"username": username},
+        {"$set": {"is_banned": False}}
+    )
+    
+    return {"success": True, "message": f"Ban removido de {username}"}
+
+# ========== AUTENTICAÇÃO ==========
 @api_router.post("/auth/check-name")
 async def check_name(data: NameCheck):
     """Verifica se o nome e PIN estão corretos"""
@@ -195,8 +325,12 @@ async def check_name(data: NameCheck):
     if AUTHORIZED_USERS[data.username] != data.pin:
         raise HTTPException(status_code=403, detail="PIN incorreto. Tente novamente.")
     
-    # Cria usuário se não existir no banco
+    # Verifica se usuário está banido
     user = await db.users.find_one({"username": data.username}, {"_id": 0})
+    if user and user.get("is_banned"):
+        raise HTTPException(status_code=403, detail="🚫 Sua conta foi suspensa. Entre em contato com o administrador.")
+    
+    # Cria usuário se não existir no banco
     if not user:
         new_user = User(username=data.username)
         await db.users.insert_one(new_user.model_dump())
