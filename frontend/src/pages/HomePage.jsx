@@ -564,7 +564,7 @@ export default function HomePage({ username }) {
           <Sparkle size={24} weight="fill" className="text-yellow-500" />
           Como Funciona
         </h3>
-        <div className="grid md:grid-cols-4 gap-4">
+        <div className="grid md:grid-cols-5 gap-4">
           <div className="text-center p-4 bg-paper rounded-xl">
             <div className="w-12 h-12 bg-pitch-green/10 rounded-full flex items-center justify-center mx-auto mb-3">
               <span className="text-2xl font-bold text-pitch-green">3</span>
@@ -588,6 +588,12 @@ export default function HomePage({ username }) {
               <span className="text-2xl font-bold text-yellow-600">5</span>
             </div>
             <p className="text-sm text-text-secondary">pts máximo (placar exato!)</p>
+          </div>
+          <div className="text-center p-4 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border-2 border-orange-200">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Fire size={24} weight="fill" className="text-white" />
+            </div>
+            <p className="text-sm text-text-secondary font-medium">Desempate: maior sequência de placares exatos</p>
           </div>
         </div>
       </div>
