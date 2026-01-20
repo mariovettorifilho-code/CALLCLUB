@@ -62,6 +62,7 @@ export default function ProfilePage({ username }) {
   const [userData, setUserData] = useState(null);
   const [allRounds, setAllRounds] = useState([]);
   const [selectedRound, setSelectedRound] = useState("all");
+  const [selectedChampionship, setSelectedChampionship] = useState("all");
   const [loading, setLoading] = useState(true);
   const [userAchievements, setUserAchievements] = useState([]);
 
