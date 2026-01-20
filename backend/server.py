@@ -526,13 +526,22 @@ async def get_round_ranking(round_number: int, championship: str = "carioca"):
         "championship": championship
     }, {"_id": 0}).to_list(1000)
     
+    # Busca info de premium de todos os usuários
+    users = await db.users.find({}, {"_id": 0, "username": 1, "is_premium": 1}).to_list(1000)
+    user_premium = {u['username']: u.get('is_premium', False) for u in users}
+    
     # Agrupa por usuário e soma pontos
     user_points = {}
     for pred in predictions:
         username = pred['username']
         points = pred.get('points', 0)
         if username not in user_points:
-            user_points[username] = {"username": username, "points": 0, "perfect_count": 0}
+            user_points[username] = {
+                "username": username, 
+                "points": 0, 
+                "perfect_count": 0,
+                "is_premium": user_premium.get(username, False)
+            }
         user_points[username]['points'] += points
         if points == 5:
             user_points[username]['perfect_count'] += 1
