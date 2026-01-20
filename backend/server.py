@@ -534,7 +534,7 @@ async def get_round_ranking(round_number: int, championship: str = "carioca"):
     user_points = {}
     for pred in predictions:
         username = pred['username']
-        points = pred.get('points', 0)
+        points = pred.get('points') or 0  # Garante que None vira 0
         if username not in user_points:
             user_points[username] = {
                 "username": username, 
