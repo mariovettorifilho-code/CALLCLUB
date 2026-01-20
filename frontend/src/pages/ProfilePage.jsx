@@ -111,7 +111,7 @@ export default function ProfilePage({ username }) {
       achievements.push("premium");
     }
     
-    // Em Chamas - 3+ acertos seguidos (simplificado: se tem sequência > 0)
+    // Em Chamas - 3+ acertos seguidos
     if (user.max_perfect_streak >= 3) {
       achievements.push("on_fire");
     }
@@ -121,12 +121,28 @@ export default function ProfilePage({ username }) {
       achievements.push("perfect_round");
     }
     
-    // Membro fundador (primeiros usuários - simulado)
-    if (["Mario", "Marcos"].includes(username)) {
-      achievements.push("founding_member");
+    // Pioneiro - primeiros 100 usuários (baseado no número do pioneer_number)
+    if (user.pioneer_number && user.pioneer_number <= 100) {
+      achievements.push("pioneer");
     }
     
     setUserAchievements(achievements);
+  };
+
+  // Função para gerar descrição especial do Pioneiro
+  const getPioneerDescription = (pioneerNumber) => {
+    if (!pioneerNumber) return "";
+    
+    const messages = [
+      `#${pioneerNumber} dos 100 Pioneiros. Você faz parte da história do CallClub.`,
+      `Palpiteiro #${pioneerNumber}. Quando outros chegarem, você já era lenda.`,
+      `#${pioneerNumber} na escalação original. Os primeiros 100 nunca serão esquecidos.`,
+      `Pioneiro #${pioneerNumber}. Você acreditou antes de todos.`,
+      `#${pioneerNumber} do clube. Sua presença construiu esse lugar.`
+    ];
+    
+    // Usa o número do pioneiro para escolher uma mensagem consistente
+    return messages[pioneerNumber % messages.length];
   };
 
   if (loading) {
