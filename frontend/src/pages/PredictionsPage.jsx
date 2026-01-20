@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Trophy, Clock, Lock, Check, Fire, Users } from "@phosphor-icons/react";
+import { Trophy, Clock, Lock, Check, Fire, Users, Star, Key } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,22 +15,68 @@ export default function PredictionsPage({ username }) {
   const [popularPredictions, setPopularPredictions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
+  
+  // Premium state
+  const [isPremium, setIsPremium] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumKey, setPremiumKey] = useState("");
+  const [premiumError, setPremiumError] = useState("");
+  const [activatingPremium, setActivatingPremium] = useState(false);
 
   useEffect(() => {
     loadChampionships();
+    checkPremiumStatus();
   }, []);
 
   useEffect(() => {
     if (selectedChampionship) {
-      loadRounds();
+      // Verifica se precisa de premium
+      const champ = championships.find(c => c.id === selectedChampionship);
+      if (champ?.premium && !isPremium) {
+        setShowPremiumModal(true);
+      } else {
+        setShowPremiumModal(false);
+        loadRounds();
+      }
     }
-  }, [selectedChampionship]);
+  }, [selectedChampionship, isPremium, championships]);
 
   useEffect(() => {
-    if (selectedRound) {
+    if (selectedRound && !showPremiumModal) {
       loadMatches();
     }
-  }, [selectedRound, selectedChampionship]);
+  }, [selectedRound, selectedChampionship, showPremiumModal]);
+
+  const checkPremiumStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/premium/status/${username}`);
+      setIsPremium(res.data.is_premium);
+    } catch (error) {
+      console.error("Erro ao verificar premium:", error);
+    }
+  };
+
+  const activatePremiumKey = async () => {
+    setActivatingPremium(true);
+    setPremiumError("");
+    
+    try {
+      const res = await axios.post(`${API}/premium/activate`, {
+        username,
+        key: premiumKey
+      });
+      
+      if (res.data.success) {
+        setIsPremium(true);
+        setShowPremiumModal(false);
+        setPremiumKey("");
+      }
+    } catch (error) {
+      setPremiumError(error.response?.data?.detail || "Erro ao ativar chave");
+    } finally {
+      setActivatingPremium(false);
+    }
+  };
 
   const loadChampionships = async () => {
     try {
@@ -68,7 +114,6 @@ export default function PredictionsPage({ username }) {
 
       setMatches(matchesRes.data || []);
       
-      // Converte palpites em objeto por match_id
       const predsMap = {};
       (predictionsRes.data || []).forEach(p => {
         predsMap[p.match_id] = {
@@ -78,7 +123,6 @@ export default function PredictionsPage({ username }) {
       });
       setPredictions(predsMap);
 
-      // Carrega palpites populares
       if (matchesRes.data && matchesRes.data.length > 0) {
         const matchIds = matchesRes.data.map(m => m.match_id).join(',');
         try {
@@ -120,7 +164,6 @@ export default function PredictionsPage({ username }) {
         away_prediction: pred.away
       });
       
-      // Recarrega palpites populares após salvar
       setTimeout(() => loadMatches(), 500);
     } catch (error) {
       console.error("Erro ao salvar palpite:", error);
@@ -161,6 +204,78 @@ export default function PredictionsPage({ username }) {
     return `${hours}h ${minutes}m`;
   };
 
+  // Modal Premium
+  if (showPremiumModal) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-8 text-white shadow-xl">
+          <div className="flex items-center gap-3 mb-4">
+            <Star size={40} weight="fill" className="text-white" />
+            <h1 className="font-heading text-3xl font-bold">
+              Conteúdo Premium
+            </h1>
+          </div>
+          <p className="text-white/90 text-lg mb-2">
+            O Campeonato Brasileiro é exclusivo para membros premium do CallClub.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-8 shadow-lg border-2 border-yellow-400">
+          <div className="text-center mb-6">
+            <Key size={48} className="mx-auto text-yellow-500 mb-4" />
+            <h2 className="font-heading text-2xl font-bold text-text-primary mb-2">
+              Ative sua Chave do Clube
+            </h2>
+            <p className="text-text-secondary">
+              Digite a chave premium que você recebeu
+            </p>
+          </div>
+
+          <div className="max-w-md mx-auto space-y-4">
+            <input
+              type="text"
+              value={premiumKey}
+              onChange={(e) => setPremiumKey(e.target.value.toUpperCase())}
+              placeholder="NOME-CLUB-XXXX"
+              className="w-full px-4 py-4 border-2 border-paper rounded-lg text-center text-xl font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            />
+
+            {premiumError && (
+              <div className="bg-error/10 border border-error text-error px-4 py-3 rounded-lg text-sm text-center">
+                {premiumError}
+              </div>
+            )}
+
+            <button
+              onClick={activatePremiumKey}
+              disabled={premiumKey.length < 10 || activatingPremium}
+              className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {activatingPremium ? "Ativando..." : "🔓 Ativar Premium"}
+            </button>
+
+            <button
+              onClick={() => {
+                setSelectedChampionship("carioca");
+                setShowPremiumModal(false);
+              }}
+              className="w-full text-text-secondary hover:text-text-primary py-2 transition-colors"
+            >
+              ← Voltar para o Carioca (gratuito)
+            </button>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-paper text-center">
+            <p className="text-xs text-text-secondary">
+              ⚠️ Sua chave é pessoal e intransferível.<br/>
+              Tentativas de uso indevido são registradas e podem resultar em banimento.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="text-center py-20">
@@ -179,6 +294,12 @@ export default function PredictionsPage({ username }) {
           <h1 className="font-heading text-3xl font-bold text-text-primary">
             Palpites
           </h1>
+          {isPremium && (
+            <span className="ml-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+              <Star size={12} weight="fill" />
+              PREMIUM
+            </span>
+          )}
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
@@ -195,7 +316,7 @@ export default function PredictionsPage({ username }) {
             >
               {championships.map((champ) => (
                 <option key={champ.id} value={champ.id}>
-                  {champ.name}
+                  {champ.name} {champ.premium && !isPremium ? "🔒" : champ.premium ? "⭐" : ""}
                 </option>
               ))}
             </select>
@@ -374,7 +495,6 @@ export default function PredictionsPage({ username }) {
                             const predMatch = predictions[match.match_id];
                             let points = 0;
                             
-                            // Calcula resultado
                             const realResult = match.home_score > match.away_score ? 'H' : (match.away_score > match.home_score ? 'A' : 'D');
                             const predResult = predMatch.home > predMatch.away ? 'H' : (predMatch.away > predMatch.home ? 'A' : 'D');
                             if (realResult === predResult) points += 3;
