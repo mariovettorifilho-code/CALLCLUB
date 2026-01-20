@@ -6,6 +6,7 @@ import HomePage from "./pages/HomePage";
 import PredictionsPage from "./pages/PredictionsPage";
 import RankingsPage from "./pages/RankingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./pages/AdminPage";
 import Layout from "./components/Layout";
 
 function App() {
@@ -29,21 +30,29 @@ function App() {
     localStorage.removeItem("callclub_username");
   };
 
-  if (!username) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
   return (
     <BrowserRouter>
-      <Layout username={username} onLogout={handleLogout}>
-        <Routes>
-          <Route path="/" element={<HomePage username={username} />} />
-          <Route path="/predictions" element={<PredictionsPage username={username} />} />
-          <Route path="/rankings" element={<RankingsPage username={username} />} />
-          <Route path="/profile" element={<ProfilePage username={username} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        {/* Admin route - não precisa de login */}
+        <Route path="/admin" element={<AdminPage />} />
+        
+        {/* Rotas protegidas */}
+        <Route path="*" element={
+          !username ? (
+            <LoginPage onLogin={handleLogin} />
+          ) : (
+            <Layout username={username} onLogout={handleLogout}>
+              <Routes>
+                <Route path="/" element={<HomePage username={username} />} />
+                <Route path="/predictions" element={<PredictionsPage username={username} />} />
+                <Route path="/rankings" element={<RankingsPage username={username} />} />
+                <Route path="/profile" element={<ProfilePage username={username} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          )
+        } />
+      </Routes>
     </BrowserRouter>
   );
 }
