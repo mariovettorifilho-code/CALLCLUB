@@ -30,7 +30,7 @@ AUTHORIZED_USERS = {
     "Marcos": "6969",
     "João": "3456",
     "Pedro": "4567",
-    "Carlos": "5678",
+    "Carlos": "1234",
     "Lucas": "6789",
     "Rafael": "7890",
     "Bruno": "8901",
