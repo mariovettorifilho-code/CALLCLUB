@@ -53,12 +53,21 @@ export default function HomePage({ username }) {
     return () => clearInterval(interval);
   }, [nextMatch]);
 
+  const loadChampionships = async () => {
+    try {
+      const res = await axios.get(`${API}/championships`);
+      setChampionships(res.data || []);
+    } catch (error) {
+      console.error("Erro ao carregar campeonatos:", error);
+    }
+  };
+
   const loadData = async () => {
     try {
       const [roundRes, rankingRes, nextMatchRes] = await Promise.all([
-        axios.get(`${API}/rounds/current`),
+        axios.get(`${API}/rounds/current?championship=${selectedChampionship}`),
         axios.get(`${API}/ranking/general`),
-        axios.get(`${API}/matches/next`)
+        axios.get(`${API}/matches/next?championship=${selectedChampionship}`)
       ]);
 
       setCurrentRound(roundRes.data);
