@@ -164,9 +164,18 @@ export default function HomePage({ username }) {
             {/* Teams */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex-1 text-center">
-                <div className="w-16 h-16 mx-auto bg-paper rounded-full flex items-center justify-center mb-2">
-                  <SoccerBall size={32} weight="fill" className="text-pitch-green" />
-                </div>
+                {nextMatch.home_badge ? (
+                  <img 
+                    src={nextMatch.home_badge} 
+                    alt={nextMatch.home_team}
+                    className="w-16 h-16 mx-auto mb-2 object-contain"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 mx-auto bg-paper rounded-full flex items-center justify-center mb-2">
+                    <SoccerBall size={32} weight="fill" className="text-pitch-green" />
+                  </div>
+                )}
                 <p className="font-heading font-bold text-text-primary text-lg">
                   {nextMatch.home_team}
                 </p>
@@ -178,9 +187,18 @@ export default function HomePage({ username }) {
               </div>
               
               <div className="flex-1 text-center">
-                <div className="w-16 h-16 mx-auto bg-paper rounded-full flex items-center justify-center mb-2">
-                  <SoccerBall size={32} weight="fill" className="text-terracotta" />
-                </div>
+                {nextMatch.away_badge ? (
+                  <img 
+                    src={nextMatch.away_badge} 
+                    alt={nextMatch.away_team}
+                    className="w-16 h-16 mx-auto mb-2 object-contain"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 mx-auto bg-paper rounded-full flex items-center justify-center mb-2">
+                    <SoccerBall size={32} weight="fill" className="text-terracotta" />
+                  </div>
+                )}
                 <p className="font-heading font-bold text-text-primary text-lg">
                   {nextMatch.away_team}
                 </p>
