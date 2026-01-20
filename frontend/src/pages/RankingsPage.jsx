@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ChartBar, Medal, TrendUp, Fire, Trophy } from "@phosphor-icons/react";
+import { ChartBar, Medal, TrendUp, Fire, Trophy, Star, Crown } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
