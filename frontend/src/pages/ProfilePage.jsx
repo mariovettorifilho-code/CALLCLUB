@@ -20,14 +20,14 @@ const LEVELS = [
 
 // Sistema de Conquistas
 const ACHIEVEMENTS = [
-  { id: "first_prediction", name: "Primeiro Palpite", description: "Fez seu primeiro palpite", icon: "🎯", color: "bg-blue-500" },
-  { id: "sniper", name: "Sniper", description: "Acertou o placar exato", icon: "🔫", color: "bg-red-500" },
-  { id: "on_fire", name: "Em Chamas", description: "3 acertos de resultado seguidos", icon: "🔥", color: "bg-orange-500" },
-  { id: "round_king", name: "Rei da Rodada", description: "Liderou uma rodada", icon: "👑", color: "bg-yellow-500" },
-  { id: "perfect_round", name: "Rodada Perfeita", description: "5+ acertos em uma rodada", icon: "⭐", color: "bg-purple-500" },
-  { id: "veteran", name: "Veterano", description: "Palpitou em 50+ jogos", icon: "🎖️", color: "bg-green-500" },
-  { id: "premium", name: "Membro Premium", description: "Ativou o acesso premium", icon: "💎", color: "bg-gradient-to-r from-yellow-400 to-yellow-600" },
-  { id: "founding_member", name: "Membro Fundador", description: "Um dos primeiros do clube", icon: "🏛️", color: "bg-indigo-500" }
+  { id: "first_prediction", name: "Primeiro Palpite", description: "Fez seu primeiro palpite no CallClub", icon: "🎯", color: "bg-blue-500" },
+  { id: "sniper", name: "Sniper", description: "Acertou o placar exato pela primeira vez", icon: "🔫", color: "bg-red-500" },
+  { id: "on_fire", name: "Em Chamas", description: "Emplacou 3 acertos de resultado seguidos", icon: "🔥", color: "bg-orange-500" },
+  { id: "round_king", name: "Rei da Rodada", description: "Conquistou o topo de uma rodada", icon: "👑", color: "bg-yellow-500" },
+  { id: "perfect_round", name: "Rodada Perfeita", description: "Marcou 5+ placares exatos em uma rodada", icon: "⭐", color: "bg-purple-500" },
+  { id: "veteran", name: "Veterano", description: "Palpitou em mais de 50 jogos", icon: "🎖️", color: "bg-green-500" },
+  { id: "premium", name: "Membro Premium", description: "Desbloqueou o acesso ao Brasileirão", icon: "💎", color: "bg-gradient-to-r from-yellow-400 to-yellow-600" },
+  { id: "pioneer", name: "Pioneiro", description: "PIONEER_SPECIAL", icon: "🏛️", color: "bg-gradient-to-r from-indigo-500 to-purple-600" }
 ];
 
 const getLevel = (points) => {
