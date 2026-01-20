@@ -300,24 +300,54 @@ export default function ProfilePage({ username }) {
         <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
           {ACHIEVEMENTS.map((achievement) => {
             const unlocked = userAchievements.includes(achievement.id);
+            const isPioneer = achievement.id === "pioneer";
+            const pioneerNumber = user.pioneer_number;
+            
+            // Descrição especial para Pioneiro
+            const description = isPioneer && unlocked 
+              ? getPioneerDescription(pioneerNumber)
+              : achievement.description;
+            
             return (
               <div
                 key={achievement.id}
                 className={`relative group cursor-pointer transition-all ${
                   unlocked ? "transform hover:scale-110" : "opacity-30 grayscale"
                 }`}
-                title={`${achievement.name}: ${achievement.description}`}
               >
                 <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-2xl ${
                   unlocked ? achievement.color : "bg-gray-200"
-                }`}>
+                } ${isPioneer && unlocked ? "ring-2 ring-purple-400 ring-offset-2 animate-pulse" : ""}`}>
                   {achievement.icon}
                 </div>
-                {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                  <p className="font-bold">{achievement.name}</p>
-                  <p className="text-gray-300">{achievement.description}</p>
+                
+                {/* Tooltip Especial */}
+                <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-3 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap z-20 pointer-events-none shadow-xl ${
+                  isPioneer && unlocked 
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white min-w-[280px] whitespace-normal text-center"
+                    : "bg-gray-900 text-white"
+                }`}>
+                  <p className={`font-bold ${isPioneer && unlocked ? "text-lg mb-1" : ""}`}>
+                    {isPioneer && unlocked ? `🏛️ Pioneiro #${pioneerNumber}` : achievement.name}
+                  </p>
+                  <p className={`${isPioneer && unlocked ? "text-purple-200 text-sm" : "text-gray-300 text-xs"}`}>
+                    {description}
+                  </p>
+                  {isPioneer && unlocked && (
+                    <div className="mt-2 pt-2 border-t border-purple-400/30">
+                      <p className="text-xs text-purple-300 italic">
+                        "Os primeiros 100 constroem a história"
+                      </p>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Número do Pioneiro Badge */}
+                {isPioneer && unlocked && pioneerNumber && (
+                  <div className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
+                    {pioneerNumber}
+                  </div>
+                )}
               </div>
             );
           })}
