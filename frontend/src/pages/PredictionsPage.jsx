@@ -68,6 +68,32 @@ export default function PredictionsPage({ username }) {
       });
       
       if (res.data.success) {
+        // Confetes de celebração! 🎉
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF']
+        });
+        
+        // Segundo disparo para mais impacto
+        setTimeout(() => {
+          confetti({
+            particleCount: 100,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: ['#FFD700', '#FFA500']
+          });
+          confetti({
+            particleCount: 100,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: ['#FFD700', '#FFA500']
+          });
+        }, 250);
+        
         setIsPremium(true);
         setShowPremiumModal(false);
         setPremiumKey("");
