@@ -278,19 +278,7 @@ async def get_popular_predictions_batch(match_ids: str):
             }
     
     return popular_by_match
-            {"is_finished": False},
-            {"_id": 0},
-            sort=[("match_date", 1)]
-        )
-    
-    return next_match
 
-
-@api_router.get("/matches/{round_number}")
-async def get_matches(round_number: int):
-    """Retorna os jogos de uma rodada"""
-    matches = await db.matches.find({"round_number": round_number}, {"_id": 0}).to_list(100)
-    return matches
 
 @api_router.post("/predictions")
 async def create_prediction(pred: PredictionCreate):
@@ -311,7 +299,8 @@ async def create_prediction(pred: PredictionCreate):
             {"username": pred.username, "match_id": pred.match_id},
             {"$set": {
                 "home_prediction": pred.home_prediction,
-                "away_prediction": pred.away_prediction
+                "away_prediction": pred.away_prediction,
+                "championship": pred.championship
             }}
         )
     else:
@@ -322,19 +311,23 @@ async def create_prediction(pred: PredictionCreate):
     return {"success": True}
 
 @api_router.get("/predictions/{username}")
-async def get_user_predictions(username: str, round_number: int):
+async def get_user_predictions(username: str, round_number: int, championship: str = "carioca"):
     """Retorna os palpites de um usuário em uma rodada"""
     predictions = await db.predictions.find({
         "username": username,
-        "round_number": round_number
+        "round_number": round_number,
+        "championship": championship
     }, {"_id": 0}).to_list(100)
     return predictions
 
 @api_router.get("/ranking/round/{round_number}")
-async def get_round_ranking(round_number: int):
+async def get_round_ranking(round_number: int, championship: str = "carioca"):
     """Retorna ranking da rodada"""
     # Busca todos os palpites da rodada
-    predictions = await db.predictions.find({"round_number": round_number}, {"_id": 0}).to_list(1000)
+    predictions = await db.predictions.find({
+        "round_number": round_number,
+        "championship": championship
+    }, {"_id": 0}).to_list(1000)
     
     # Agrupa por usuário e soma pontos
     user_points = {}
