@@ -21,16 +21,41 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# ==================== WHITELIST ====================
-# Lista dos 70 amigos autorizados
-AUTHORIZED_USERS = [
-    "Mario", "Marcos", "João", "Pedro", "Carlos", "Lucas", 
-    "Rafael", "Bruno", "Fernando", "Ricardo", "Paulo",
-    "Anderson", "Gabriel", "Felipe", "Rodrigo", "Thiago",
-    "Marcelo", "Diego", "Matheus", "Vinicius", "Gustavo",
-    "Leonardo", "André", "Alexandre", "Renato", "Fabio",
-    # Adicione os outros 45 nomes dos seus amigos aqui
-]
+# ==================== USUÁRIOS AUTORIZADOS COM PIN ====================
+# 📌 AQUI VOCÊ EDITA OS USUÁRIOS E PINS
+# Formato: "Nome": "PIN de 4 dígitos"
+# Exemplo: "Mario": "1234"
+
+AUTHORIZED_USERS = {
+    "Mario": "1234",
+    "Marcos": "2345",
+    "João": "3456",
+    "Pedro": "4567",
+    "Carlos": "5678",
+    "Lucas": "6789",
+    "Rafael": "7890",
+    "Bruno": "8901",
+    "Fernando": "9012",
+    "Ricardo": "0123",
+    "Paulo": "1111",
+    "Anderson": "2222",
+    "Gabriel": "3333",
+    "Felipe": "4444",
+    "Rodrigo": "5555",
+    "Thiago": "6666",
+    "Marcelo": "7777",
+    "Diego": "8888",
+    "Matheus": "9999",
+    "Vinicius": "1010",
+    "Gustavo": "2020",
+    "Leonardo": "3030",
+    "André": "4040",
+    "Alexandre": "5050",
+    "Renato": "6060",
+    "Fabio": "7070",
+    # ⬇️ ADICIONE MAIS USUÁRIOS AQUI NO FORMATO: "Nome": "PIN" ⬇️
+    
+}
 
 # ==================== CAMPEONATOS ====================
 CHAMPIONSHIPS = {
