@@ -1,16 +1,69 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { User, Trophy, Fire, ChartBar, Target, Medal, CalendarBlank, SoccerBall, TrendUp, Check, X } from "@phosphor-icons/react";
+import { 
+  User, Trophy, Fire, ChartBar, Target, Medal, CalendarBlank, 
+  SoccerBall, TrendUp, Check, X, Star, Lightning, Crown, 
+  Crosshair, FirstAid, Flame, Rocket, Diamond, Shield
+} from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Sistema de Níveis
+const LEVELS = [
+  { name: "Amador", minPoints: 0, maxPoints: 50, icon: "🥉", color: "text-amber-600" },
+  { name: "Profissional", minPoints: 51, maxPoints: 150, icon: "🥈", color: "text-gray-400" },
+  { name: "Craque", minPoints: 151, maxPoints: 300, icon: "🥇", color: "text-yellow-500" },
+  { name: "Lendário", minPoints: 301, maxPoints: Infinity, icon: "👑", color: "text-purple-500" }
+];
+
+// Sistema de Conquistas
+const ACHIEVEMENTS = [
+  { id: "first_prediction", name: "Primeiro Palpite", description: "Fez seu primeiro palpite", icon: "🎯", color: "bg-blue-500" },
+  { id: "sniper", name: "Sniper", description: "Acertou o placar exato", icon: "🔫", color: "bg-red-500" },
+  { id: "on_fire", name: "Em Chamas", description: "3 acertos de resultado seguidos", icon: "🔥", color: "bg-orange-500" },
+  { id: "round_king", name: "Rei da Rodada", description: "Liderou uma rodada", icon: "👑", color: "bg-yellow-500" },
+  { id: "perfect_round", name: "Rodada Perfeita", description: "5+ acertos em uma rodada", icon: "⭐", color: "bg-purple-500" },
+  { id: "veteran", name: "Veterano", description: "Palpitou em 50+ jogos", icon: "🎖️", color: "bg-green-500" },
+  { id: "premium", name: "Membro Premium", description: "Ativou o acesso premium", icon: "💎", color: "bg-gradient-to-r from-yellow-400 to-yellow-600" },
+  { id: "founding_member", name: "Membro Fundador", description: "Um dos primeiros do clube", icon: "🏛️", color: "bg-indigo-500" }
+];
+
+const getLevel = (points) => {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (points >= LEVELS[i].minPoints) {
+      return LEVELS[i];
+    }
+  }
+  return LEVELS[0];
+};
+
+const getNextLevel = (points) => {
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (points < LEVELS[i].maxPoints) {
+      return LEVELS[i + 1] || null;
+    }
+  }
+  return null;
+};
+
+const getLevelProgress = (points) => {
+  const level = getLevel(points);
+  const nextLevel = getNextLevel(points);
+  if (!nextLevel) return 100;
+  
+  const pointsInLevel = points - level.minPoints;
+  const levelRange = nextLevel.minPoints - level.minPoints;
+  return Math.min((pointsInLevel / levelRange) * 100, 100);
+};
 
 export default function ProfilePage({ username }) {
   const [userData, setUserData] = useState(null);
   const [allRounds, setAllRounds] = useState([]);
   const [selectedRound, setSelectedRound] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [userAchievements, setUserAchievements] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -24,11 +77,56 @@ export default function ProfilePage({ username }) {
       ]);
       setUserData(profileRes.data);
       setAllRounds(roundsRes.data || []);
+      
+      // Calcula conquistas baseado nos dados
+      calculateAchievements(profileRes.data);
     } catch (error) {
       console.error("Erro ao carregar perfil:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateAchievements = (data) => {
+    const achievements = [];
+    const { statistics, predictions, user } = data;
+    
+    // Primeiro palpite
+    if (predictions && predictions.length > 0) {
+      achievements.push("first_prediction");
+    }
+    
+    // Sniper - acertou placar exato
+    if (statistics.perfect_scores > 0) {
+      achievements.push("sniper");
+    }
+    
+    // Veterano - 50+ jogos
+    if (statistics.games_played >= 50) {
+      achievements.push("veteran");
+    }
+    
+    // Premium
+    if (user.is_premium) {
+      achievements.push("premium");
+    }
+    
+    // Em Chamas - 3+ acertos seguidos (simplificado: se tem sequência > 0)
+    if (user.max_perfect_streak >= 3) {
+      achievements.push("on_fire");
+    }
+    
+    // Rodada Perfeita - muitos acertos em uma rodada
+    if (statistics.perfect_scores >= 5) {
+      achievements.push("perfect_round");
+    }
+    
+    // Membro fundador (primeiros usuários - simulado)
+    if (["Mario", "Marcos"].includes(username)) {
+      achievements.push("founding_member");
+    }
+    
+    setUserAchievements(achievements);
   };
 
   if (loading) {
@@ -52,6 +150,9 @@ export default function ProfilePage({ username }) {
   }
 
   const { user, statistics, ranking, predictions } = userData;
+  const level = getLevel(user.total_points || 0);
+  const nextLevel = getNextLevel(user.total_points || 0);
+  const levelProgress = getLevelProgress(user.total_points || 0);
 
   // Filtra palpites por rodada
   const filteredPredictions = selectedRound === "all" 
@@ -83,46 +184,127 @@ export default function ProfilePage({ username }) {
 
   return (
     <div className="space-y-6">
-      {/* Profile Header */}
-      <div className="bg-gradient-to-br from-pitch-green to-pitch-green/80 rounded-2xl p-6 md:p-8 text-bone shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
+      {/* Profile Header - Premium Style */}
+      <div className={`rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden ${
+        user.is_premium 
+          ? "bg-gradient-to-br from-yellow-500 via-yellow-600 to-amber-700 text-white" 
+          : "bg-gradient-to-br from-pitch-green to-pitch-green/80 text-bone"
+      }`}>
+        {/* Premium Glow Effect */}
+        {user.is_premium && (
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        )}
+        
+        <div className="relative flex flex-col md:flex-row md:items-center gap-6">
           {/* Avatar & Name */}
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 bg-bone/20 rounded-full flex items-center justify-center">
-              <User size={40} weight="fill" className="text-bone" />
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
+              user.is_premium 
+                ? "bg-white/20 ring-4 ring-white/50" 
+                : "bg-bone/20"
+            }`}>
+              <span className="text-4xl">{level.icon}</span>
             </div>
             <div>
-              <h1 className="font-heading text-3xl font-bold">{user.username}</h1>
-              <p className="text-bone/80 flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <h1 className="font-heading text-3xl font-bold">{user.username}</h1>
+                {user.is_premium && (
+                  <span className="bg-white/20 backdrop-blur px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    <Diamond size={12} weight="fill" />
+                    PREMIUM
+                  </span>
+                )}
+              </div>
+              <p className={`flex items-center gap-2 ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>
                 <Medal size={16} weight="fill" />
-                #{ranking.position} de {ranking.total_users} membros
+                #{ranking.position} de {ranking.total_users} palpiteiros
+              </p>
+              <p className={`text-sm ${level.color} font-bold mt-1`}>
+                {level.icon} {level.name}
               </p>
             </div>
           </div>
 
           {/* Quick Stats */}
           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
               <Trophy size={24} weight="fill" className="mx-auto mb-1 text-yellow-400" />
               <p className="text-2xl font-mono font-bold">{user.total_points || 0}</p>
-              <p className="text-xs text-bone/80">Pontos</p>
+              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Pontos</p>
             </div>
-            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
               <Fire size={24} weight="fill" className="mx-auto mb-1 text-orange-400" />
               <p className="text-2xl font-mono font-bold">{user.max_perfect_streak || 0}</p>
-              <p className="text-xs text-bone/80">Sequência</p>
+              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Sequência</p>
             </div>
-            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
-              <Target size={24} weight="fill" className="mx-auto mb-1 text-terracotta" />
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
+              <Target size={24} weight="fill" className="mx-auto mb-1 text-red-400" />
               <p className="text-2xl font-mono font-bold">{statistics.perfect_scores || 0}</p>
-              <p className="text-xs text-bone/80">Placares Exatos</p>
+              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Placares Exatos</p>
             </div>
-            <div className="bg-bone/10 backdrop-blur rounded-lg p-3 text-center">
-              <ChartBar size={24} weight="fill" className="mx-auto mb-1 text-bone" />
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
+              <ChartBar size={24} weight="fill" className={`mx-auto mb-1 ${user.is_premium ? "text-white" : "text-bone"}`} />
               <p className="text-2xl font-mono font-bold">{statistics.accuracy_rate || 0}%</p>
-              <p className="text-xs text-bone/80">Aproveitamento</p>
+              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Aproveitamento</p>
             </div>
           </div>
+        </div>
+
+        {/* Level Progress Bar */}
+        <div className="mt-6 relative">
+          <div className="flex justify-between text-xs mb-1">
+            <span>{level.icon} {level.name}</span>
+            {nextLevel && <span>{nextLevel.icon} {nextLevel.name}</span>}
+          </div>
+          <div className={`h-3 rounded-full overflow-hidden ${user.is_premium ? "bg-white/20" : "bg-bone/20"}`}>
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                user.is_premium 
+                  ? "bg-gradient-to-r from-white to-yellow-200" 
+                  : "bg-gradient-to-r from-terracotta to-warning"
+              }`}
+              style={{ width: `${levelProgress}%` }}
+            />
+          </div>
+          {nextLevel && (
+            <p className={`text-xs mt-1 text-center ${user.is_premium ? "text-white/70" : "text-bone/70"}`}>
+              {nextLevel.minPoints - (user.total_points || 0)} pts para {nextLevel.name}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Conquistas */}
+      <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
+        <h2 className="font-heading text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
+          <Star size={24} weight="fill" className="text-yellow-500" />
+          Conquistas ({userAchievements.length}/{ACHIEVEMENTS.length})
+        </h2>
+        
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          {ACHIEVEMENTS.map((achievement) => {
+            const unlocked = userAchievements.includes(achievement.id);
+            return (
+              <div
+                key={achievement.id}
+                className={`relative group cursor-pointer transition-all ${
+                  unlocked ? "transform hover:scale-110" : "opacity-30 grayscale"
+                }`}
+                title={`${achievement.name}: ${achievement.description}`}
+              >
+                <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-2xl ${
+                  unlocked ? achievement.color : "bg-gray-200"
+                }`}>
+                  {achievement.icon}
+                </div>
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                  <p className="font-bold">{achievement.name}</p>
+                  <p className="text-gray-300">{achievement.description}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -179,7 +361,7 @@ export default function ProfilePage({ username }) {
         <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
           <h3 className="font-heading text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
             <ChartBar size={20} weight="fill" className="text-pitch-green" />
-            Pontos por Rodada
+            Evolução por Rodada
           </h3>
           <div className="flex items-end gap-2 h-32">
             {Object.entries(statistics.points_by_round)
@@ -188,10 +370,10 @@ export default function ProfilePage({ username }) {
                 const maxPoints = Math.max(...Object.values(statistics.points_by_round), 30);
                 const height = (points / maxPoints) * 100;
                 return (
-                  <div key={round} className="flex-1 flex flex-col items-center">
-                    <span className="text-xs font-bold text-pitch-green mb-1">{points}</span>
+                  <div key={round} className="flex-1 flex flex-col items-center group">
+                    <span className="text-xs font-bold text-pitch-green mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{points}</span>
                     <div 
-                      className="w-full bg-gradient-to-t from-pitch-green to-pitch-green/60 rounded-t-lg transition-all"
+                      className="w-full bg-gradient-to-t from-pitch-green to-pitch-green/60 rounded-t-lg transition-all group-hover:from-terracotta group-hover:to-terracotta/60"
                       style={{ height: `${Math.max(height, 10)}%` }}
                     />
                     <span className="text-xs text-text-secondary mt-1">R{round}</span>
@@ -210,7 +392,6 @@ export default function ProfilePage({ username }) {
             Histórico de Palpites
           </h2>
           
-          {/* Filter by Round */}
           <select
             value={selectedRound}
             onChange={(e) => setSelectedRound(e.target.value)}
@@ -248,7 +429,6 @@ export default function ProfilePage({ username }) {
               .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
               .map(([roundNum, roundPreds]) => (
                 <div key={roundNum}>
-                  {/* Round Header */}
                   <div className="flex items-center gap-2 mb-3">
                     <span className="bg-pitch-green/10 text-pitch-green px-3 py-1 rounded-lg text-sm font-bold">
                       Rodada {roundNum}
@@ -261,7 +441,6 @@ export default function ProfilePage({ username }) {
                     </span>
                   </div>
 
-                  {/* Predictions Grid */}
                   <div className="grid gap-3">
                     {roundPreds.map((pred, index) => (
                       <div
@@ -280,7 +459,6 @@ export default function ProfilePage({ username }) {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-4">
-                          {/* Teams */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 text-sm text-text-secondary mb-1">
                               <CalendarBlank size={14} />
@@ -291,7 +469,6 @@ export default function ProfilePage({ username }) {
                             </p>
                           </div>
 
-                          {/* Prediction */}
                           <div className="text-center px-3">
                             <p className="text-xs text-text-secondary mb-1">Palpite</p>
                             <p className="font-mono text-lg font-bold text-text-primary">
@@ -299,7 +476,6 @@ export default function ProfilePage({ username }) {
                             </p>
                           </div>
 
-                          {/* Result & Points */}
                           <div className="text-center min-w-[80px]">
                             {pred.is_finished ? (
                               <>
