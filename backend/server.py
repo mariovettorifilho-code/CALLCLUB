@@ -24,7 +24,6 @@ api_router = APIRouter(prefix="/api")
 # ==================== USUÁRIOS AUTORIZADOS COM PIN ====================
 # 📌 AQUI VOCÊ EDITA OS USUÁRIOS E PINS
 # Formato: "Nome": "PIN de 4 dígitos"
-# Exemplo: "Mario": "1234"
 
 AUTHORIZED_USERS = {
     "Mario": "2412",
@@ -56,6 +55,23 @@ AUTHORIZED_USERS = {
     # ⬇️ ADICIONE MAIS USUÁRIOS AQUI NO FORMATO: "Nome": "PIN" ⬇️
     
 }
+
+# ==================== CHAVES PREMIUM (BRASILEIRÃO) ====================
+# 📌 AQUI VOCÊ EDITA AS CHAVES PREMIUM
+# Formato: "NOME-CLUB-XXXX": "Nome" (a chave aponta para o dono)
+# A chave SÓ funciona para o usuário correspondente
+
+PREMIUM_KEYS = {
+    "MARIO-CLUB-7X2K": "Mario",
+    "MARCOS-CLUB-9M4P": "Marcos",
+    # ⬇️ ADICIONE MAIS CHAVES PREMIUM AQUI ⬇️
+}
+
+# Usuários que já ativaram premium (preenchido automaticamente)
+# Armazenado no banco de dados
+
+# Senha do painel admin
+ADMIN_PASSWORD = "callclub2026"
 
 # ==================== CAMPEONATOS ====================
 CHAMPIONSHIPS = {
