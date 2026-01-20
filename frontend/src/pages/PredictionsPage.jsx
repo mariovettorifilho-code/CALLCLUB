@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Trophy, Clock, Lock, Check, Fire, Users, Star, Key } from "@phosphor-icons/react";
+import confetti from "canvas-confetti";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
