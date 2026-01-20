@@ -182,6 +182,7 @@ export default function RankingsPage({ username }) {
             {/* Ranking Rows */}
             {currentRanking.map((player, index) => {
               const isCurrentUser = player.username === username;
+              const isPremium = player.is_premium === true;
               const points = isGeneral ? (player.total_points || 0) : (player.points || 0);
               const streak = isGeneral ? (player.max_perfect_streak || 0) : (player.perfect_count || 0);
 
@@ -192,7 +193,9 @@ export default function RankingsPage({ username }) {
                   className={`grid grid-cols-12 gap-4 p-4 rounded-lg transition-all border-2 ${
                     isCurrentUser
                       ? "bg-pitch-green/10 border-pitch-green"
-                      : getMedalBg(index)
+                      : isPremium
+                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-300"
+                        : getMedalBg(index)
                   }`}
                 >
                   {/* Position */}
@@ -206,16 +209,24 @@ export default function RankingsPage({ username }) {
 
                   {/* Player Info */}
                   <div className="col-span-6 flex flex-col justify-center">
-                    <p className={`font-semibold ${isCurrentUser ? "text-pitch-green" : "text-text-primary"}`}>
-                      {player.username}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`font-semibold ${isCurrentUser ? "text-pitch-green" : "text-text-primary"}`}>
+                        {player.username}
+                      </p>
+                      {isPremium && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">
+                          <Star size={10} weight="fill" />
+                          PREMIUM
+                        </span>
+                      )}
                       {isCurrentUser && (
-                        <span className="ml-2 text-xs bg-pitch-green text-bone px-2 py-1 rounded">
+                        <span className="text-xs bg-pitch-green text-bone px-2 py-1 rounded">
                           Você
                         </span>
                       )}
-                    </p>
+                    </div>
                     {streak > 0 && (
-                      <p className="text-xs text-text-secondary flex items-center gap-1">
+                      <p className="text-xs text-text-secondary flex items-center gap-1 mt-1">
                         <Fire size={12} weight="fill" className="text-orange-500" />
                         {streak} {isGeneral ? "acertos perfeitos (sequência)" : "placar(es) exato(s)"}
                       </p>
