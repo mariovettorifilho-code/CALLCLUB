@@ -566,62 +566,65 @@ export default function ProfilePage({ username }) {
                             </span>
                           </div>
 
-                  <div className="grid gap-3">
-                    {roundPreds.map((pred, index) => (
-                      <div
-                        key={`${pred.match_id}-${index}`}
-                        data-testid={`prediction-${roundNum}-${index}`}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          pred.is_finished 
-                            ? pred.points === 5 
-                              ? "bg-yellow-50 border-yellow-400"
-                              : pred.points >= 3
-                              ? "bg-green-50 border-green-300"
-                              : pred.points > 0
-                              ? "bg-blue-50 border-blue-300"
-                              : "bg-gray-50 border-gray-200"
-                            : "bg-paper border-paper"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 text-sm text-text-secondary mb-1">
-                              <CalendarBlank size={14} />
-                              {formatDate(pred.match_date)}
-                            </div>
-                            <p className="font-semibold text-text-primary truncate">
-                              {pred.home_team} <span className="text-text-secondary">vs</span> {pred.away_team}
-                            </p>
-                          </div>
+                          <div className="grid gap-3">
+                            {roundPreds.map((pred, index) => (
+                              <div
+                                key={`${pred.match_id}-${index}`}
+                                data-testid={`prediction-${championship}-${roundNum}-${index}`}
+                                className={`p-4 rounded-lg border-2 transition-all ${
+                                  pred.is_finished 
+                                    ? pred.points === 5 
+                                      ? "bg-yellow-50 border-yellow-400"
+                                      : pred.points >= 3
+                                      ? "bg-green-50 border-green-300"
+                                      : pred.points > 0
+                                      ? "bg-blue-50 border-blue-300"
+                                      : "bg-gray-50 border-gray-200"
+                                    : "bg-paper border-paper"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 text-sm text-text-secondary mb-1">
+                                      <CalendarBlank size={14} />
+                                      {formatDate(pred.match_date)}
+                                    </div>
+                                    <p className="font-semibold text-text-primary truncate">
+                                      {pred.home_team} <span className="text-text-secondary">vs</span> {pred.away_team}
+                                    </p>
+                                  </div>
 
-                          <div className="text-center px-3">
-                            <p className="text-xs text-text-secondary mb-1">Palpite</p>
-                            <p className="font-mono text-lg font-bold text-text-primary">
-                              {pred.home_prediction} × {pred.away_prediction}
-                            </p>
-                          </div>
+                                  <div className="text-center px-3">
+                                    <p className="text-xs text-text-secondary mb-1">Palpite</p>
+                                    <p className="font-mono text-lg font-bold text-text-primary">
+                                      {pred.home_prediction} × {pred.away_prediction}
+                                    </p>
+                                  </div>
 
-                          <div className="text-center min-w-[80px]">
-                            {pred.is_finished ? (
-                              <>
-                                <p className="text-xs text-text-secondary mb-1">Resultado</p>
-                                <p className="font-mono text-lg font-bold text-pitch-green mb-1">
-                                  {pred.home_score} × {pred.away_score}
-                                </p>
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${getPointsBadgeStyle(pred.points)}`}>
-                                  {pred.points === 5 ? "🎯 " : ""}{pred.points} pts
-                                </span>
-                              </>
-                            ) : (
-                              <div className="flex items-center justify-center gap-1 text-text-secondary">
-                                <div className="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
-                                <span className="text-sm">Aguardando</span>
+                                  <div className="text-center min-w-[80px]">
+                                    {pred.is_finished ? (
+                                      <>
+                                        <p className="text-xs text-text-secondary mb-1">Resultado</p>
+                                        <p className="font-mono text-lg font-bold text-pitch-green mb-1">
+                                          {pred.home_score} × {pred.away_score}
+                                        </p>
+                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${getPointsBadgeStyle(pred.points)}`}>
+                                          {pred.points === 5 ? "🎯 " : ""}{pred.points} pts
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center justify-center gap-1 text-text-secondary">
+                                        <div className="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
+                                        <span className="text-sm">Aguardando</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            )}
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
               ))}
