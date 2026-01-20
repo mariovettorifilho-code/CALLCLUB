@@ -112,6 +112,7 @@ class Round(BaseModel):
 
 class NameCheck(BaseModel):
     username: str
+    pin: str
 
 class PredictionCreate(BaseModel):
     username: str
