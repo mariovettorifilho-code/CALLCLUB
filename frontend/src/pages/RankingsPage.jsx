@@ -63,7 +63,8 @@ export default function RankingsPage({ username }) {
     return "text-text-primary";
   };
 
-  const getMedalBg = (position) => {
+  const getMedalBg = (position, isPremium = false) => {
+    if (isPremium) return "bg-gradient-to-r from-yellow-100 to-amber-100 border-yellow-400 ring-2 ring-yellow-400/50";
     if (position === 0) return "bg-yellow-500/10 border-yellow-500";
     if (position === 1) return "bg-gray-400/10 border-gray-400";
     if (position === 2) return "bg-amber-700/10 border-amber-700";
