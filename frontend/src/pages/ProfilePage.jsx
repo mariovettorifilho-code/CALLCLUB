@@ -171,20 +171,40 @@ export default function ProfilePage({ username }) {
   const nextLevel = getNextLevel(user.total_points || 0);
   const levelProgress = getLevelProgress(user.total_points || 0);
 
-  // Filtra palpites por rodada
-  const filteredPredictions = selectedRound === "all" 
-    ? predictions 
-    : predictions.filter(p => p.round_number === parseInt(selectedRound));
+  // Filtra palpites por campeonato primeiro
+  const filteredByChampionship = selectedChampionship === "all"
+    ? predictions
+    : predictions.filter(p => p.championship === selectedChampionship);
 
-  // Agrupa por rodada para exibição
-  const groupedByRound = {};
+  // Depois filtra por rodada
+  const filteredPredictions = selectedRound === "all" 
+    ? filteredByChampionship 
+    : filteredByChampionship.filter(p => p.round_number === parseInt(selectedRound));
+
+  // Pega as rodadas disponíveis para o campeonato selecionado
+  const availableRounds = selectedChampionship === "all"
+    ? [...new Set(predictions.map(p => p.round_number))].sort((a, b) => a - b)
+    : [...new Set(predictions.filter(p => p.championship === selectedChampionship).map(p => p.round_number))].sort((a, b) => a - b);
+
+  // Agrupa por campeonato e rodada para exibição
+  const groupedByChampionshipAndRound = {};
   filteredPredictions.forEach(pred => {
+    const champ = pred.championship || "carioca";
     const rn = pred.round_number;
-    if (!groupedByRound[rn]) {
-      groupedByRound[rn] = [];
+    if (!groupedByChampionshipAndRound[champ]) {
+      groupedByChampionshipAndRound[champ] = {};
     }
-    groupedByRound[rn].push(pred);
+    if (!groupedByChampionshipAndRound[champ][rn]) {
+      groupedByChampionshipAndRound[champ][rn] = [];
+    }
+    groupedByChampionshipAndRound[champ][rn].push(pred);
   });
+
+  // Mapeamento de nomes de campeonatos
+  const championshipNames = {
+    "carioca": "Campeonato Carioca 2026",
+    "brasileirao": "Campeonato Brasileiro 2026"
+  };
 
   const getPointsBadgeStyle = (points) => {
     if (points === 5) return "bg-yellow-500 text-white";
