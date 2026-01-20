@@ -423,33 +423,188 @@ export default function ProfilePage({ username }) {
         </div>
       </div>
 
-      {/* Points by Round Chart */}
-      {statistics.points_by_round && Object.keys(statistics.points_by_round).length > 0 && (
-        <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-paper">
-          <h3 className="font-heading text-lg font-bold text-text-primary mb-4 flex items-center gap-2">
-            <ChartBar size={20} weight="fill" className="text-pitch-green" />
-            Evolução por Rodada
-          </h3>
-          <div className="flex items-end gap-2 h-32">
-            {Object.entries(statistics.points_by_round)
-              .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-              .map(([round, points]) => {
-                const maxPoints = Math.max(...Object.values(statistics.points_by_round), 30);
-                const height = (points / maxPoints) * 100;
-                return (
-                  <div key={round} className="flex-1 flex flex-col items-center group">
-                    <span className="text-xs font-bold text-pitch-green mb-1 opacity-0 group-hover:opacity-100 transition-opacity">{points}</span>
-                    <div 
-                      className="w-full bg-gradient-to-t from-pitch-green to-pitch-green/60 rounded-t-lg transition-all group-hover:from-terracotta group-hover:to-terracotta/60"
-                      style={{ height: `${Math.max(height, 10)}%` }}
-                    />
-                    <span className="text-xs text-text-secondary mt-1">R{round}</span>
-                  </div>
-                );
-              })}
-          </div>
+      {/* ===== JORNADA DO PALPITEIRO - Evolução Inovadora ===== */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 shadow-2xl border border-slate-700 overflow-hidden relative">
+        {/* Background Stars Effect */}
+        <div className="absolute inset-0 overflow-hidden opacity-30">
+          <div className="absolute top-4 left-[10%] w-1 h-1 bg-white rounded-full animate-pulse"></div>
+          <div className="absolute top-12 left-[30%] w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+          <div className="absolute top-8 left-[60%] w-1 h-1 bg-white rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-20 left-[80%] w-1 h-1 bg-blue-300 rounded-full animate-pulse" style={{animationDelay: '0.3s'}}></div>
+          <div className="absolute top-6 left-[45%] w-0.5 h-0.5 bg-white rounded-full animate-pulse" style={{animationDelay: '0.7s'}}></div>
         </div>
-      )}
+
+        <div className="relative">
+          <h3 className="font-heading text-xl font-bold text-white mb-2 flex items-center gap-3">
+            <span className="text-2xl">🚀</span>
+            Jornada do Palpiteiro
+            <span className="ml-auto text-sm font-normal text-slate-400">
+              {statistics.points_by_round ? Object.keys(statistics.points_by_round).length : 0} rodadas disputadas
+            </span>
+          </h3>
+          <p className="text-slate-400 text-sm mb-6">Sua trajetória rumo à glória</p>
+
+          {(!statistics.points_by_round || Object.keys(statistics.points_by_round).length === 0) ? (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 mx-auto mb-4 bg-slate-700/50 rounded-full flex items-center justify-center">
+                <Rocket size={40} className="text-slate-500" />
+              </div>
+              <p className="text-slate-400 mb-2">Sua jornada ainda não começou!</p>
+              <p className="text-slate-500 text-sm">Faça seu primeiro palpite para iniciar</p>
+              <Link
+                to="/predictions"
+                className="inline-flex items-center gap-2 mt-4 bg-gradient-to-r from-pitch-green to-emerald-500 text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg hover:shadow-green-500/30 transition-all"
+              >
+                <Lightning size={18} weight="fill" />
+                Começar Jornada
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Journey Path */}
+              <div className="relative">
+                {/* Connection Line */}
+                <div className="absolute top-1/2 left-0 right-0 h-1 bg-gradient-to-r from-slate-700 via-slate-600 to-slate-700 transform -translate-y-1/2 rounded-full"></div>
+                <div 
+                  className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-pitch-green via-emerald-400 to-yellow-400 transform -translate-y-1/2 rounded-full transition-all duration-1000"
+                  style={{ 
+                    width: `${Math.min((Object.keys(statistics.points_by_round).length / 6) * 100, 100)}%`,
+                    boxShadow: '0 0 20px rgba(34, 197, 94, 0.5)'
+                  }}
+                ></div>
+
+                {/* Checkpoints */}
+                <div className="flex justify-between items-center relative py-8">
+                  {Object.entries(statistics.points_by_round)
+                    .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+                    .slice(0, 6) // Max 6 rounds displayed
+                    .map(([round, points], index, arr) => {
+                      const maxPossible = 30; // ~6 jogos por rodada * 5 pts
+                      const percentage = Math.min((points / maxPossible) * 100, 100);
+                      const prevPoints = index > 0 ? arr[index - 1][1] : 0;
+                      const trend = points > prevPoints ? 'up' : points < prevPoints ? 'down' : 'same';
+                      const isHot = points >= 15; // 3+ jogos com resultado certo
+                      const isPerfect = points >= 25; // Quase perfeito
+                      const isBest = points === Math.max(...Object.values(statistics.points_by_round));
+
+                      return (
+                        <div key={round} className="flex flex-col items-center group relative z-10">
+                          {/* Trend Arrow */}
+                          {index > 0 && (
+                            <div className={`absolute -top-6 text-xs font-bold ${
+                              trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-slate-500'
+                            }`}>
+                              {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
+                            </div>
+                          )}
+
+                          {/* Checkpoint Node */}
+                          <div className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer
+                            ${isPerfect 
+                              ? 'bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 shadow-lg shadow-yellow-500/50 scale-110' 
+                              : isHot 
+                                ? 'bg-gradient-to-br from-orange-400 to-red-500 shadow-lg shadow-orange-500/40'
+                                : percentage >= 50 
+                                  ? 'bg-gradient-to-br from-pitch-green to-emerald-600 shadow-lg shadow-green-500/30'
+                                  : percentage > 0
+                                    ? 'bg-gradient-to-br from-slate-600 to-slate-700'
+                                    : 'bg-slate-800 border-2 border-slate-700'
+                            }
+                            group-hover:scale-110 group-hover:shadow-xl
+                          `}>
+                            {/* Inner Content */}
+                            <div className="text-center">
+                              <span className={`block text-lg font-bold ${isPerfect || isHot ? 'text-white' : percentage >= 50 ? 'text-white' : 'text-slate-300'}`}>
+                                {points}
+                              </span>
+                              <span className={`block text-[10px] ${isPerfect || isHot ? 'text-white/80' : 'text-slate-400'}`}>
+                                pts
+                              </span>
+                            </div>
+
+                            {/* Special Badges */}
+                            {isBest && (
+                              <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce shadow-lg">
+                                <Crown size={14} weight="fill" className="text-yellow-800" />
+                              </div>
+                            )}
+                            {isHot && !isPerfect && (
+                              <div className="absolute -top-1 -right-1 text-lg animate-pulse">🔥</div>
+                            )}
+                            {isPerfect && (
+                              <div className="absolute -top-1 -right-1 text-lg animate-pulse">⭐</div>
+                            )}
+
+                            {/* Hover Tooltip */}
+                            <div className="absolute bottom-full mb-3 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20">
+                              <div className="bg-white rounded-lg shadow-xl p-3 min-w-[140px] text-center">
+                                <p className="font-bold text-slate-800 text-sm">Rodada {round}</p>
+                                <p className="text-pitch-green font-bold text-xl">{points} pts</p>
+                                <div className="flex justify-center gap-1 mt-1">
+                                  {percentage >= 80 && <span className="text-xs">🎯 Excelente!</span>}
+                                  {percentage >= 50 && percentage < 80 && <span className="text-xs">👍 Bom!</span>}
+                                  {percentage < 50 && percentage > 0 && <span className="text-xs">💪 Pode melhorar</span>}
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
+                                  <div 
+                                    className="bg-gradient-to-r from-pitch-green to-emerald-400 h-1.5 rounded-full"
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-1">{Math.round(percentage)}% do máximo</p>
+                              </div>
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-white"></div>
+                            </div>
+                          </div>
+
+                          {/* Round Label */}
+                          <span className="mt-3 text-sm font-semibold text-slate-400 group-hover:text-white transition-colors">
+                            R{round}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Stats Summary */}
+              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-700">
+                <div className="text-center">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-pitch-green to-emerald-400 bg-clip-text text-transparent">
+                    {Math.max(...Object.values(statistics.points_by_round))}
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1">Melhor Rodada</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                    {Math.round(Object.values(statistics.points_by_round).reduce((a, b) => a + b, 0) / Object.keys(statistics.points_by_round).length)}
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1">Média por Rodada</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                    {Object.values(statistics.points_by_round).reduce((a, b) => a + b, 0)}
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1">Total Acumulado</p>
+                </div>
+              </div>
+
+              {/* Motivational Message */}
+              <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                <p className="text-center text-sm">
+                  {(() => {
+                    const avg = Object.values(statistics.points_by_round).reduce((a, b) => a + b, 0) / Object.keys(statistics.points_by_round).length;
+                    if (avg >= 20) return <span className="text-yellow-400">🏆 Você está jogando como um LENDÁRIO! Continue assim!</span>;
+                    if (avg >= 15) return <span className="text-green-400">🔥 Performance de CRAQUE! O topo está próximo!</span>;
+                    if (avg >= 10) return <span className="text-blue-400">💪 Bom ritmo! Cada rodada é uma chance de brilhar!</span>;
+                    return <span className="text-slate-400">🚀 A jornada está apenas começando. Bora subir!</span>;
+                  })()}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Predictions History */}
       <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
