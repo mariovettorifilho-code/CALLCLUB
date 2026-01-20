@@ -104,6 +104,27 @@ export default function HomePage({ username }) {
 
   return (
     <div className="space-y-6">
+      {/* Seletor de Campeonato */}
+      <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper">
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium text-text-secondary whitespace-nowrap">
+            Campeonato:
+          </label>
+          <select
+            value={selectedChampionship}
+            onChange={(e) => setSelectedChampionship(e.target.value)}
+            data-testid="home-championship-filter"
+            className="flex-1 px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
+          >
+            {championships.map((champ) => (
+              <option key={champ.id} value={champ.id}>
+                {champ.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-pitch-green to-pitch-green/80 rounded-2xl p-8 text-bone shadow-xl">
         <div className="flex items-center gap-3 mb-4">
@@ -113,7 +134,7 @@ export default function HomePage({ username }) {
           </h1>
         </div>
         <p className="text-bone/90 text-lg mb-6">
-          Rodada {currentRound?.round_number || 1} do Campeonato Carioca 2026 está aberta para palpites!
+          Rodada {currentRound?.round_number || 1} está aberta para palpites!
         </p>
         <Link
           to="/predictions"
