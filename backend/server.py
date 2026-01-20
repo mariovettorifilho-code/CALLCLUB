@@ -138,6 +138,13 @@ class PredictionCreate(BaseModel):
     home_prediction: int
     away_prediction: int
 
+class PremiumKeyActivation(BaseModel):
+    username: str
+    key: str
+
+class AdminLogin(BaseModel):
+    password: str
+
 # ==================== HELPER FUNCTIONS ====================
 def calculate_points(prediction: dict, match: dict) -> int:
     """Calcula pontos: 3 pts (resultado) + 1 pt (gols mandante) + 1 pt (gols visitante)"""
