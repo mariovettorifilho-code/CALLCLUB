@@ -100,6 +100,8 @@ def parse_event(event: dict, championship: str) -> dict:
         "round_number": round_number,
         "home_team": event.get("strHomeTeam", ""),
         "away_team": event.get("strAwayTeam", ""),
+        "home_badge": event.get("strHomeTeamBadge", ""),
+        "away_badge": event.get("strAwayTeamBadge", ""),
         "home_score": home_score,
         "away_score": away_score,
         "match_date": match_date,
