@@ -125,6 +125,16 @@ def calculate_points(prediction: dict, match: dict) -> int:
     return points
 
 # ==================== ROUTES ====================
+
+# ========== CAMPEONATOS ==========
+@api_router.get("/championships")
+async def get_championships():
+    """Retorna lista de campeonatos disponíveis"""
+    return [
+        {"id": "carioca", "name": "Campeonato Carioca 2026"},
+        {"id": "brasileirao", "name": "Campeonato Brasileiro 2026"}
+    ]
+
 @api_router.post("/auth/check-name")
 async def check_name(data: NameCheck):
     """Verifica se o nome está na whitelist"""
@@ -140,12 +150,24 @@ async def check_name(data: NameCheck):
     return {"success": True, "username": data.username}
 
 @api_router.get("/rounds/current")
-async def get_current_round():
-    """Retorna a rodada atual"""
-    current_round = await db.rounds.find_one({"is_current": True}, {"_id": 0})
+async def get_current_round(championship: str = "carioca"):
+    """Retorna a rodada atual de um campeonato"""
+    current_round = await db.rounds.find_one(
+        {"is_current": True, "championship": championship}, 
+        {"_id": 0}
+    )
     if not current_round:
+        # Busca primeira rodada do campeonato
+        first_round = await db.rounds.find_one(
+            {"championship": championship},
+            {"_id": 0},
+            sort=[("round_number", 1)]
+        )
+        if first_round:
+            return first_round
         # Cria rodada 1 se não existir
         new_round = Round(
+            championship=championship,
             round_number=1, 
             is_current=True,
             deadline=datetime.now(timezone.utc)
@@ -155,19 +177,23 @@ async def get_current_round():
     return current_round
 
 @api_router.get("/rounds/all")
-async def get_all_rounds():
-    """Retorna todas as rodadas"""
-    rounds = await db.rounds.find({}, {"_id": 0}).sort("round_number", 1).to_list(100)
+async def get_all_rounds(championship: str = "carioca"):
+    """Retorna todas as rodadas de um campeonato"""
+    rounds = await db.rounds.find(
+        {"championship": championship}, 
+        {"_id": 0}
+    ).sort("round_number", 1).to_list(100)
     return rounds
 
 @api_router.get("/matches/next")
-async def get_next_match():
+async def get_next_match(championship: str = "carioca"):
     """Retorna o próximo jogo não finalizado"""
     now = datetime.now(timezone.utc)
     
     # Busca o próximo jogo que ainda não começou
     next_match = await db.matches.find_one(
         {
+            "championship": championship,
             "is_finished": False,
             "match_date": {"$gt": now}
         },
@@ -178,6 +204,80 @@ async def get_next_match():
     if not next_match:
         # Se não encontrar, busca qualquer jogo não finalizado
         next_match = await db.matches.find_one(
+            {"championship": championship, "is_finished": False},
+            {"_id": 0},
+            sort=[("match_date", 1)]
+        )
+    
+    return next_match
+
+
+@api_router.get("/matches/{round_number}")
+async def get_matches(round_number: int, championship: str = "carioca"):
+    """Retorna os jogos de uma rodada"""
+    matches = await db.matches.find(
+        {"round_number": round_number, "championship": championship}, 
+        {"_id": 0}
+    ).to_list(100)
+    return matches
+
+
+@api_router.get("/matches/{match_id}/popular-prediction")
+async def get_popular_prediction(match_id: str):
+    """Retorna o palpite mais votado para um jogo"""
+    pipeline = [
+        {"$match": {"match_id": match_id}},
+        {"$group": {
+            "_id": {"home": "$home_prediction", "away": "$away_prediction"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"count": -1}},
+        {"$limit": 1}
+    ]
+    
+    result = await db.predictions.aggregate(pipeline).to_list(1)
+    
+    if result:
+        return {
+            "home_prediction": result[0]["_id"]["home"],
+            "away_prediction": result[0]["_id"]["away"],
+            "count": result[0]["count"]
+        }
+    return None
+
+
+@api_router.get("/matches/popular-predictions/batch")
+async def get_popular_predictions_batch(match_ids: str):
+    """Retorna palpites mais votados para múltiplos jogos"""
+    ids_list = match_ids.split(",")
+    
+    pipeline = [
+        {"$match": {"match_id": {"$in": ids_list}}},
+        {"$group": {
+            "_id": {
+                "match_id": "$match_id",
+                "home": "$home_prediction", 
+                "away": "$away_prediction"
+            },
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.match_id": 1, "count": -1}}
+    ]
+    
+    results = await db.predictions.aggregate(pipeline).to_list(1000)
+    
+    # Agrupa por match_id e pega o mais votado de cada
+    popular_by_match = {}
+    for r in results:
+        mid = r["_id"]["match_id"]
+        if mid not in popular_by_match:
+            popular_by_match[mid] = {
+                "home_prediction": r["_id"]["home"],
+                "away_prediction": r["_id"]["away"],
+                "count": r["count"]
+            }
+    
+    return popular_by_match
             {"is_finished": False},
             {"_id": 0},
             sort=[("match_date", 1)]
