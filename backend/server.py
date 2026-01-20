@@ -32,6 +32,22 @@ AUTHORIZED_USERS = [
     # Adicione os outros 45 nomes dos seus amigos aqui
 ]
 
+# ==================== CAMPEONATOS ====================
+CHAMPIONSHIPS = {
+    "carioca": {
+        "id": "5688",
+        "name": "Campeonato Carioca",
+        "season": "2026",
+        "total_rounds": 6
+    },
+    "brasileirao": {
+        "id": "4351",
+        "name": "Campeonato Brasileiro",
+        "season": "2026",
+        "total_rounds": 38
+    }
+}
+
 # ==================== MODELS ====================
 class User(BaseModel):
     username: str
@@ -43,6 +59,7 @@ class User(BaseModel):
 class Match(BaseModel):
     model_config = ConfigDict(extra="ignore")
     match_id: str
+    championship: str = "carioca"  # carioca ou brasileirao
     round_number: int
     home_team: str
     away_team: str
@@ -55,6 +72,7 @@ class Prediction(BaseModel):
     model_config = ConfigDict(extra="ignore")
     username: str
     match_id: str
+    championship: str = "carioca"
     round_number: int
     home_prediction: int
     away_prediction: int
@@ -62,6 +80,7 @@ class Prediction(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Round(BaseModel):
+    championship: str = "carioca"
     round_number: int
     is_current: bool = True
     deadline: datetime
@@ -72,6 +91,7 @@ class NameCheck(BaseModel):
 class PredictionCreate(BaseModel):
     username: str
     match_id: str
+    championship: str = "carioca"
     round_number: int
     home_prediction: int
     away_prediction: int
