@@ -7,6 +7,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function HomePage({ username }) {
+  const [championships, setChampionships] = useState([]);
+  const [selectedChampionship, setSelectedChampionship] = useState("carioca");
   const [currentRound, setCurrentRound] = useState(null);
   const [topPlayers, setTopPlayers] = useState([]);
   const [nextMatch, setNextMatch] = useState(null);
@@ -14,8 +16,14 @@ export default function HomePage({ username }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    loadChampionships();
   }, []);
+
+  useEffect(() => {
+    if (selectedChampionship) {
+      loadData();
+    }
+  }, [selectedChampionship]);
 
   // Countdown timer
   useEffect(() => {
