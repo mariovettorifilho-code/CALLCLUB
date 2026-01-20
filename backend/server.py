@@ -64,6 +64,7 @@ AUTHORIZED_USERS = {
 PREMIUM_KEYS = {
     "MARIO-CLUB-7X2K": "Mario",
     "MARCOS-CLUB-9M4P": "Marcos",
+    "CARLOS-CLUB-4321": "Carlos",
     # ⬇️ ADICIONE MAIS CHAVES PREMIUM AQUI ⬇️
 }
 
