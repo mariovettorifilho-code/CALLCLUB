@@ -453,34 +453,53 @@ export default function ProfilePage({ username }) {
 
       {/* Predictions History */}
       <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-paper">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-4 mb-6">
           <h2 className="font-heading text-2xl font-bold text-text-primary flex items-center gap-2">
             <CalendarBlank size={24} weight="fill" className="text-pitch-green" />
             Histórico de Palpites
           </h2>
           
-          <select
-            value={selectedRound}
-            onChange={(e) => setSelectedRound(e.target.value)}
-            data-testid="round-filter"
-            className="px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-pitch-green"
-          >
-            <option value="all">Todas as Rodadas</option>
-            {allRounds.map((round) => (
-              <option key={round.round_number} value={round.round_number}>
-                Rodada {round.round_number}
-              </option>
-            ))}
-          </select>
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Filtro de Campeonato */}
+            <select
+              value={selectedChampionship}
+              onChange={(e) => {
+                setSelectedChampionship(e.target.value);
+                setSelectedRound("all"); // Reset rodada ao mudar campeonato
+              }}
+              data-testid="championship-filter"
+              className="flex-1 px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-pitch-green"
+            >
+              <option value="all">🏆 Todos os Campeonatos</option>
+              <option value="carioca">⚪ Campeonato Carioca 2026</option>
+              <option value="brasileirao">🟡 Campeonato Brasileiro 2026</option>
+            </select>
+
+            {/* Filtro de Rodada */}
+            <select
+              value={selectedRound}
+              onChange={(e) => setSelectedRound(e.target.value)}
+              data-testid="round-filter"
+              className="flex-1 px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-pitch-green"
+            >
+              <option value="all">📅 Todas as Rodadas</option>
+              {availableRounds.map((roundNum) => (
+                <option key={roundNum} value={roundNum}>
+                  Rodada {roundNum}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {filteredPredictions.length === 0 ? (
           <div className="text-center py-12">
             <SoccerBall size={48} className="mx-auto text-text-secondary/50 mb-4" />
             <p className="text-text-secondary mb-4">
-              {selectedRound === "all" 
-                ? "Você ainda não fez nenhum palpite."
-                : `Nenhum palpite na Rodada ${selectedRound}.`}
+              {selectedChampionship !== "all" || selectedRound !== "all"
+                ? "Nenhum palpite encontrado com os filtros selecionados."
+                : "Você ainda não fez nenhum palpite."}
             </p>
             <Link
               to="/predictions"
@@ -491,22 +510,61 @@ export default function ProfilePage({ username }) {
             </Link>
           </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedByRound)
-              .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
-              .map(([roundNum, roundPreds]) => (
-                <div key={roundNum}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="bg-pitch-green/10 text-pitch-green px-3 py-1 rounded-lg text-sm font-bold">
-                      Rodada {roundNum}
-                    </span>
-                    <span className="text-sm text-text-secondary">
-                      {roundPreds.length} {roundPreds.length === 1 ? 'palpite' : 'palpites'}
-                    </span>
-                    <span className="ml-auto text-sm font-bold text-pitch-green">
-                      {roundPreds.reduce((sum, p) => sum + (p.points || 0), 0)} pts
-                    </span>
-                  </div>
+          <div className="space-y-8">
+            {Object.entries(groupedByChampionshipAndRound)
+              .sort((a, b) => a[0] === "brasileirao" ? -1 : 1) // Brasileirão primeiro
+              .map(([championship, rounds]) => (
+                <div key={championship}>
+                  {/* Header do Campeonato */}
+                  {selectedChampionship === "all" && (
+                    <div className={`flex items-center gap-2 mb-4 pb-2 border-b-2 ${
+                      championship === "brasileirao" 
+                        ? "border-yellow-400" 
+                        : "border-pitch-green"
+                    }`}>
+                      <span className={`text-2xl`}>
+                        {championship === "brasileirao" ? "🇧🇷" : "🏆"}
+                      </span>
+                      <h3 className={`font-heading text-lg font-bold ${
+                        championship === "brasileirao" 
+                          ? "text-yellow-600" 
+                          : "text-pitch-green"
+                      }`}>
+                        {championshipNames[championship] || championship}
+                      </h3>
+                      {championship === "brasileirao" && (
+                        <span className="ml-2 text-xs bg-gradient-to-r from-yellow-400 to-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
+                          PREMIUM
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Rodadas */}
+                  <div className="space-y-4">
+                    {Object.entries(rounds)
+                      .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
+                      .map(([roundNum, roundPreds]) => (
+                        <div key={`${championship}-${roundNum}`} className={`${
+                          selectedChampionship === "all" ? "ml-4" : ""
+                        }`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                              championship === "brasileirao"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-pitch-green/10 text-pitch-green"
+                            }`}>
+                              Rodada {roundNum}
+                            </span>
+                            <span className="text-sm text-text-secondary">
+                              {roundPreds.length} {roundPreds.length === 1 ? 'palpite' : 'palpites'}
+                            </span>
+                            <span className={`ml-auto text-sm font-bold ${
+                              championship === "brasileirao" ? "text-yellow-600" : "text-pitch-green"
+                            }`}>
+                              {roundPreds.reduce((sum, p) => sum + (p.points || 0), 0)} pts
+                            </span>
+                          </div>
 
                   <div className="grid gap-3">
                     {roundPreds.map((pred, index) => (
