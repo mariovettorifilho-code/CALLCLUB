@@ -332,8 +332,16 @@ async def check_name(data: NameCheck):
     
     # Cria usuário se não existir no banco
     if not user:
+        # Conta quantos usuários existem para definir número de pioneiro
+        total_users = await db.users.count_documents({})
+        pioneer_number = total_users + 1 if total_users < 100 else None
+        
         new_user = User(username=data.username)
-        await db.users.insert_one(new_user.model_dump())
+        user_data = new_user.model_dump()
+        user_data["pioneer_number"] = pioneer_number
+        user_data["first_login"] = datetime.now(timezone.utc)
+        
+        await db.users.insert_one(user_data)
     
     return {"success": True, "username": data.username}
 
