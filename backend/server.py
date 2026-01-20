@@ -27,8 +27,8 @@ api_router = APIRouter(prefix="/api")
 # Exemplo: "Mario": "1234"
 
 AUTHORIZED_USERS = {
-    "Mario": "1234",
-    "Marcos": "2345",
+    "Mario": "2412",
+    "Marcos": "6969",
     "João": "3456",
     "Pedro": "4567",
     "Carlos": "5678",
