@@ -24,7 +24,7 @@ export default function Layout({ username, onLogout, children }) {
               <h1 className="font-heading text-xl font-bold text-pitch-green">
                 CallClub
               </h1>
-              <p className="text-xs text-text-secondary">The Gentlemen's League</p>
+              <p className="text-xs text-text-secondary">Liga dos Palpiteiros</p>
             </div>
           </div>
 
