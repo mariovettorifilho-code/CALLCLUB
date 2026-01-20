@@ -42,7 +42,7 @@ export default function LoginPage({ onLogin }) {
             CallClub
           </h1>
           <p className="text-text-secondary font-body">
-            The Gentlemen's League
+            Liga dos Palpiteiros
           </p>
         </div>
 
