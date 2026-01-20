@@ -271,6 +271,20 @@ export default function PredictionsPage({ username }) {
                 <div className="flex items-center justify-between gap-4">
                   {/* Time Casa */}
                   <div className="flex-1 text-center">
+                    {match.home_badge ? (
+                      <img 
+                        src={match.home_badge} 
+                        alt={match.home_team}
+                        className="w-16 h-16 mx-auto mb-2 object-contain"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 mx-auto mb-2 bg-paper rounded-full flex items-center justify-center">
+                        <span className="text-2xl font-bold text-text-secondary">
+                          {match.home_team?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <p className="font-heading font-bold text-text-primary text-lg mb-2">
                       {match.home_team}
                     </p>
@@ -295,6 +309,20 @@ export default function PredictionsPage({ username }) {
 
                   {/* Time Fora */}
                   <div className="flex-1 text-center">
+                    {match.away_badge ? (
+                      <img 
+                        src={match.away_badge} 
+                        alt={match.away_team}
+                        className="w-16 h-16 mx-auto mb-2 object-contain"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 mx-auto mb-2 bg-paper rounded-full flex items-center justify-center">
+                        <span className="text-2xl font-bold text-text-secondary">
+                          {match.away_team?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <p className="font-heading font-bold text-text-primary text-lg mb-2">
                       {match.away_team}
                     </p>
