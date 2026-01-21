@@ -260,7 +260,7 @@ async def admin_get_users(password: str):
     
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
     
-    # Adiciona info de chave premium para cada usuário
+    # Adiciona info de chave premium e PIN para cada usuário
     for user in users:
         username = user.get("username")
         # Procura se tem chave
@@ -270,6 +270,8 @@ async def admin_get_users(password: str):
                 user_key = key
                 break
         user["premium_key"] = user_key
+        # Adiciona PIN
+        user["pin"] = AUTHORIZED_USERS.get(username, "N/A")
     
     return users
 
@@ -313,6 +315,203 @@ async def admin_unban_user(password: str, username: str):
     )
     
     return {"success": True, "message": f"Ban removido de {username}"}
+
+# ========== NOVOS ENDPOINTS ADMIN ==========
+
+class AddUserRequest(BaseModel):
+    password: str
+    username: str
+    pin: str
+
+class UpdatePinRequest(BaseModel):
+    password: str
+    username: str
+    new_pin: str
+
+class TogglePremiumRequest(BaseModel):
+    password: str
+    username: str
+    is_premium: bool
+
+class GenerateKeyRequest(BaseModel):
+    password: str
+    username: str
+
+@api_router.post("/admin/add-user")
+async def admin_add_user(data: AddUserRequest):
+    """Adiciona novo usuário (requer senha admin)"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Verifica se já existe
+    if data.username in AUTHORIZED_USERS:
+        raise HTTPException(status_code=400, detail="Usuário já existe")
+    
+    # Adiciona na whitelist (em memória - para persistir, editar server.py)
+    AUTHORIZED_USERS[data.username] = data.pin
+    
+    # Conta usuários para definir número de pioneiro
+    user_count = await db.users.count_documents({})
+    pioneer_num = user_count + 1 if user_count < 100 else None
+    
+    # Cria no banco
+    await db.users.insert_one({
+        "username": data.username,
+        "total_points": 0,
+        "is_premium": False,
+        "is_banned": False,
+        "achievements": ["pioneer"] if pioneer_num else [],
+        "pioneer_number": pioneer_num,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    await db.security_logs.insert_one({
+        "type": "user_added",
+        "username": data.username,
+        "added_by": "admin",
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": f"Usuário {data.username} adicionado!", "pioneer_number": pioneer_num}
+
+@api_router.post("/admin/update-pin")
+async def admin_update_pin(data: UpdatePinRequest):
+    """Atualiza PIN de um usuário (requer senha admin)"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    if data.username not in AUTHORIZED_USERS:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Atualiza em memória
+    AUTHORIZED_USERS[data.username] = data.new_pin
+    
+    await db.security_logs.insert_one({
+        "type": "pin_updated",
+        "username": data.username,
+        "updated_by": "admin",
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": f"PIN de {data.username} atualizado!"}
+
+@api_router.post("/admin/toggle-premium")
+async def admin_toggle_premium(data: TogglePremiumRequest):
+    """Ativa/desativa premium de um usuário (requer senha admin)"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    update_data = {"is_premium": data.is_premium}
+    
+    if data.is_premium:
+        update_data["premium_activated_at"] = datetime.now(timezone.utc)
+        # Adiciona conquista de premium
+        await db.users.update_one(
+            {"username": data.username},
+            {"$addToSet": {"achievements": "premium"}}
+        )
+    else:
+        update_data["premium_key"] = None
+        # Remove conquista de premium
+        await db.users.update_one(
+            {"username": data.username},
+            {"$pull": {"achievements": "premium"}}
+        )
+    
+    await db.users.update_one(
+        {"username": data.username},
+        {"$set": update_data}
+    )
+    
+    action = "ativado" if data.is_premium else "desativado"
+    await db.security_logs.insert_one({
+        "type": f"premium_{action}",
+        "username": data.username,
+        "updated_by": "admin",
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": f"Premium {action} para {data.username}!"}
+
+@api_router.post("/admin/generate-key")
+async def admin_generate_key(data: GenerateKeyRequest):
+    """Gera nova chave premium para usuário (requer senha admin)"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    import random
+    import string
+    
+    # Gera chave única no formato NOME-CLUB-XXXX
+    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    new_key = f"{data.username.upper()}-CLUB-{suffix}"
+    
+    # Adiciona na lista de chaves (em memória)
+    PREMIUM_KEYS[new_key] = data.username
+    
+    await db.security_logs.insert_one({
+        "type": "key_generated",
+        "username": data.username,
+        "key": new_key,
+        "generated_by": "admin",
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "key": new_key, "message": f"Chave gerada: {new_key}"}
+
+@api_router.delete("/admin/remove-user")
+async def admin_remove_user(password: str, username: str):
+    """Remove um usuário completamente (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Remove da whitelist
+    if username in AUTHORIZED_USERS:
+        del AUTHORIZED_USERS[username]
+    
+    # Remove chaves premium associadas
+    keys_to_remove = [k for k, v in PREMIUM_KEYS.items() if v == username]
+    for key in keys_to_remove:
+        del PREMIUM_KEYS[key]
+    
+    # Remove do banco
+    await db.users.delete_one({"username": username})
+    await db.predictions.delete_many({"username": username})
+    
+    await db.security_logs.insert_one({
+        "type": "user_removed",
+        "username": username,
+        "removed_by": "admin",
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True, "message": f"Usuário {username} removido completamente"}
+
+@api_router.get("/admin/stats")
+async def admin_get_stats(password: str):
+    """Retorna estatísticas gerais (requer senha admin)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    total_users = await db.users.count_documents({})
+    premium_users = await db.users.count_documents({"is_premium": True})
+    banned_users = await db.users.count_documents({"is_banned": True})
+    total_predictions = await db.predictions.count_documents({})
+    total_matches = await db.matches.count_documents({})
+    finished_matches = await db.matches.count_documents({"status": "finished"})
+    
+    # Alertas de segurança
+    security_alerts = await db.security_logs.count_documents({"type": "stolen_key_attempt"})
+    
+    return {
+        "total_users": total_users,
+        "premium_users": premium_users,
+        "banned_users": banned_users,
+        "total_predictions": total_predictions,
+        "total_matches": total_matches,
+        "finished_matches": finished_matches,
+        "security_alerts": security_alerts
+    }
 
 # ========== AUTENTICAÇÃO ==========
 @api_router.post("/auth/check-name")
