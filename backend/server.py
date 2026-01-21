@@ -749,6 +749,117 @@ async def get_round_ranking(round_number: int, championship: str = "carioca"):
     ranking = sorted(user_points.values(), key=lambda x: x['points'], reverse=True)
     return ranking
 
+@api_router.get("/ranking/detailed/{championship}")
+async def get_detailed_ranking(championship: str):
+    """Retorna ranking detalhado com todas as estatísticas por campeonato"""
+    
+    # Busca a rodada atual do campeonato
+    current_round_match = await db.matches.find_one(
+        {"championship": championship, "is_finished": False},
+        sort=[("round_number", 1)]
+    )
+    current_round = current_round_match.get("round_number", 1) if current_round_match else 1
+    
+    # Total de rodadas disponíveis
+    max_round_doc = await db.matches.find_one(
+        {"championship": championship},
+        sort=[("round_number", -1)]
+    )
+    total_rounds = max_round_doc.get("round_number", 1) if max_round_doc else 1
+    
+    # Busca todos os palpites do campeonato
+    predictions = await db.predictions.find(
+        {"championship": championship},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    # Busca todas as partidas para calcular estatísticas detalhadas
+    matches = await db.matches.find(
+        {"championship": championship},
+        {"_id": 0}
+    ).to_list(1000)
+    matches_dict = {m['match_id']: m for m in matches}
+    
+    # Busca info de premium e pioneiro de todos os usuários
+    users = await db.users.find({}, {"_id": 0, "username": 1, "is_premium": 1, "pioneer_number": 1}).to_list(1000)
+    user_info = {u['username']: u for u in users}
+    
+    # Agrupa estatísticas por usuário
+    user_stats = {}
+    for pred in predictions:
+        username = pred['username']
+        match = matches_dict.get(pred['match_id'], {})
+        
+        if username not in user_stats:
+            user_stats[username] = {
+                "username": username,
+                "total_points": 0,
+                "correct_results": 0,  # Acertos de resultado (V/E/D)
+                "correct_home_goals": 0,  # Acertos gols mandante
+                "correct_away_goals": 0,  # Acertos gols visitante
+                "exact_scores": 0,  # Placares exatos
+                "total_predictions": 0,
+                "is_premium": user_info.get(username, {}).get('is_premium', False),
+                "pioneer_number": user_info.get(username, {}).get('pioneer_number')
+            }
+        
+        user_stats[username]['total_predictions'] += 1
+        
+        # Só conta estatísticas se o jogo já terminou
+        if match.get('is_finished') and pred.get('points') is not None:
+            points = pred.get('points') or 0
+            user_stats[username]['total_points'] += points
+            
+            home_pred = pred.get('home_prediction')
+            away_pred = pred.get('away_prediction')
+            home_score = match.get('home_score')
+            away_score = match.get('away_score')
+            
+            if home_score is not None and away_score is not None:
+                # Verifica acerto de resultado (V/E/D)
+                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
+                if pred_result == actual_result:
+                    user_stats[username]['correct_results'] += 1
+                
+                # Verifica acerto de gols do mandante
+                if home_pred == home_score:
+                    user_stats[username]['correct_home_goals'] += 1
+                
+                # Verifica acerto de gols do visitante
+                if away_pred == away_score:
+                    user_stats[username]['correct_away_goals'] += 1
+                
+                # Verifica placar exato
+                if home_pred == home_score and away_pred == away_score:
+                    user_stats[username]['exact_scores'] += 1
+    
+    # Calcula aproveitamento para cada usuário
+    for username, stats in user_stats.items():
+        if stats['total_predictions'] > 0:
+            max_possible = stats['total_predictions'] * 5  # 5 pontos máximo por jogo
+            stats['efficiency'] = round((stats['total_points'] / max_possible) * 100, 1) if max_possible > 0 else 0
+        else:
+            stats['efficiency'] = 0
+    
+    # Ordena por pontos totais, depois por placares exatos (desempate)
+    ranking = sorted(
+        user_stats.values(), 
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']), 
+        reverse=True
+    )
+    
+    # Adiciona posição
+    for i, user in enumerate(ranking):
+        user['position'] = i + 1
+    
+    return {
+        "championship": championship,
+        "current_round": current_round,
+        "total_rounds": total_rounds,
+        "ranking": ranking
+    }
+
 @api_router.get("/ranking/general")
 async def get_general_ranking():
     """Retorna ranking geral (todas as rodadas)"""
