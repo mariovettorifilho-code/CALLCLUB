@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Shield, Users, Warning, Check, X, Key, Star } from "@phosphor-icons/react";
+import { 
+  Shield, Users, Warning, Check, X, Key, Star, Plus, 
+  Trash, PencilSimple, Eye, EyeSlash, UserPlus, Crown,
+  ChartBar, Lock, LockOpen, Copy, ArrowClockwise
+} from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -11,8 +15,26 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState("");
   const [users, setUsers] = useState([]);
   const [securityLogs, setSecurityLogs] = useState([]);
-  const [activeTab, setActiveTab] = useState("users");
+  const [stats, setStats] = useState(null);
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(false);
+  
+  // Modal states
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showEditPin, setShowEditPin] = useState(false);
+  const [showGenerateKey, setShowGenerateKey] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserPin, setNewUserPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [generatedKey, setGeneratedKey] = useState("");
+  const [showPins, setShowPins] = useState({});
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const handleLogin = async () => {
     try {
@@ -28,12 +50,14 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, logsRes] = await Promise.all([
+      const [usersRes, logsRes, statsRes] = await Promise.all([
         axios.get(`${API}/admin/users?password=${password}`),
-        axios.get(`${API}/admin/security-logs?password=${password}`)
+        axios.get(`${API}/admin/security-logs?password=${password}`),
+        axios.get(`${API}/admin/stats?password=${password}`)
       ]);
       setUsers(usersRes.data || []);
       setSecurityLogs(logsRes.data || []);
+      setStats(statsRes.data || null);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -45,13 +69,111 @@ export default function AdminPage() {
     try {
       if (isBanned) {
         await axios.post(`${API}/admin/unban-user?password=${password}&username=${username}`);
+        showNotification(`${username} foi desbanido`);
       } else {
         await axios.post(`${API}/admin/ban-user?password=${password}&username=${username}`);
+        showNotification(`${username} foi banido`, "warning");
       }
       loadData();
     } catch (error) {
-      console.error("Erro ao banir/desbanir:", error);
+      showNotification("Erro ao processar", "error");
     }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserName.trim() || !newUserPin.trim()) {
+      showNotification("Preencha todos os campos", "error");
+      return;
+    }
+    if (newUserPin.length !== 4 || !/^\d+$/.test(newUserPin)) {
+      showNotification("PIN deve ter 4 dígitos", "error");
+      return;
+    }
+    try {
+      const res = await axios.post(`${API}/admin/add-user`, {
+        password,
+        username: newUserName.trim(),
+        pin: newUserPin
+      });
+      showNotification(res.data.message);
+      setShowAddUser(false);
+      setNewUserName("");
+      setNewUserPin("");
+      loadData();
+    } catch (error) {
+      showNotification(error.response?.data?.detail || "Erro ao adicionar", "error");
+    }
+  };
+
+  const handleUpdatePin = async () => {
+    if (!newPin.trim()) {
+      showNotification("Digite o novo PIN", "error");
+      return;
+    }
+    if (newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+      showNotification("PIN deve ter 4 dígitos", "error");
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/update-pin`, {
+        password,
+        username: selectedUser,
+        new_pin: newPin
+      });
+      showNotification(`PIN de ${selectedUser} atualizado!`);
+      setShowEditPin(false);
+      setNewPin("");
+      setSelectedUser(null);
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao atualizar PIN", "error");
+    }
+  };
+
+  const handleTogglePremium = async (username, currentPremium) => {
+    try {
+      await axios.post(`${API}/admin/toggle-premium`, {
+        password,
+        username,
+        is_premium: !currentPremium
+      });
+      showNotification(`Premium ${!currentPremium ? "ativado" : "desativado"} para ${username}`);
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao alterar premium", "error");
+    }
+  };
+
+  const handleGenerateKey = async () => {
+    try {
+      const res = await axios.post(`${API}/admin/generate-key`, {
+        password,
+        username: selectedUser
+      });
+      setGeneratedKey(res.data.key);
+      showNotification("Chave gerada com sucesso!");
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao gerar chave", "error");
+    }
+  };
+
+  const handleRemoveUser = async (username) => {
+    if (!window.confirm(`Tem certeza que deseja REMOVER ${username}? Esta ação não pode ser desfeita!`)) {
+      return;
+    }
+    try {
+      await axios.delete(`${API}/admin/remove-user?password=${password}&username=${username}`);
+      showNotification(`${username} removido completamente`, "warning");
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao remover usuário", "error");
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    showNotification("Copiado!");
   };
 
   const formatDate = (dateString) => {
@@ -64,8 +186,12 @@ export default function AdminPage() {
     switch (type) {
       case "stolen_key_attempt": return "bg-red-100 text-red-800 border-red-300";
       case "invalid_key": return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "premium_activated": return "bg-green-100 text-green-800 border-green-300";
+      case "premium_activated": 
+      case "premium_ativado": return "bg-green-100 text-green-800 border-green-300";
       case "user_banned": return "bg-red-100 text-red-800 border-red-300";
+      case "user_added": return "bg-blue-100 text-blue-800 border-blue-300";
+      case "pin_updated": return "bg-purple-100 text-purple-800 border-purple-300";
+      case "key_generated": return "bg-yellow-100 text-yellow-800 border-yellow-300";
       default: return "bg-gray-100 text-gray-800 border-gray-300";
     }
   };
@@ -74,23 +200,32 @@ export default function AdminPage() {
     switch (type) {
       case "stolen_key_attempt": return "🚨 TENTATIVA DE USO INDEVIDO";
       case "invalid_key": return "⚠️ Chave inválida";
-      case "premium_activated": return "✅ Premium ativado";
+      case "premium_activated":
+      case "premium_ativado": return "✅ Premium ativado";
+      case "premium_desativado": return "❌ Premium desativado";
       case "user_banned": return "🚫 Usuário banido";
+      case "user_added": return "➕ Usuário adicionado";
+      case "user_removed": return "🗑️ Usuário removido";
+      case "pin_updated": return "🔑 PIN atualizado";
+      case "key_generated": return "🎫 Chave gerada";
       default: return type;
     }
   };
 
+  // Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <Shield size={64} className="mx-auto text-yellow-500 mb-4" />
+            <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/30">
+              <Shield size={40} className="text-white" weight="fill" />
+            </div>
             <h1 className="text-3xl font-bold text-white mb-2">Painel Admin</h1>
             <p className="text-gray-400">CallClub - Área Restrita</p>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl p-8 border border-gray-700 shadow-xl">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -101,22 +236,25 @@ export default function AdminPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
                   placeholder="Digite a senha"
+                  data-testid="admin-password-input"
                 />
               </div>
 
               {authError && (
-                <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                  <X size={18} />
                   {authError}
                 </div>
               )}
 
               <button
                 onClick={handleLogin}
-                className="w-full bg-yellow-500 text-gray-900 font-semibold py-3 px-6 rounded-lg hover:bg-yellow-400 transition-all"
+                data-testid="admin-login-btn"
+                className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-900 font-bold py-3 px-6 rounded-xl hover:from-yellow-400 hover:to-amber-500 transition-all shadow-lg shadow-yellow-500/20"
               >
-                Entrar
+                Entrar no Painel
               </button>
             </div>
           </div>
@@ -126,167 +264,520 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white p-4 md:p-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-xl shadow-lg animate-pulse ${
+          notification.type === "error" ? "bg-red-500" :
+          notification.type === "warning" ? "bg-yellow-500 text-gray-900" :
+          "bg-green-500"
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <Shield size={32} className="text-yellow-500" />
-            <h1 className="text-2xl font-bold">Painel Admin - CallClub</h1>
+            <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Shield size={24} className="text-white" weight="fill" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Painel Admin</h1>
+              <p className="text-gray-400 text-sm">CallClub - Liga dos Palpiteiros</p>
+            </div>
           </div>
-          <button
-            onClick={() => {
-              setIsAuthenticated(false);
-              setPassword("");
-            }}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={loadData}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <ArrowClockwise size={18} />
+              Atualizar
+            </button>
+            <button
+              onClick={() => {
+                setIsAuthenticated(false);
+                setPassword("");
+              }}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              Sair
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === "users"
-                ? "bg-yellow-500 text-gray-900"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            <Users size={20} className="inline mr-2" />
-            Usuários ({users.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("security")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === "security"
-                ? "bg-yellow-500 text-gray-900"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-            }`}
-          >
-            <Warning size={20} className="inline mr-2" />
-            Logs de Segurança ({securityLogs.filter(l => l.type === "stolen_key_attempt").length} alertas)
-          </button>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: "dashboard", label: "Dashboard", icon: ChartBar },
+            { id: "users", label: `Usuários (${users.length})`, icon: Users },
+            { id: "security", label: `Segurança (${securityLogs.filter(l => l.type === "stolen_key_attempt").length})`, icon: Warning },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              data-testid={`tab-${tab.id}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all ${
+                activeTab === tab.id
+                  ? "bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-900 shadow-lg shadow-yellow-500/20"
+                  : "bg-gray-800/50 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              <tab.icon size={20} weight={activeTab === tab.id ? "fill" : "regular"} />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div className="animate-spin w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-400">Carregando...</p>
           </div>
-        ) : activeTab === "users" ? (
-          /* Users Tab */
-          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-700">
-                <tr>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Usuário</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Status</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Chave Premium</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Pontos</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.username} className="border-t border-gray-700 hover:bg-gray-750">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{user.username}</span>
-                        {user.is_premium && (
-                          <Star size={16} className="text-yellow-500" weight="fill" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.is_banned ? (
-                        <span className="bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded">BANIDO</span>
-                      ) : (
-                        <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded">Ativo</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.premium_key ? (
-                        <code className="bg-gray-700 px-2 py-1 rounded text-xs text-yellow-400">
-                          {user.premium_key}
-                        </code>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono">{user.total_points || 0}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleBan(user.username, user.is_banned)}
-                        className={`text-xs px-3 py-1 rounded font-medium transition-colors ${
-                          user.is_banned
-                            ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                            : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                        }`}
-                      >
-                        {user.is_banned ? "Desbanir" : "Banir"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         ) : (
-          /* Security Logs Tab */
-          <div className="space-y-3">
-            {securityLogs.length === 0 ? (
-              <div className="bg-gray-800 rounded-lg p-8 text-center border border-gray-700">
-                <Check size={48} className="mx-auto text-green-500 mb-4" />
-                <p className="text-gray-400">Nenhum evento de segurança registrado</p>
-              </div>
-            ) : (
-              securityLogs.map((log, index) => (
-                <div
-                  key={index}
-                  className={`rounded-lg p-4 border ${getLogTypeColor(log.type)}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-bold mb-1">{getLogTypeLabel(log.type)}</p>
-                      <p className="text-sm">
-                        <strong>Usuário:</strong> {log.username}
-                      </p>
-                      {log.attempted_key && (
-                        <p className="text-sm">
-                          <strong>Chave tentada:</strong> <code>{log.attempted_key}</code>
-                        </p>
-                      )}
-                      {log.key_owner && (
-                        <p className="text-sm">
-                          <strong>Dono da chave:</strong> {log.key_owner}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right text-sm opacity-75">
-                      {formatDate(log.timestamp)}
-                    </div>
+          <>
+            {/* Dashboard Tab */}
+            {activeTab === "dashboard" && stats && (
+              <div className="space-y-6">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-2xl p-5 border border-blue-500/30">
+                    <Users size={28} className="text-blue-400 mb-2" />
+                    <p className="text-3xl font-bold">{stats.total_users}</p>
+                    <p className="text-blue-300 text-sm">Usuários</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-yellow-500/20 to-amber-600/10 rounded-2xl p-5 border border-yellow-500/30">
+                    <Star size={28} className="text-yellow-400 mb-2" weight="fill" />
+                    <p className="text-3xl font-bold">{stats.premium_users}</p>
+                    <p className="text-yellow-300 text-sm">Premium</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-500/20 to-emerald-600/10 rounded-2xl p-5 border border-green-500/30">
+                    <Check size={28} className="text-green-400 mb-2" />
+                    <p className="text-3xl font-bold">{stats.total_predictions}</p>
+                    <p className="text-green-300 text-sm">Palpites</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 rounded-2xl p-5 border border-red-500/30">
+                    <Warning size={28} className="text-red-400 mb-2" />
+                    <p className="text-3xl font-bold">{stats.security_alerts}</p>
+                    <p className="text-red-300 text-sm">Alertas</p>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
 
-        {/* Refresh Button */}
-        <div className="mt-6 text-center">
-          <button
-            onClick={loadData}
-            className="text-gray-400 hover:text-white transition-colors text-sm"
-          >
-            🔄 Atualizar dados
-          </button>
-        </div>
+                {/* Quick Actions */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Plus size={20} className="text-yellow-500" />
+                    Ações Rápidas
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <button
+                      onClick={() => setShowAddUser(true)}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors group"
+                    >
+                      <UserPlus size={28} className="text-green-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Adicionar Usuário</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("users")}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors group"
+                    >
+                      <Users size={28} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Gerenciar Usuários</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("security")}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors group"
+                    >
+                      <Warning size={28} className="text-red-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Ver Alertas</span>
+                    </button>
+                    <button
+                      onClick={loadData}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors group"
+                    >
+                      <ArrowClockwise size={28} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Atualizar Dados</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Recent Logs */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Warning size={20} className="text-yellow-500" />
+                    Atividade Recente
+                  </h3>
+                  <div className="space-y-2">
+                    {securityLogs.slice(0, 5).map((log, index) => (
+                      <div key={index} className={`rounded-lg p-3 border ${getLogTypeColor(log.type)}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{getLogTypeLabel(log.type)}</span>
+                          <span className="text-xs opacity-75">{formatDate(log.timestamp)}</span>
+                        </div>
+                        <p className="text-xs mt-1 opacity-75">Usuário: {log.username}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Users Tab */}
+            {activeTab === "users" && (
+              <div className="space-y-4">
+                {/* Add User Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowAddUser(true)}
+                    data-testid="add-user-btn"
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl font-medium hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-500/20"
+                  >
+                    <UserPlus size={20} weight="bold" />
+                    Adicionar Usuário
+                  </button>
+                </div>
+
+                {/* Users Table */}
+                <div className="bg-gray-800/50 rounded-2xl border border-gray-700 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-700/50">
+                        <tr>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Usuário</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">PIN</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Status</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Chave Premium</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Pontos</th>
+                          <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((user) => (
+                          <tr key={user.username} className="border-t border-gray-700 hover:bg-gray-700/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{user.username}</span>
+                                {user.is_premium && (
+                                  <Star size={16} className="text-yellow-500" weight="fill" />
+                                )}
+                                {user.pioneer_number && (
+                                  <span className="text-xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">
+                                    #{user.pioneer_number}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <code className="bg-gray-700 px-2 py-1 rounded text-sm">
+                                  {showPins[user.username] ? user.pin : "••••"}
+                                </code>
+                                <button
+                                  onClick={() => setShowPins(prev => ({...prev, [user.username]: !prev[user.username]}))}
+                                  className="text-gray-400 hover:text-white transition-colors"
+                                >
+                                  {showPins[user.username] ? <EyeSlash size={16} /> : <Eye size={16} />}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setSelectedUser(user.username);
+                                    setShowEditPin(true);
+                                  }}
+                                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                                  title="Editar PIN"
+                                >
+                                  <PencilSimple size={16} />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {user.is_banned ? (
+                                <span className="bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded-full">BANIDO</span>
+                              ) : (
+                                <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full">Ativo</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {user.premium_key ? (
+                                <div className="flex items-center gap-2">
+                                  <code className="bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded text-xs">
+                                    {user.premium_key}
+                                  </code>
+                                  <button
+                                    onClick={() => copyToClipboard(user.premium_key)}
+                                    className="text-gray-400 hover:text-white transition-colors"
+                                    title="Copiar"
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setSelectedUser(user.username);
+                                    setGeneratedKey("");
+                                    setShowGenerateKey(true);
+                                  }}
+                                  className="text-xs text-yellow-500 hover:text-yellow-400 flex items-center gap-1"
+                                >
+                                  <Key size={14} />
+                                  Gerar Chave
+                                </button>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="font-mono font-bold text-lg">{user.total_points || 0}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {/* Toggle Premium */}
+                                <button
+                                  onClick={() => handleTogglePremium(user.username, user.is_premium)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    user.is_premium
+                                      ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                                      : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                                  }`}
+                                  title={user.is_premium ? "Desativar Premium" : "Ativar Premium"}
+                                >
+                                  {user.is_premium ? <Crown size={16} weight="fill" /> : <Crown size={16} />}
+                                </button>
+
+                                {/* Ban/Unban */}
+                                <button
+                                  onClick={() => handleBan(user.username, user.is_banned)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    user.is_banned
+                                      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                                      : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                                  }`}
+                                  title={user.is_banned ? "Desbanir" : "Banir"}
+                                >
+                                  {user.is_banned ? <LockOpen size={16} /> : <Lock size={16} />}
+                                </button>
+
+                                {/* Remove */}
+                                <button
+                                  onClick={() => handleRemoveUser(user.username)}
+                                  className="p-2 rounded-lg bg-gray-700 text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                                  title="Remover usuário"
+                                >
+                                  <Trash size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Security Tab */}
+            {activeTab === "security" && (
+              <div className="space-y-3">
+                {securityLogs.length === 0 ? (
+                  <div className="bg-gray-800/50 rounded-2xl p-12 text-center border border-gray-700">
+                    <Check size={64} className="mx-auto text-green-500 mb-4" />
+                    <p className="text-xl font-bold text-white mb-2">Tudo Seguro!</p>
+                    <p className="text-gray-400">Nenhum evento de segurança registrado</p>
+                  </div>
+                ) : (
+                  securityLogs.map((log, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-xl p-4 border ${getLogTypeColor(log.type)}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-bold mb-1">{getLogTypeLabel(log.type)}</p>
+                          <p className="text-sm">
+                            <strong>Usuário:</strong> {log.username}
+                          </p>
+                          {log.attempted_key && (
+                            <p className="text-sm">
+                              <strong>Chave tentada:</strong> <code className="bg-black/20 px-1 rounded">{log.attempted_key}</code>
+                            </p>
+                          )}
+                          {log.key_owner && (
+                            <p className="text-sm">
+                              <strong>Dono da chave:</strong> {log.key_owner}
+                            </p>
+                          )}
+                          {log.key && (
+                            <p className="text-sm">
+                              <strong>Chave:</strong> <code className="bg-black/20 px-1 rounded">{log.key}</code>
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right text-sm opacity-75">
+                          {formatDate(log.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
+
+      {/* Add User Modal */}
+      {showAddUser && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-700">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <UserPlus size={24} className="text-green-500" />
+              Adicionar Novo Usuário
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Nome do Usuário</label>
+                <input
+                  type="text"
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ex: João"
+                  data-testid="new-user-name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">PIN (4 dígitos)</label>
+                <input
+                  type="text"
+                  value={newUserPin}
+                  onChange={(e) => setNewUserPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-2xl tracking-widest text-center"
+                  placeholder="0000"
+                  maxLength={4}
+                  data-testid="new-user-pin"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowAddUser(false);
+                    setNewUserName("");
+                    setNewUserPin("");
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddUser}
+                  data-testid="confirm-add-user"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl font-bold hover:from-green-400 hover:to-emerald-500 transition-all"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit PIN Modal */}
+      {showEditPin && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-700">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Key size={24} className="text-blue-500" />
+              Alterar PIN de {selectedUser}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Novo PIN (4 dígitos)</label>
+                <input
+                  type="text"
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-2xl tracking-widest text-center"
+                  placeholder="0000"
+                  maxLength={4}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowEditPin(false);
+                    setNewPin("");
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleUpdatePin}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl font-bold hover:from-blue-400 hover:to-blue-500 transition-all"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Key Modal */}
+      {showGenerateKey && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-700">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Key size={24} className="text-yellow-500" />
+              Gerar Chave Premium
+            </h3>
+            <div className="space-y-4">
+              <p className="text-gray-300">
+                Gerar chave premium para <strong className="text-white">{selectedUser}</strong>?
+              </p>
+              
+              {generatedKey && (
+                <div className="bg-green-500/20 border border-green-500 rounded-xl p-4 text-center">
+                  <p className="text-sm text-green-300 mb-2">Chave gerada com sucesso!</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <code className="text-xl font-bold text-green-400">{generatedKey}</code>
+                    <button
+                      onClick={() => copyToClipboard(generatedKey)}
+                      className="text-green-400 hover:text-green-300"
+                    >
+                      <Copy size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowGenerateKey(false);
+                    setGeneratedKey("");
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 px-4 py-3 bg-gray-700 rounded-xl hover:bg-gray-600 transition-colors"
+                >
+                  {generatedKey ? "Fechar" : "Cancelar"}
+                </button>
+                {!generatedKey && (
+                  <button
+                    onClick={handleGenerateKey}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-gray-900 rounded-xl font-bold hover:from-yellow-400 hover:to-amber-500 transition-all"
+                  >
+                    Gerar Chave
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
