@@ -267,7 +267,7 @@ export default function RankingsPage({ username }) {
                       <span className={`font-mono font-bold ${
                         player.exact_scores > 0 ? "text-yellow-600" : "text-gray-400"
                       }`}>
-                        {player.exact_scores > 0 && "🎯 "}{player.exact_scores}
+                        {player.exact_scores}
                       </span>
                     </td>
 
@@ -277,6 +277,7 @@ export default function RankingsPage({ username }) {
                         {player.total_predictions}
                       </span>
                     </td>
+
 
                     {/* Aproveitamento */}
                     <td className="px-3 py-3 text-center">
