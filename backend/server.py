@@ -798,26 +798,42 @@ async def get_detailed_ranking(championship: str):
                 "correct_home_goals": 0,  # Acertos gols mandante
                 "correct_away_goals": 0,  # Acertos gols visitante
                 "exact_scores": 0,  # Placares exatos
-                "total_predictions": 0,
+                "total_predictions": 0,  # Apenas jogos realizados
                 "is_premium": user_info.get(username, {}).get('is_premium', False),
                 "pioneer_number": user_info.get(username, {}).get('pioneer_number')
             }
         
-        user_stats[username]['total_predictions'] += 1
-        
-        # Só conta estatísticas se o jogo já terminou
-        if match.get('is_finished') and pred.get('points') is not None:
-            points = pred.get('points') or 0
-            user_stats[username]['total_points'] += points
+        # Só conta palpites e estatísticas de jogos JÁ REALIZADOS (finalizados)
+        if match.get('is_finished'):
+            user_stats[username]['total_predictions'] += 1
             
-            home_pred = pred.get('home_prediction')
-            away_pred = pred.get('away_prediction')
-            home_score = match.get('home_score')
-            away_score = match.get('away_score')
-            
-            if home_score is not None and away_score is not None:
-                # Verifica acerto de resultado (V/E/D)
-                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+            if pred.get('points') is not None:
+                points = pred.get('points') or 0
+                user_stats[username]['total_points'] += points
+                
+                home_pred = pred.get('home_prediction')
+                away_pred = pred.get('away_prediction')
+                home_score = match.get('home_score')
+                away_score = match.get('away_score')
+                
+                if home_score is not None and away_score is not None:
+                    # Verifica acerto de resultado (V/E/D)
+                    pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                    actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
+                    if pred_result == actual_result:
+                        user_stats[username]['correct_results'] += 1
+                    
+                    # Verifica acerto de gols do mandante
+                    if home_pred == home_score:
+                        user_stats[username]['correct_home_goals'] += 1
+                    
+                    # Verifica acerto de gols do visitante
+                    if away_pred == away_score:
+                        user_stats[username]['correct_away_goals'] += 1
+                    
+                    # Verifica placar exato
+                    if home_pred == home_score and away_pred == away_score:
+                        user_stats[username]['exact_scores'] += 1
                 actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
                 if pred_result == actual_result:
                     user_stats[username]['correct_results'] += 1
