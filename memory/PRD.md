@@ -107,6 +107,23 @@ Nomes na whitelist (exemplo): Mario, Marcos, João, Pedro, Carlos, Lucas, Rafael
 - **Rodadas 4-6**: Futuras
 
 ## Changelog
+- **20/01/2026**: Ranking detalhado com 10 colunas por campeonato
+- **20/01/2026**: Painel Admin completo (adicionar usuários, editar PIN, toggle premium)
+- **20/01/2026**: Jornada do Palpiteiro (visualização de evolução)
+- **20/01/2026**: Corrigido bug de championship=null (ver TROUBLESHOOTING.md)
 - **19/01/2026**: Sistema de pontuação e rankings implementados
 - **19/01/2026**: Corrigido sync para buscar todas as 6 rodadas
 - **19/01/2026**: Integração TheSportsDB funcionando
+
+## 📚 Documentos de Referência
+- `/app/memory/PRD.md` - Este documento (requisitos do produto)
+- `/app/memory/TROUBLESHOOTING.md` - Problemas conhecidos e soluções
+- `/app/CONTEXT_FOR_NEXT_AGENT.md` - Contexto completo para novos agentes
+
+## ⚠️ IMPORTANTE: Checklist de Integridade
+Antes de assumir que algo está "bugado", verificar:
+1. `championship` está definido em todos os `matches` e `predictions`?
+2. Jogos finalizados têm `is_finished: true` e placar preenchido?
+3. Palpites de jogos finalizados têm `points` calculados?
+
+Ver `/app/memory/TROUBLESHOOTING.md` para scripts de diagnóstico.
