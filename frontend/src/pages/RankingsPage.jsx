@@ -326,20 +326,20 @@ export default function RankingsPage({ username }) {
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-lg">✓</span>
-            <span className="text-text-secondary">Res. = Acertos V/E/D</span>
+            <span className="font-bold text-pitch-green">Res.</span>
+            <span className="text-text-secondary">= Acertos V/E/D</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg">🏠</span>
-            <span className="text-text-secondary">Gols casa certos</span>
+            <span className="font-bold text-pitch-green">Casa</span>
+            <span className="text-text-secondary">= Gols casa certos</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg">✈️</span>
-            <span className="text-text-secondary">Gols visitante certos</span>
+            <span className="font-bold text-pitch-green">Vis.</span>
+            <span className="text-text-secondary">= Gols visitante certos</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg">🎯</span>
-            <span className="text-text-secondary">Placares exatos</span>
+            <span className="font-bold text-pitch-green">Exato</span>
+            <span className="text-text-secondary">= Placares exatos</span>
           </div>
           <div className="flex items-center gap-2">
             <Percent size={16} className="text-pitch-green" />
@@ -350,12 +350,12 @@ export default function RankingsPage({ username }) {
 
       {/* Scoring Info */}
       <div className="bg-gradient-to-r from-pitch-green/10 to-emerald-100 rounded-xl p-4 border-2 border-pitch-green/30">
-        <h3 className="font-bold text-text-primary mb-2">📊 Sistema de Pontuação</h3>
+        <h3 className="font-bold text-text-primary mb-2">Sistema de Pontuação</h3>
         <div className="flex flex-wrap gap-4 text-sm">
           <span className="bg-white px-3 py-1 rounded-lg shadow-sm"><strong>3 pts</strong> = Resultado certo</span>
           <span className="bg-white px-3 py-1 rounded-lg shadow-sm"><strong>+1 pt</strong> = Gols casa</span>
           <span className="bg-white px-3 py-1 rounded-lg shadow-sm"><strong>+1 pt</strong> = Gols visitante</span>
-          <span className="bg-yellow-100 px-3 py-1 rounded-lg shadow-sm border border-yellow-300"><strong>5 pts</strong> = Placar exato! 🎯</span>
+          <span className="bg-yellow-100 px-3 py-1 rounded-lg shadow-sm border border-yellow-300"><strong>5 pts</strong> = Placar exato!</span>
         </div>
       </div>
     </div>
