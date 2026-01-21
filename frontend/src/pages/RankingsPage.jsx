@@ -130,15 +130,12 @@ export default function RankingsPage({ username }) {
                   : "bg-gradient-to-r from-pitch-green to-emerald-600"
               }`}>
                 <th className="px-3 py-4 text-center font-bold w-16">
-                  <span className="flex items-center justify-center gap-1">
-                    <ListNumbers size={16} />
-                    #
-                  </span>
+                  <span title="Posição">Pos.</span>
                 </th>
                 <th className="px-3 py-4 text-left font-bold">Palpiteiro</th>
                 <th className="px-3 py-4 text-center font-bold">
                   <span className="flex items-center justify-center gap-1" title="Rodada Atual">
-                    📅 Rod.
+                    Rod.
                   </span>
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
@@ -149,12 +146,12 @@ export default function RankingsPage({ username }) {
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
                   <span className="flex items-center justify-center gap-1" title="Acertos de Resultado (V/E/D)">
-                    ✓ Res.
+                    Res.
                   </span>
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
                   <span className="flex items-center justify-center gap-1" title="Acertos Gols Casa">
-                    🏠 Casa
+                    Casa
                   </span>
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
