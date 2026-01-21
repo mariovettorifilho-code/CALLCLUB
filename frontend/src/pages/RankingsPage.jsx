@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ChartBar, Trophy, Star, Crown, Target, SoccerBall, Percent, ListNumbers } from "@phosphor-icons/react";
+import { ChartBar, Trophy, Star, SoccerBall, Percent } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -26,13 +26,8 @@ export default function RankingsPage({ username }) {
     }
   };
 
-  const getMedalDisplay = (position) => {
-    switch (position) {
-      case 1: return <span className="text-2xl">🥇</span>;
-      case 2: return <span className="text-2xl">🥈</span>;
-      case 3: return <span className="text-2xl">🥉</span>;
-      default: return <span className="text-lg font-bold text-text-secondary">#{position}</span>;
-    }
+  const getPositionDisplay = (position) => {
+    return <span className="text-lg font-bold text-text-primary">{position}º</span>;
   };
 
   const getRowStyle = (position, isCurrentUser, isPremium) => {
@@ -47,7 +42,7 @@ export default function RankingsPage({ username }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin w-10 h-10 border-4 border-pitch-green border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-10 h-10 border-4 border-pitch-green border-t-transparent rounded-full"></div></div>
       </div>
     );
   }
