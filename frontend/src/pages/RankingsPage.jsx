@@ -156,12 +156,12 @@ export default function RankingsPage({ username }) {
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
                   <span className="flex items-center justify-center gap-1" title="Acertos Gols Visitante">
-                    ✈️ Vis.
+                    Vis.
                   </span>
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
                   <span className="flex items-center justify-center gap-1" title="Placares Exatos">
-                    🎯 Exato
+                    Exato
                   </span>
                 </th>
                 <th className="px-3 py-4 text-center font-bold">
@@ -191,7 +191,7 @@ export default function RankingsPage({ username }) {
                   >
                     {/* Posição */}
                     <td className="px-3 py-3 text-center">
-                      {getMedalDisplay(player.position)}
+                      {getPositionDisplay(player.position)}
                     </td>
 
                     {/* Nome */}
