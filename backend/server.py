@@ -834,21 +834,6 @@ async def get_detailed_ranking(championship: str):
                     # Verifica placar exato
                     if home_pred == home_score and away_pred == away_score:
                         user_stats[username]['exact_scores'] += 1
-                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
-                if pred_result == actual_result:
-                    user_stats[username]['correct_results'] += 1
-                
-                # Verifica acerto de gols do mandante
-                if home_pred == home_score:
-                    user_stats[username]['correct_home_goals'] += 1
-                
-                # Verifica acerto de gols do visitante
-                if away_pred == away_score:
-                    user_stats[username]['correct_away_goals'] += 1
-                
-                # Verifica placar exato
-                if home_pred == home_score and away_pred == away_score:
-                    user_stats[username]['exact_scores'] += 1
     
     # Calcula aproveitamento para cada usuário
     for username, stats in user_stats.items():
