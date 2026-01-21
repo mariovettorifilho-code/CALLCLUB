@@ -42,7 +42,7 @@ export default function RankingsPage({ username }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin w-10 h-10 border-4 border-pitch-green border-t-transparent rounded-full"></div></div>
+        <div className="animate-spin w-10 h-10 border-4 border-pitch-green border-t-transparent rounded-full"></div>
       </div>
     );
   }
