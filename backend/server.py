@@ -960,8 +960,11 @@ async def get_user_profile(username: str):
     enriched_predictions = []
     for pred in predictions:
         match = matches_dict.get(pred['match_id'], {})
+        # Usa o championship do palpite, ou pega do match se não existir
+        champ = pred.get('championship') or match.get('championship', 'carioca')
         enriched_predictions.append({
             **pred,
+            "championship": champ,  # Garante que sempre tem o championship
             "home_team": match.get("home_team", "?"),
             "away_team": match.get("away_team", "?"),
             "home_score": match.get("home_score"),
