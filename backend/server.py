@@ -1136,7 +1136,7 @@ async def seed_initial_data():
     
     return {"success": True, "message": "Dados iniciais criados!"}
 
-@api_router.post("/admin/init-production")
+@api_router.get("/admin/init-production")
 async def init_production_database(password: str):
     """Inicializa o banco de produção com jogos e usuários"""
     if password != ADMIN_PASSWORD:
