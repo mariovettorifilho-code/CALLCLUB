@@ -799,19 +799,16 @@ async def get_round_ranking(round_number: int, championship: str = "carioca"):
 async def get_detailed_ranking(championship: str):
     """Retorna ranking detalhado com todas as estatísticas por campeonato"""
     
+    # Define total de rodadas por campeonato (fixo)
+    total_rounds_map = {"carioca": 6, "brasileirao": 38}
+    total_rounds = total_rounds_map.get(championship, 38)
+    
     # Busca a rodada atual do campeonato
     current_round_match = await db.matches.find_one(
         {"championship": championship, "is_finished": False},
         sort=[("round_number", 1)]
     )
     current_round = current_round_match.get("round_number", 1) if current_round_match else 1
-    
-    # Total de rodadas disponíveis
-    max_round_doc = await db.matches.find_one(
-        {"championship": championship},
-        sort=[("round_number", -1)]
-    )
-    total_rounds = max_round_doc.get("round_number", 1) if max_round_doc else 1
     
     # Busca todos os palpites do campeonato
     predictions = await db.predictions.find(
