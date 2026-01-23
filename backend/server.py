@@ -1093,46 +1093,53 @@ async def recalculate_all_points():
 async def sync_results_from_api():
     """Sincroniza resultados da API TheSportsDB e recalcula pontos"""
     
-    LEAGUE_ID = "5688"
-    SEASON = "2026"
     API_KEY = "3"
+    SEASON = "2026"
+    
+    championships = [
+        {"id": "5688", "name": "carioca", "rounds": 6},
+        {"id": "4351", "name": "brasileirao", "rounds": 38}
+    ]
     
     updated_matches = 0
     
-    async with httpx.AsyncClient() as client:
-        # Busca cada rodada
-        for round_num in range(1, 7):
-            url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
-            params = {"id": LEAGUE_ID, "r": round_num, "s": SEASON}
-            
-            try:
-                response = await client.get(url, params=params, timeout=15.0)
-                data = response.json()
+    async with httpx.AsyncClient(timeout=60.0) as http_client:
+        for champ in championships:
+            for round_num in range(1, champ["rounds"] + 1):
+                url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
                 
-                if data and "events" in data and data["events"]:
-                    for event in data["events"]:
-                        match_id = event["idEvent"]
-                        status = event.get("strStatus", "")
-                        
-                        # Se o jogo terminou
-                        if status in ["FT", "Match Finished", "Finished"]:
-                            home_score = event.get("intHomeScore")
-                            away_score = event.get("intAwayScore")
+                try:
+                    response = await http_client.get(url)
+                    data = response.json()
+                    
+                    if data and "events" in data and data["events"]:
+                        for event in data["events"]:
+                            match_id = str(event["idEvent"])
                             
-                            if home_score is not None and away_score is not None:
-                                # Atualiza no banco
-                                result = await db.matches.update_one(
-                                    {"match_id": match_id},
-                                    {"$set": {
-                                        "home_score": int(home_score),
-                                        "away_score": int(away_score),
-                                        "is_finished": True
-                                    }}
-                                )
-                                if result.modified_count > 0:
-                                    updated_matches += 1
-            except Exception as e:
-                logging.error(f"Erro ao buscar rodada {round_num}: {e}")
+                            # Verifica se tem placar
+                            home_score_raw = event.get("intHomeScore")
+                            away_score_raw = event.get("intAwayScore")
+                            
+                            if home_score_raw not in [None, ""] and away_score_raw not in [None, ""]:
+                                try:
+                                    home_score = int(home_score_raw)
+                                    away_score = int(away_score_raw)
+                                    
+                                    # Atualiza no banco
+                                    result = await db.matches.update_one(
+                                        {"match_id": match_id},
+                                        {"$set": {
+                                            "home_score": home_score,
+                                            "away_score": away_score,
+                                            "is_finished": True
+                                        }}
+                                    )
+                                    if result.modified_count > 0:
+                                        updated_matches += 1
+                                except (ValueError, TypeError):
+                                    pass
+                except Exception as e:
+                    logging.error(f"Erro ao buscar {champ['name']} rodada {round_num}: {e}")
     
     # Recalcula pontos de todos os usuários
     users_updated = await recalculate_all_points()
