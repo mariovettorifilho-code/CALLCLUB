@@ -1245,6 +1245,46 @@ async def init_production_database(password: str):
     
     return {"success": True, "results": results}
 
+@api_router.get("/admin/debug-matches")
+async def debug_matches(password: str):
+    """Debug endpoint para verificar como os matches estão salvos no banco"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Conta por championship
+    carioca_count = await db.matches.count_documents({"championship": "carioca"})
+    brasileirao_count = await db.matches.count_documents({"championship": "brasileirao"})
+    
+    # Pega 3 amostras de cada
+    carioca_samples = await db.matches.find({"championship": "carioca"}, {"_id": 0}).limit(3).to_list(3)
+    brasileirao_samples = await db.matches.find({"championship": "brasileirao"}, {"_id": 0}).limit(3).to_list(3)
+    
+    # Busca sem filtro de championship
+    all_samples = await db.matches.find({}, {"_id": 0}).limit(5).to_list(5)
+    
+    # Pega valores únicos de championship
+    pipeline = [{"$group": {"_id": "$championship", "count": {"$sum": 1}}}]
+    championships = await db.matches.aggregate(pipeline).to_list(10)
+    
+    # Pega valores únicos de round_number pra carioca
+    pipeline2 = [
+        {"$match": {"championship": "carioca"}},
+        {"$group": {"_id": "$round_number", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}
+    ]
+    rounds = await db.matches.aggregate(pipeline2).to_list(50)
+    
+    return {
+        "total_matches": await db.matches.count_documents({}),
+        "carioca_count": carioca_count,
+        "brasileirao_count": brasileirao_count,
+        "championships_breakdown": championships,
+        "carioca_rounds": rounds,
+        "carioca_samples": carioca_samples,
+        "brasileirao_samples": brasileirao_samples,
+        "all_samples": all_samples
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to CallClub API! 🔥"}
