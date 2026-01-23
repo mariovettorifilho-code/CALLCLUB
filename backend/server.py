@@ -912,13 +912,36 @@ async def get_general_ranking():
     """Retorna ranking geral (todas as rodadas)"""
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
     
-    # Ordena por pontos totais, depois por sequência de acertos perfeitos
+    # Ordena por pontos totais, depois por total de placares exatos
     ranking = sorted(
         users, 
-        key=lambda x: (x.get('total_points', 0), x.get('max_perfect_streak', 0)), 
+        key=lambda x: (x.get('total_points', 0), x.get('exact_scores', 0), x.get('correct_results', 0)), 
         reverse=True
     )
     return ranking
+
+@api_router.get("/ranking/user-position/{username}")
+async def get_user_ranking_position(username: str, championship: str = "carioca"):
+    """Retorna a posição do usuário em um campeonato específico"""
+    ranking_data = await get_detailed_ranking(championship)
+    
+    for player in ranking_data.get("ranking", []):
+        if player.get("username") == username:
+            return {
+                "championship": championship,
+                "position": player.get("position"),
+                "total_points": player.get("total_points", 0),
+                "exact_scores": player.get("exact_scores", 0),
+                "correct_results": player.get("correct_results", 0)
+            }
+    
+    return {
+        "championship": championship,
+        "position": None,
+        "total_points": 0,
+        "exact_scores": 0,
+        "correct_results": 0
+    }
 
 @api_router.get("/user/{username}")
 async def get_user_profile(username: str):
