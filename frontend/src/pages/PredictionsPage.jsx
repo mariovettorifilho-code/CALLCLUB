@@ -138,8 +138,15 @@ export default function PredictionsPage({ username }) {
       ]);
 
       setAllRounds(roundsRes.data || []);
-      const currentRoundNum = currentRes.data?.round_number || 1;
-      setSelectedRound(currentRoundNum);
+      
+      // Se tem rodada na URL, usa ela. Senão, usa a atual
+      const urlRound = searchParams.get('round');
+      if (urlRound && !selectedRound) {
+        setSelectedRound(parseInt(urlRound));
+      } else if (!selectedRound) {
+        const currentRoundNum = currentRes.data?.round_number || 1;
+        setSelectedRound(currentRoundNum);
+      }
     } catch (error) {
       console.error("Erro ao carregar rodadas:", error);
     } finally {
