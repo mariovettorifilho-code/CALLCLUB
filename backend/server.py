@@ -21,6 +21,12 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# ==================== HEALTH CHECK ENDPOINT ====================
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes"""
+    return {"status": "healthy"}
+
 # ==================== USUÁRIOS AUTORIZADOS COM PIN ====================
 # 📌 AQUI VOCÊ EDITA OS USUÁRIOS E PINS
 # Formato: "Nome": "PIN de 4 dígitos"
