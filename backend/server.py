@@ -1136,6 +1136,137 @@ async def seed_initial_data():
     
     return {"success": True, "message": "Dados iniciais criados!"}
 
+@api_router.post("/admin/init-production")
+async def init_production_database(password: str):
+    """Inicializa o banco de produção com jogos e usuários"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    import httpx
+    
+    results = {
+        "users_created": 0,
+        "matches_created": 0,
+        "rounds_created": 0
+    }
+    
+    # 1. Criar usuários autorizados
+    for username, pin in AUTHORIZED_USERS.items():
+        existing = await db.users.find_one({"username": username})
+        if not existing:
+            # Verificar se tem chave premium
+            is_premium = any(owner == username for owner in PREMIUM_KEYS.values())
+            premium_key = next((k for k, v in PREMIUM_KEYS.items() if v == username), None)
+            
+            # Contar para número de pioneiro
+            user_count = await db.users.count_documents({})
+            pioneer_num = user_count + 1 if user_count < 100 else None
+            
+            await db.users.insert_one({
+                "username": username,
+                "total_points": 0,
+                "is_premium": is_premium,
+                "premium_key": premium_key,
+                "is_banned": False,
+                "achievements": ["pioneer"] if pioneer_num else [],
+                "pioneer_number": pioneer_num
+            })
+            results["users_created"] += 1
+    
+    # 2. Sincronizar jogos do Carioca
+    CARIOCA_LEAGUE_ID = "5688"
+    SEASON = "2026"
+    API_KEY = "3"
+    
+    async with httpx.AsyncClient() as client:
+        for round_num in range(1, 7):
+            url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
+            params = {"id": CARIOCA_LEAGUE_ID, "r": round_num, "s": SEASON}
+            
+            try:
+                response = await client.get(url, params=params, timeout=30.0)
+                data = response.json()
+                
+                if data and "events" in data and data["events"]:
+                    for event in data["events"]:
+                        match_id = event["idEvent"]
+                        
+                        # Verifica se já existe
+                        existing = await db.matches.find_one({"match_id": match_id})
+                        if not existing:
+                            match_data = {
+                                "match_id": match_id,
+                                "round_number": round_num,
+                                "home_team": event.get("strHomeTeam", ""),
+                                "away_team": event.get("strAwayTeam", ""),
+                                "home_badge": event.get("strHomeTeamBadge", ""),
+                                "away_badge": event.get("strAwayTeamBadge", ""),
+                                "match_date": event.get("dateEvent", ""),
+                                "match_time": event.get("strTime", ""),
+                                "status": event.get("strStatus", ""),
+                                "home_score": int(event["intHomeScore"]) if event.get("intHomeScore") else None,
+                                "away_score": int(event["intAwayScore"]) if event.get("intAwayScore") else None,
+                                "is_finished": event.get("strStatus") in ["FT", "Match Finished", "Finished"],
+                                "championship": "carioca",
+                                "league_id": CARIOCA_LEAGUE_ID
+                            }
+                            await db.matches.insert_one(match_data)
+                            results["matches_created"] += 1
+            except Exception as e:
+                logging.error(f"Erro ao buscar rodada {round_num} do Carioca: {e}")
+        
+        # 3. Sincronizar jogos do Brasileirão
+        BRASILEIRAO_LEAGUE_ID = "4351"
+        
+        for round_num in range(1, 39):
+            url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
+            params = {"id": BRASILEIRAO_LEAGUE_ID, "r": round_num, "s": SEASON}
+            
+            try:
+                response = await client.get(url, params=params, timeout=30.0)
+                data = response.json()
+                
+                if data and "events" in data and data["events"]:
+                    for event in data["events"]:
+                        match_id = event["idEvent"]
+                        
+                        existing = await db.matches.find_one({"match_id": match_id})
+                        if not existing:
+                            match_data = {
+                                "match_id": match_id,
+                                "round_number": round_num,
+                                "home_team": event.get("strHomeTeam", ""),
+                                "away_team": event.get("strAwayTeam", ""),
+                                "home_badge": event.get("strHomeTeamBadge", ""),
+                                "away_badge": event.get("strAwayTeamBadge", ""),
+                                "match_date": event.get("dateEvent", ""),
+                                "match_time": event.get("strTime", ""),
+                                "status": event.get("strStatus", ""),
+                                "home_score": int(event["intHomeScore"]) if event.get("intHomeScore") else None,
+                                "away_score": int(event["intAwayScore"]) if event.get("intAwayScore") else None,
+                                "is_finished": event.get("strStatus") in ["FT", "Match Finished", "Finished"],
+                                "championship": "brasileirao",
+                                "league_id": BRASILEIRAO_LEAGUE_ID
+                            }
+                            await db.matches.insert_one(match_data)
+                            results["matches_created"] += 1
+            except Exception as e:
+                logging.error(f"Erro ao buscar rodada {round_num} do Brasileirão: {e}")
+    
+    # 4. Criar rodadas
+    for champ, total_rounds in [("carioca", 6), ("brasileirao", 38)]:
+        for rn in range(1, total_rounds + 1):
+            existing = await db.rounds.find_one({"championship": champ, "round_number": rn})
+            if not existing:
+                await db.rounds.insert_one({
+                    "championship": champ,
+                    "round_number": rn,
+                    "is_current": rn == 1
+                })
+                results["rounds_created"] += 1
+    
+    return {"success": True, "results": results}
+
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to CallClub API! 🔥"}
