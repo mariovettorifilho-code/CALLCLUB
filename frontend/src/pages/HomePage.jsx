@@ -453,7 +453,7 @@ export default function HomePage({ username }) {
 
             {isCountdownActive && (
               <Link
-                to="/predictions"
+                to={`/predictions?championship=${selectedChampionship}&round=${nextMatch.round_number}`}
                 data-testid="quick-predict-button"
                 className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pitch-green to-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:from-pitch-green/90 hover:to-emerald-600/90 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
               >
