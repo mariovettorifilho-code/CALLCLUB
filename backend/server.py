@@ -590,10 +590,41 @@ async def get_current_round(championship: str = "carioca"):
 @api_router.get("/rounds/all")
 async def get_all_rounds(championship: str = "carioca"):
     """Retorna todas as rodadas de um campeonato"""
+    # Define total de rodadas por campeonato
+    total_rounds_map = {"carioca": 6, "brasileirao": 38}
+    total_rounds = total_rounds_map.get(championship, 38)
+    
+    # Busca rodadas existentes
     rounds = await db.rounds.find(
         {"championship": championship}, 
         {"_id": 0}
     ).sort("round_number", 1).to_list(100)
+    
+    existing_rounds = {r['round_number'] for r in rounds}
+    
+    # Busca a rodada atual
+    current_round_data = await get_current_round(championship)
+    current_round_num = current_round_data.get("round_number", 1)
+    
+    # Cria rodadas faltantes
+    for rn in range(1, total_rounds + 1):
+        if rn not in existing_rounds:
+            await db.rounds.insert_one({
+                "championship": championship,
+                "round_number": rn,
+                "is_current": rn == current_round_num
+            })
+    
+    # Busca novamente com todas as rodadas
+    rounds = await db.rounds.find(
+        {"championship": championship}, 
+        {"_id": 0}
+    ).sort("round_number", 1).to_list(100)
+    
+    # Atualiza is_current
+    for r in rounds:
+        r['is_current'] = r['round_number'] == current_round_num
+    
     return rounds
 
 @api_router.get("/matches/next")
