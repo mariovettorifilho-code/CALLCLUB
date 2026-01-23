@@ -67,10 +67,14 @@ export default function HomePage({ username }) {
       const res = await axios.get(`${API}/premium/status/${username}`);
       setIsPremium(res.data.is_premium);
       
-      // Se premium, carrega próximo jogo do Brasileirão
+      // Se premium, carrega próximo jogo do Brasileirão e posição no ranking
       if (res.data.is_premium) {
-        const brasRes = await axios.get(`${API}/matches/next?championship=brasileirao`);
+        const [brasRes, posRes] = await Promise.all([
+          axios.get(`${API}/matches/next?championship=brasileirao`),
+          axios.get(`${API}/ranking/user-position/${username}?championship=brasileirao`)
+        ]);
         setNextBrasileiraoMatch(brasRes.data);
+        setBrasileiraoPosition(posRes.data);
       }
     } catch (error) {
       console.error("Erro ao verificar premium:", error);
