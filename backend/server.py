@@ -889,7 +889,7 @@ async def get_detailed_ranking(championship: str):
         else:
             stats['efficiency'] = 0
     
-    # Ordena por pontos totais, depois por placares exatos (desempate)
+    # Ordena por pontos totais, depois por placares exatos (1º desempate), depois por acertos de resultado (2º desempate)
     ranking = sorted(
         user_stats.values(), 
         key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']), 
