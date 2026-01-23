@@ -1285,6 +1285,98 @@ async def debug_matches(password: str):
         "all_samples": all_samples
     }
 
+@api_router.get("/admin/force-populate")
+async def force_populate_matches(password: str):
+    """Força a população de partidas buscando da API do TheSportsDB"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    import httpx
+    
+    results = {"matches_created": 0, "errors": [], "matches_updated": 0}
+    API_KEY = "3"
+    SEASON = "2026"
+    
+    championships = [
+        {"id": "5688", "name": "carioca", "rounds": 6},
+        {"id": "4351", "name": "brasileirao", "rounds": 38}
+    ]
+    
+    async with httpx.AsyncClient(timeout=120.0) as http_client:
+        for champ in championships:
+            for round_num in range(1, champ["rounds"] + 1):
+                try:
+                    url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
+                    response = await http_client.get(url)
+                    data = response.json()
+                    
+                    if data and data.get("events"):
+                        for event in data["events"]:
+                            match_id = str(event["idEvent"])
+                            
+                            home_score = None
+                            away_score = None
+                            is_finished = False
+                            
+                            if event.get("intHomeScore") not in [None, ""]:
+                                try:
+                                    home_score = int(event["intHomeScore"])
+                                    away_score = int(event.get("intAwayScore") or 0)
+                                    is_finished = True
+                                except:
+                                    pass
+                            
+                            match_date_str = event.get("dateEvent", "")
+                            match_time_str = event.get("strTime", "00:00:00")
+                            if match_time_str:
+                                match_date_str = f"{match_date_str}T{match_time_str[:5]}:00"
+                            
+                            match_data = {
+                                "match_id": match_id,
+                                "round_number": round_num,
+                                "home_team": event.get("strHomeTeam", ""),
+                                "away_team": event.get("strAwayTeam", ""),
+                                "home_badge": event.get("strHomeTeamBadge", ""),
+                                "away_badge": event.get("strAwayTeamBadge", ""),
+                                "match_date": match_date_str,
+                                "home_score": home_score,
+                                "away_score": away_score,
+                                "is_finished": is_finished,
+                                "championship": champ["name"],
+                                "event_id": match_id,
+                                "venue": event.get("strVenue", "")
+                            }
+                            
+                            # Usa upsert para criar ou atualizar
+                            result = await db.matches.update_one(
+                                {"match_id": match_id},
+                                {"$set": match_data},
+                                upsert=True
+                            )
+                            
+                            if result.upserted_id:
+                                results["matches_created"] += 1
+                            elif result.modified_count > 0:
+                                results["matches_updated"] += 1
+                                
+                except Exception as e:
+                    results["errors"].append(f"{champ['name']} R{round_num}: {str(e)}")
+    
+    # Também cria as rodadas se não existirem
+    for champ_key, total_rounds in [("carioca", 6), ("brasileirao", 38)]:
+        for rn in range(1, total_rounds + 1):
+            await db.rounds.update_one(
+                {"championship": champ_key, "round_number": rn},
+                {"$setOnInsert": {"is_current": rn == 1}},
+                upsert=True
+            )
+    
+    return {
+        "success": True,
+        "results": results,
+        "total_matches_now": await db.matches.count_documents({})
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to CallClub API! 🔥"}
