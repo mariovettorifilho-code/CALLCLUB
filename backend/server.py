@@ -553,30 +553,39 @@ async def check_name(data: NameCheck):
 
 @api_router.get("/rounds/current")
 async def get_current_round(championship: str = "carioca"):
-    """Retorna a rodada atual de um campeonato"""
-    current_round = await db.rounds.find_one(
-        {"is_current": True, "championship": championship}, 
-        {"_id": 0}
+    """Retorna a rodada atual de um campeonato baseado nos jogos não finalizados"""
+    # Busca a primeira rodada que tem jogo não finalizado (essa é a rodada atual)
+    next_unfinished = await db.matches.find_one(
+        {"championship": championship, "is_finished": False},
+        sort=[("round_number", 1), ("match_date", 1)]
     )
-    if not current_round:
-        # Busca primeira rodada do campeonato
-        first_round = await db.rounds.find_one(
+    
+    if next_unfinished:
+        current_round_num = next_unfinished.get("round_number", 1)
+    else:
+        # Se todos os jogos estão finalizados, pega a última rodada
+        last_match = await db.matches.find_one(
             {"championship": championship},
-            {"_id": 0},
-            sort=[("round_number", 1)]
+            sort=[("round_number", -1)]
         )
-        if first_round:
-            return first_round
-        # Cria rodada 1 se não existir
-        new_round = Round(
-            championship=championship,
-            round_number=1, 
-            is_current=True,
-            deadline=datetime.now(timezone.utc)
-        )
-        await db.rounds.insert_one(new_round.model_dump())
-        return new_round.model_dump()
-    return current_round
+        current_round_num = last_match.get("round_number", 1) if last_match else 1
+    
+    # Atualiza as rodadas no banco
+    await db.rounds.update_many(
+        {"championship": championship},
+        {"$set": {"is_current": False}}
+    )
+    await db.rounds.update_one(
+        {"championship": championship, "round_number": current_round_num},
+        {"$set": {"is_current": True}},
+        upsert=True
+    )
+    
+    return {
+        "championship": championship,
+        "round_number": current_round_num,
+        "is_current": True
+    }
 
 @api_router.get("/rounds/all")
 async def get_all_rounds(championship: str = "carioca"):
