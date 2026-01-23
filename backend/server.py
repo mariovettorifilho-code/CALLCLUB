@@ -1143,22 +1143,21 @@ async def init_production_database(password: str):
         raise HTTPException(status_code=403, detail="Não autorizado")
     
     import httpx
+    import logging
     
     results = {
         "users_created": 0,
         "matches_created": 0,
-        "rounds_created": 0
+        "rounds_created": 0,
+        "errors": []
     }
     
     # 1. Criar usuários autorizados
     for username, pin in AUTHORIZED_USERS.items():
         existing = await db.users.find_one({"username": username})
         if not existing:
-            # Verificar se tem chave premium
             is_premium = any(owner == username for owner in PREMIUM_KEYS.values())
             premium_key = next((k for k, v in PREMIUM_KEYS.items() if v == username), None)
-            
-            # Contar para número de pioneiro
             user_count = await db.users.count_documents({})
             pioneer_num = user_count + 1 if user_count < 100 else None
             
@@ -1173,31 +1172,78 @@ async def init_production_database(password: str):
             })
             results["users_created"] += 1
     
-    # 2. Sincronizar jogos do Carioca
-    CARIOCA_LEAGUE_ID = "5688"
-    SEASON = "2026"
-    API_KEY = "3"
+    # 2. Criar rodadas primeiro
+    for champ, total_rounds in [("carioca", 6), ("brasileirao", 38)]:
+        for rn in range(1, total_rounds + 1):
+            existing = await db.rounds.find_one({"championship": champ, "round_number": rn})
+            if not existing:
+                await db.rounds.insert_one({
+                    "championship": champ,
+                    "round_number": rn,
+                    "is_current": rn == 1
+                })
+                results["rounds_created"] += 1
     
-    async with httpx.AsyncClient() as client:
-        for round_num in range(1, 7):
-            url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php"
-            params = {"id": CARIOCA_LEAGUE_ID, "r": round_num, "s": SEASON}
-            
-            try:
-                response = await client.get(url, params=params, timeout=30.0)
-                data = response.json()
-                
-                if data and "events" in data and data["events"]:
-                    for event in data["events"]:
-                        match_id = event["idEvent"]
+    # 3. Sincronizar jogos
+    API_KEY = "3"
+    SEASON = "2026"
+    
+    championships = [
+        {"id": "5688", "name": "carioca", "rounds": 6},
+        {"id": "4351", "name": "brasileirao", "rounds": 38}
+    ]
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            for champ in championships:
+                for round_num in range(1, champ["rounds"] + 1):
+                    try:
+                        url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
+                        response = await client.get(url)
+                        data = response.json()
                         
-                        # Verifica se já existe
-                        existing = await db.matches.find_one({"match_id": match_id})
-                        if not existing:
-                            match_data = {
-                                "match_id": match_id,
-                                "round_number": round_num,
-                                "home_team": event.get("strHomeTeam", ""),
+                        if data and data.get("events"):
+                            for event in data["events"]:
+                                match_id = str(event["idEvent"])
+                                
+                                existing = await db.matches.find_one({"match_id": match_id})
+                                if not existing:
+                                    home_score = None
+                                    away_score = None
+                                    is_finished = False
+                                    
+                                    if event.get("intHomeScore") is not None and event.get("intHomeScore") != "":
+                                        try:
+                                            home_score = int(event["intHomeScore"])
+                                            away_score = int(event["intAwayScore"]) if event.get("intAwayScore") else 0
+                                            is_finished = True
+                                        except:
+                                            pass
+                                    
+                                    match_data = {
+                                        "match_id": match_id,
+                                        "round_number": round_num,
+                                        "home_team": event.get("strHomeTeam", ""),
+                                        "away_team": event.get("strAwayTeam", ""),
+                                        "home_badge": event.get("strHomeTeamBadge", ""),
+                                        "away_badge": event.get("strAwayTeamBadge", ""),
+                                        "match_date": event.get("dateEvent", ""),
+                                        "match_time": event.get("strTime", ""),
+                                        "status": event.get("strStatus", ""),
+                                        "home_score": home_score,
+                                        "away_score": away_score,
+                                        "is_finished": is_finished,
+                                        "championship": champ["name"],
+                                        "league_id": champ["id"]
+                                    }
+                                    await db.matches.insert_one(match_data)
+                                    results["matches_created"] += 1
+                    except Exception as e:
+                        results["errors"].append(f"{champ['name']} R{round_num}: {str(e)}")
+    except Exception as e:
+        results["errors"].append(f"HTTP Error: {str(e)}")
+    
+    return {"success": True, "results": results}
                                 "away_team": event.get("strAwayTeam", ""),
                                 "home_badge": event.get("strHomeTeamBadge", ""),
                                 "away_badge": event.get("strAwayTeamBadge", ""),
