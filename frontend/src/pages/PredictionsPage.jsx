@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { Trophy, Clock, Lock, Check, Fire, Users, Star, Key } from "@phosphor-icons/react";
 import confetti from "canvas-confetti";
@@ -7,6 +8,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function PredictionsPage({ username }) {
+  const [searchParams] = useSearchParams();
   const [championships, setChampionships] = useState([]);
   const [selectedChampionship, setSelectedChampionship] = useState("carioca");
   const [allRounds, setAllRounds] = useState([]);
@@ -23,6 +25,19 @@ export default function PredictionsPage({ username }) {
   const [premiumKey, setPremiumKey] = useState("");
   const [premiumError, setPremiumError] = useState("");
   const [activatingPremium, setActivatingPremium] = useState(false);
+
+  // Carrega parâmetros da URL
+  useEffect(() => {
+    const champParam = searchParams.get('championship');
+    const roundParam = searchParams.get('round');
+    
+    if (champParam) {
+      setSelectedChampionship(champParam);
+    }
+    if (roundParam) {
+      setSelectedRound(parseInt(roundParam));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadChampionships();
