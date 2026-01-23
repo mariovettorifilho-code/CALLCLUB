@@ -281,12 +281,23 @@ export default function HomePage({ username }) {
       {/* Seção Premium - Próximo jogo do Brasileirão */}
       {isPremium && nextBrasileiraoMatch && (
         <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl p-6 shadow-lg border-2 border-yellow-200">
-          <div className="flex items-center gap-2 mb-4">
-            <Diamond size={20} weight="fill" className="text-yellow-600" />
-            <h3 className="font-heading text-lg font-bold text-yellow-800">Brasileirão Premium</h3>
-            <span className="ml-auto text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full font-semibold">
-              Rodada {nextBrasileiraoMatch.round_number}
-            </span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Diamond size={20} weight="fill" className="text-yellow-600" />
+              <h3 className="font-heading text-lg font-bold text-yellow-800">Brasileirão Premium</h3>
+            </div>
+            <div className="flex items-center gap-3">
+              {brasileiraoPosition && brasileiraoPosition.position && (
+                <div className="flex items-center gap-2 bg-yellow-200 px-3 py-1 rounded-full">
+                  <Medal size={16} weight="fill" className="text-yellow-700" />
+                  <span className="text-sm font-bold text-yellow-800">#{brasileiraoPosition.position}</span>
+                  <span className="text-xs text-yellow-700">{brasileiraoPosition.total_points} pts</span>
+                </div>
+              )}
+              <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-1 rounded-full font-semibold">
+                Rodada {nextBrasileiraoMatch.round_number}
+              </span>
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
@@ -317,8 +328,7 @@ export default function HomePage({ username }) {
             </div>
             
             <Link
-              to="/predictions"
-              onClick={() => localStorage.setItem('selectedChampionship', 'brasileirao')}
+              to={`/predictions?championship=brasileirao&round=${nextBrasileiraoMatch.round_number}`}
               className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-amber-600 transition-all flex items-center gap-2"
             >
               Palpitar <ArrowRight size={16} weight="bold" />
