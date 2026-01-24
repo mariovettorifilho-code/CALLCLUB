@@ -36,6 +36,20 @@ export default function HomePage({ username }) {
     }
   }, [selectedChampionship]);
 
+  // Carrega estatísticas por campeonato quando muda a seleção
+  useEffect(() => {
+    loadUserChampStats();
+  }, [statsChampionship]);
+
+  const loadUserChampStats = async () => {
+    try {
+      const res = await axios.get(`${API}/user/${username}/stats-by-championship?championship=${statsChampionship}`);
+      setUserChampStats(res.data);
+    } catch (error) {
+      console.error("Erro ao carregar stats por campeonato:", error);
+    }
+  };
+
   // Countdown timer
   useEffect(() => {
     if (!nextMatch?.match_date) return;
