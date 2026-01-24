@@ -1547,6 +1547,34 @@ async def import_predictions(password: str, data: dict):
         "skipped": skipped
     }
 
+@api_router.post("/admin/set-current-round")
+async def set_current_round_manual(password: str, data: dict):
+    """Define manualmente qual é a rodada atual de um campeonato"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    championship = data.get("championship", "carioca")
+    round_number = data.get("round_number", 1)
+    
+    # Remove is_current de todas as rodadas do campeonato
+    await db.rounds.update_many(
+        {"championship": championship},
+        {"$set": {"is_current": False}}
+    )
+    
+    # Define a nova rodada como atual
+    await db.rounds.update_one(
+        {"championship": championship, "round_number": round_number},
+        {"$set": {"is_current": True}},
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "championship": championship,
+        "current_round": round_number
+    }
+
 @api_router.get("/user/{username}/stats-by-championship")
 async def get_user_stats_by_championship(username: str, championship: str = "carioca"):
     """Retorna estatísticas do usuário por campeonato"""
