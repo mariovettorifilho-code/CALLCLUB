@@ -659,11 +659,11 @@ async def get_next_match(championship: str = "carioca"):
 
 @api_router.get("/matches/{round_number}")
 async def get_matches(round_number: int, championship: str = "carioca"):
-    """Retorna os jogos de uma rodada"""
+    """Retorna os jogos de uma rodada ordenados por data"""
     matches = await db.matches.find(
         {"round_number": round_number, "championship": championship}, 
         {"_id": 0}
-    ).to_list(100)
+    ).sort("match_date", 1).to_list(100)
     return matches
 
 
