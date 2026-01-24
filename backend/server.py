@@ -1344,6 +1344,13 @@ async def debug_matches(password: str):
     ]
     rounds = await db.matches.aggregate(pipeline2).to_list(50)
     
+    # DEBUG: Verificar palpites
+    total_predictions = await db.predictions.count_documents({})
+    predictions_carioca = await db.predictions.count_documents({"championship": "carioca"})
+    predictions_brasileirao = await db.predictions.count_documents({"championship": "brasileirao"})
+    predictions_sem_championship = await db.predictions.count_documents({"championship": {"$exists": False}})
+    predictions_samples = await db.predictions.find({}, {"_id": 0}).limit(5).to_list(5)
+    
     return {
         "total_matches": await db.matches.count_documents({}),
         "carioca_count": carioca_count,
@@ -1352,7 +1359,14 @@ async def debug_matches(password: str):
         "carioca_rounds": rounds,
         "carioca_samples": carioca_samples,
         "brasileirao_samples": brasileirao_samples,
-        "all_samples": all_samples
+        "all_samples": all_samples,
+        "predictions_debug": {
+            "total": total_predictions,
+            "carioca": predictions_carioca,
+            "brasileirao": predictions_brasileirao,
+            "sem_championship": predictions_sem_championship,
+            "samples": predictions_samples
+        }
     }
 
 @api_router.get("/admin/force-populate")
