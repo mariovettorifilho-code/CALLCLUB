@@ -43,6 +43,8 @@ export default function AdminPage() {
   const [userPredictions, setUserPredictions] = useState([]);
   const [currentRounds, setCurrentRounds] = useState({});
   const [debugInfo, setDebugInfo] = useState(null);
+  const [setRoundChamp, setSetRoundChamp] = useState("carioca");
+  const [setRoundNum, setSetRoundNum] = useState(1);
 
   const showNotification = (message, type = "success") => {
     setNotification({ message, type });
