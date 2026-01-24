@@ -1410,10 +1410,17 @@ async def force_populate_matches(password: str):
                                 except:
                                     pass
                             
+                            # Converte horário UTC para Brasília (UTC-3)
                             match_date_str = event.get("dateEvent", "")
                             match_time_str = event.get("strTime", "00:00:00")
-                            if match_time_str:
-                                match_date_str = f"{match_date_str}T{match_time_str[:5]}:00"
+                            if match_time_str and match_date_str:
+                                from datetime import datetime, timedelta
+                                try:
+                                    utc_datetime = datetime.strptime(f"{match_date_str} {match_time_str[:8]}", "%Y-%m-%d %H:%M:%S")
+                                    brasilia_datetime = utc_datetime - timedelta(hours=3)
+                                    match_date_str = brasilia_datetime.strftime("%Y-%m-%dT%H:%M:%S")
+                                except:
+                                    match_date_str = f"{match_date_str}T{match_time_str[:5]}:00"
                             
                             match_data = {
                                 "match_id": match_id,
