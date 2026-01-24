@@ -630,6 +630,7 @@ async def get_all_rounds(championship: str = "carioca"):
 @api_router.get("/matches/next")
 async def get_next_match(championship: str = "carioca"):
     """Retorna o próximo jogo não finalizado"""
+    from datetime import timedelta
     # Usa horário de Brasília (UTC-3) para comparação
     now_brasilia = datetime.now(timezone.utc) - timedelta(hours=3)
     now_str = now_brasilia.strftime("%Y-%m-%dT%H:%M:%S")
