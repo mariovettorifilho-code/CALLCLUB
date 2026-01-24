@@ -151,10 +151,6 @@ export default function PredictionsPage({ username }) {
         const currentRoundNum = currentRes.data?.round_number || 1;
         setSelectedRound(currentRoundNum);
       }
-      } else if (!selectedRound) {
-        const currentRoundNum = currentRes.data?.round_number || 1;
-        setSelectedRound(currentRoundNum);
-      }
     } catch (error) {
       console.error("Erro ao carregar rodadas:", error);
     } finally {
