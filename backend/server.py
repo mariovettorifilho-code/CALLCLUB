@@ -1494,6 +1494,118 @@ async def fix_predictions_championship(password: str):
         "predictions_fixed": fixed_count
     }
 
+@api_router.get("/admin/export-predictions")
+async def export_predictions(password: str):
+    """Exporta todos os palpites para migração"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    predictions = await db.predictions.find({}, {"_id": 0}).to_list(10000)
+    return {"predictions": predictions, "total": len(predictions)}
+
+@api_router.post("/admin/import-predictions")
+async def import_predictions(password: str, data: dict):
+    """Importa palpites de outro ambiente"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    predictions = data.get("predictions", [])
+    imported = 0
+    skipped = 0
+    
+    for pred in predictions:
+        # Verifica se já existe
+        existing = await db.predictions.find_one({
+            "username": pred.get("username"),
+            "match_id": pred.get("match_id")
+        })
+        
+        if not existing:
+            # Remove _id se existir
+            pred.pop("_id", None)
+            await db.predictions.insert_one(pred)
+            imported += 1
+        else:
+            skipped += 1
+    
+    # Recalcula pontos de todos os usuários
+    await recalculate_all_points()
+    
+    return {
+        "success": True,
+        "imported": imported,
+        "skipped": skipped
+    }
+
+@api_router.get("/user/{username}/stats-by-championship")
+async def get_user_stats_by_championship(username: str, championship: str = "carioca"):
+    """Retorna estatísticas do usuário por campeonato"""
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Busca palpites do campeonato
+    predictions = await db.predictions.find(
+        {"username": username, "championship": championship},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Busca matches para saber quais estão finalizados
+    match_ids = [p['match_id'] for p in predictions]
+    matches = await db.matches.find(
+        {"match_id": {"$in": match_ids}},
+        {"_id": 0}
+    ).to_list(1000)
+    matches_dict = {m['match_id']: m for m in matches}
+    
+    # Calcula estatísticas
+    total_points = 0
+    perfect_scores = 0
+    correct_results = 0
+    total_finished = 0
+    
+    for pred in predictions:
+        match = matches_dict.get(pred['match_id'], {})
+        if match.get('is_finished'):
+            total_finished += 1
+            points = pred.get('points', 0) or 0
+            total_points += points
+            
+            if points == 5:
+                perfect_scores += 1
+            
+            # Verifica acerto de resultado
+            home_pred = pred.get('home_prediction', 0)
+            away_pred = pred.get('away_prediction', 0)
+            home_score = match.get('home_score', 0)
+            away_score = match.get('away_score', 0)
+            
+            if home_score is not None and away_score is not None:
+                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
+                if pred_result == actual_result:
+                    correct_results += 1
+    
+    accuracy_rate = round(total_points / (total_finished * 5) * 100, 1) if total_finished > 0 else 0
+    
+    # Busca posição no ranking do campeonato
+    ranking_data = await get_detailed_ranking(championship)
+    position = None
+    for player in ranking_data.get("ranking", []):
+        if player.get("username") == username:
+            position = player.get("position")
+            break
+    
+    return {
+        "championship": championship,
+        "total_points": total_points,
+        "perfect_scores": perfect_scores,
+        "correct_results": correct_results,
+        "total_predictions": total_finished,
+        "accuracy_rate": accuracy_rate,
+        "position": position
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to CallClub API! 🔥"}
