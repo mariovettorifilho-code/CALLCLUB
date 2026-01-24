@@ -45,6 +45,23 @@ export default function AdminPage() {
   const [debugInfo, setDebugInfo] = useState(null);
   const [setRoundChamp, setSetRoundChamp] = useState("carioca");
   const [setRoundNum, setSetRoundNum] = useState(1);
+  
+  // Match management states
+  const [manageChamp, setManageChamp] = useState("carioca");
+  const [manageRound, setManageRound] = useState(1);
+  const [manageMatches, setManageMatches] = useState([]);
+  const [editingMatch, setEditingMatch] = useState(null);
+  const [showAddMatch, setShowAddMatch] = useState(false);
+  const [newMatch, setNewMatch] = useState({
+    home_team: "",
+    away_team: "",
+    match_date: "",
+    match_time: "",
+    home_score: "",
+    away_score: "",
+    is_finished: false,
+    predictions_closed: false
+  });
 
   const showNotification = (message, type = "success") => {
     setNotification({ message, type });
