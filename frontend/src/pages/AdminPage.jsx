@@ -217,6 +217,28 @@ export default function AdminPage() {
     }
   };
 
+  const handleSetCurrentRound = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await axios.post(`${API}/admin/set-current-round?password=${password}`, {
+        championship: setRoundChamp,
+        round_number: setRoundNum
+      });
+      setMaintenanceResult({
+        success: true,
+        title: "Rodada Atual Definida",
+        message: `${setRoundChamp === 'carioca' ? 'Carioca' : 'Brasileirão'} agora está na rodada ${setRoundNum}`,
+        data: res.data
+      });
+      showNotification(`Rodada ${setRoundNum} definida como atual!`);
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao definir rodada", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
   const handleViewRoundMatches = async () => {
     try {
       const res = await axios.get(`${API}/matches/${viewRoundNum}?championship=${viewRoundChamp}`);
