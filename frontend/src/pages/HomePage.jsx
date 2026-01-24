@@ -21,6 +21,8 @@ export default function HomePage({ username }) {
   const [isPremium, setIsPremium] = useState(false);
   const [userStats, setUserStats] = useState(null);
   const [brasileiraoPosition, setBrasileiraoPosition] = useState(null);
+  const [userChampStats, setUserChampStats] = useState(null);
+  const [statsChampionship, setStatsChampionship] = useState("carioca");
 
   useEffect(() => {
     loadChampionships();
