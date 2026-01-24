@@ -241,58 +241,86 @@ export default function HomePage({ username }) {
         </div>
       )}
 
-      {/* Stats Rápidas do Usuário */}
-      {userStats && (
+      {/* Stats Rápidas do Usuário - Com seletor de campeonato */}
+      <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-heading font-bold text-text-primary">Suas Estatísticas</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setStatsChampionship("carioca")}
+              className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                statsChampionship === "carioca"
+                  ? "bg-pitch-green text-white"
+                  : "bg-paper text-text-secondary hover:bg-gray-200"
+              }`}
+            >
+              Carioca
+            </button>
+            {isPremium && (
+              <button
+                onClick={() => setStatsChampionship("brasileirao")}
+                className={`px-3 py-1 rounded-lg text-sm font-semibold transition-all ${
+                  statsChampionship === "brasileirao"
+                    ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-white"
+                    : "bg-paper text-text-secondary hover:bg-gray-200"
+                }`}
+              >
+                Brasileirão
+              </button>
+            )}
+          </div>
+        </div>
+        
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper hover:border-pitch-green transition-all">
+          <div className="bg-paper rounded-xl p-4 hover:bg-gray-100 transition-all">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <Trophy size={20} weight="fill" className="text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-text-primary">{userStats.user?.total_points || 0}</p>
+                <p className="text-2xl font-bold text-text-primary">{userChampStats?.total_points || 0}</p>
                 <p className="text-xs text-text-secondary">Pontos</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper hover:border-pitch-green transition-all">
+          <div className="bg-paper rounded-xl p-4 hover:bg-gray-100 transition-all">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
                 <Fire size={20} weight="fill" className="text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-text-primary">{userStats.statistics?.perfect_scores || 0}</p>
+                <p className="text-2xl font-bold text-text-primary">{userChampStats?.perfect_scores || 0}</p>
                 <p className="text-xs text-text-secondary">Placares Exatos</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper hover:border-pitch-green transition-all">
+          <div className="bg-paper rounded-xl p-4 hover:bg-gray-100 transition-all">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                 <TrendUp size={20} weight="bold" className="text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-text-primary">{userStats.statistics?.accuracy_rate || 0}%</p>
+                <p className="text-2xl font-bold text-text-primary">{userChampStats?.accuracy_rate || 0}%</p>
                 <p className="text-xs text-text-secondary">Aproveitamento</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper hover:border-pitch-green transition-all">
+          <div className="bg-paper rounded-xl p-4 hover:bg-gray-100 transition-all">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Medal size={20} weight="fill" className="text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-text-primary">#{userStats.ranking?.position || '-'}</p>
+                <p className="text-2xl font-bold text-text-primary">#{userChampStats?.position || '-'}</p>
                 <p className="text-xs text-text-secondary">No Ranking</p>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Seção Premium - Próximo jogo do Brasileirão */}
       {isPremium && nextBrasileiraoMatch && (
