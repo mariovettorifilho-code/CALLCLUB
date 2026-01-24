@@ -275,6 +275,92 @@ export default function AdminPage() {
     }
   };
 
+  // ==================== MATCH MANAGEMENT ====================
+  
+  const loadManageMatches = async () => {
+    try {
+      const res = await axios.get(`${API}/matches/${manageRound}?championship=${manageChamp}`);
+      setManageMatches(res.data || []);
+    } catch (error) {
+      showNotification("Erro ao carregar jogos", "error");
+    }
+  };
+
+  const handleUpdateMatch = async (matchId, updates) => {
+    setMaintenanceLoading(true);
+    try {
+      await axios.post(`${API}/admin/update-match?password=${password}`, {
+        match_id: matchId,
+        ...updates
+      });
+      showNotification("Partida atualizada!");
+      loadManageMatches();
+      setEditingMatch(null);
+    } catch (error) {
+      showNotification("Erro ao atualizar partida", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleAddNewMatch = async () => {
+    if (!newMatch.home_team || !newMatch.away_team) {
+      showNotification("Preencha os times", "error");
+      return;
+    }
+    setMaintenanceLoading(true);
+    try {
+      const matchDateTime = newMatch.match_date && newMatch.match_time 
+        ? `${newMatch.match_date}T${newMatch.match_time}:00`
+        : new Date().toISOString();
+      
+      await axios.post(`${API}/admin/add-match?password=${password}`, {
+        championship: manageChamp,
+        round_number: manageRound,
+        home_team: newMatch.home_team,
+        away_team: newMatch.away_team,
+        match_date: matchDateTime,
+        home_score: newMatch.home_score ? parseInt(newMatch.home_score) : null,
+        away_score: newMatch.away_score ? parseInt(newMatch.away_score) : null,
+        is_finished: newMatch.is_finished,
+        predictions_closed: newMatch.predictions_closed
+      });
+      showNotification("Partida adicionada!");
+      loadManageMatches();
+      setShowAddMatch(false);
+      setNewMatch({
+        home_team: "",
+        away_team: "",
+        match_date: "",
+        match_time: "",
+        home_score: "",
+        away_score: "",
+        is_finished: false,
+        predictions_closed: false
+      });
+    } catch (error) {
+      showNotification("Erro ao adicionar partida", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleDeleteMatch = async (matchId) => {
+    if (!window.confirm("Tem certeza que deseja EXCLUIR esta partida? Os palpites relacionados serão mantidos.")) {
+      return;
+    }
+    setMaintenanceLoading(true);
+    try {
+      await axios.delete(`${API}/admin/delete-match?password=${password}&match_id=${matchId}`);
+      showNotification("Partida excluída!");
+      loadManageMatches();
+    } catch (error) {
+      showNotification("Erro ao excluir partida", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
   const handleDebugInfo = async () => {
     setMaintenanceLoading(true);
     try {
