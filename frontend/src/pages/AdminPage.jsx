@@ -1019,6 +1019,374 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Matches Tab - Gerenciamento Manual de Partidas */}
+            {activeTab === "matches" && (
+              <div className="space-y-6">
+                {/* Seletor de Campeonato e Rodada */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <SoccerBall size={20} className="text-green-400" />
+                    Gerenciar Partidas
+                  </h3>
+                  <div className="flex flex-wrap gap-3 items-end mb-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Campeonato</label>
+                      <select
+                        value={manageChamp}
+                        onChange={(e) => setManageChamp(e.target.value)}
+                        className="px-4 py-2 bg-gray-700 rounded-lg text-white"
+                      >
+                        <option value="carioca">Campeonato Carioca</option>
+                        <option value="brasileirao">Campeonato Brasileiro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Rodada</label>
+                      <input
+                        type="number"
+                        value={manageRound}
+                        onChange={(e) => setManageRound(parseInt(e.target.value) || 1)}
+                        min="1"
+                        max={manageChamp === 'carioca' ? 6 : 38}
+                        className="px-4 py-2 bg-gray-700 rounded-lg text-white w-24"
+                      />
+                    </div>
+                    <button
+                      onClick={loadManageMatches}
+                      className="px-6 py-2 bg-green-500 rounded-lg font-medium hover:bg-green-600 transition-colors"
+                    >
+                      Carregar Jogos
+                    </button>
+                    <button
+                      onClick={() => setShowAddMatch(true)}
+                      className="px-6 py-2 bg-blue-500 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center gap-2"
+                    >
+                      <Plus size={18} />
+                      Adicionar Partida
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista de Partidas */}
+                {manageMatches.length > 0 && (
+                  <div className="bg-gray-800/50 rounded-2xl border border-gray-700 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-700/50">
+                          <tr>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Mandante</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Visitante</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Data/Hora</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Placar</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Status</th>
+                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-300">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {manageMatches.map((match) => (
+                            <tr key={match.match_id} className="border-t border-gray-700 hover:bg-gray-700/30">
+                              {editingMatch === match.match_id ? (
+                                // Modo edição
+                                <>
+                                  <td className="px-4 py-3">
+                                    <input
+                                      type="text"
+                                      defaultValue={match.home_team}
+                                      id={`home_${match.match_id}`}
+                                      className="px-2 py-1 bg-gray-600 rounded text-white w-full"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <input
+                                      type="text"
+                                      defaultValue={match.away_team}
+                                      id={`away_${match.match_id}`}
+                                      className="px-2 py-1 bg-gray-600 rounded text-white w-full"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <input
+                                      type="datetime-local"
+                                      defaultValue={match.match_date?.slice(0, 16)}
+                                      id={`date_${match.match_id}`}
+                                      className="px-2 py-1 bg-gray-600 rounded text-white"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        defaultValue={match.home_score ?? ''}
+                                        id={`hscore_${match.match_id}`}
+                                        className="px-2 py-1 bg-gray-600 rounded text-white w-12 text-center"
+                                        min="0"
+                                      />
+                                      <span>x</span>
+                                      <input
+                                        type="number"
+                                        defaultValue={match.away_score ?? ''}
+                                        id={`ascore_${match.match_id}`}
+                                        className="px-2 py-1 bg-gray-600 rounded text-white w-12 text-center"
+                                        min="0"
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="space-y-1">
+                                      <label className="flex items-center gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          defaultChecked={match.is_finished}
+                                          id={`finished_${match.match_id}`}
+                                          className="rounded"
+                                        />
+                                        Encerrada
+                                      </label>
+                                      <label className="flex items-center gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          defaultChecked={match.predictions_closed}
+                                          id={`closed_${match.match_id}`}
+                                          className="rounded"
+                                        />
+                                        Palpites fechados
+                                      </label>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          const homeTeam = document.getElementById(`home_${match.match_id}`).value;
+                                          const awayTeam = document.getElementById(`away_${match.match_id}`).value;
+                                          const matchDate = document.getElementById(`date_${match.match_id}`).value;
+                                          const homeScore = document.getElementById(`hscore_${match.match_id}`).value;
+                                          const awayScore = document.getElementById(`ascore_${match.match_id}`).value;
+                                          const isFinished = document.getElementById(`finished_${match.match_id}`).checked;
+                                          const predictionsClosed = document.getElementById(`closed_${match.match_id}`).checked;
+                                          
+                                          handleUpdateMatch(match.match_id, {
+                                            home_team: homeTeam,
+                                            away_team: awayTeam,
+                                            match_date: matchDate ? `${matchDate}:00` : match.match_date,
+                                            home_score: homeScore !== '' ? parseInt(homeScore) : null,
+                                            away_score: awayScore !== '' ? parseInt(awayScore) : null,
+                                            is_finished: isFinished,
+                                            predictions_closed: predictionsClosed
+                                          });
+                                        }}
+                                        className="px-3 py-1 bg-green-500 rounded text-sm font-medium hover:bg-green-600"
+                                      >
+                                        Salvar
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingMatch(null)}
+                                        className="px-3 py-1 bg-gray-600 rounded text-sm hover:bg-gray-500"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  </td>
+                                </>
+                              ) : (
+                                // Modo visualização
+                                <>
+                                  <td className="px-4 py-3 font-medium">{match.home_team}</td>
+                                  <td className="px-4 py-3">{match.away_team}</td>
+                                  <td className="px-4 py-3 text-sm text-gray-400">
+                                    {match.match_date ? new Date(match.match_date).toLocaleString('pt-BR') : '-'}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    {match.home_score !== null && match.away_score !== null ? (
+                                      <span className="font-bold text-lg">{match.home_score} x {match.away_score}</span>
+                                    ) : (
+                                      <span className="text-gray-500">- x -</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex flex-col gap-1">
+                                      {match.is_finished ? (
+                                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Encerrada</span>
+                                      ) : (
+                                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">Em aberto</span>
+                                      )}
+                                      {match.predictions_closed && (
+                                        <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Palpites fechados</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => setEditingMatch(match.match_id)}
+                                        className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30"
+                                        title="Editar"
+                                      >
+                                        <PencilSimple size={16} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteMatch(match.match_id)}
+                                        className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
+                                        title="Excluir"
+                                      >
+                                        <Trash size={16} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {manageMatches.length === 0 && (
+                  <div className="bg-gray-800/50 rounded-2xl p-12 text-center border border-gray-700">
+                    <SoccerBall size={48} className="mx-auto text-gray-600 mb-4" />
+                    <p className="text-gray-400">Selecione um campeonato e rodada, depois clique em "Carregar Jogos"</p>
+                  </div>
+                )}
+
+                {/* Modal Adicionar Partida */}
+                {showAddMatch && (
+                  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-lg border border-gray-700">
+                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <Plus size={24} className="text-green-500" />
+                        Adicionar Nova Partida
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Time Mandante</label>
+                            <input
+                              type="text"
+                              value={newMatch.home_team}
+                              onChange={(e) => setNewMatch({...newMatch, home_team: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                              placeholder="Ex: Flamengo"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Time Visitante</label>
+                            <input
+                              type="text"
+                              value={newMatch.away_team}
+                              onChange={(e) => setNewMatch({...newMatch, away_team: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                              placeholder="Ex: Fluminense"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Data</label>
+                            <input
+                              type="date"
+                              value={newMatch.match_date}
+                              onChange={(e) => setNewMatch({...newMatch, match_date: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Horário</label>
+                            <input
+                              type="time"
+                              value={newMatch.match_time}
+                              onChange={(e) => setNewMatch({...newMatch, match_time: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Gols Mandante (opcional)</label>
+                            <input
+                              type="number"
+                              value={newMatch.home_score}
+                              onChange={(e) => setNewMatch({...newMatch, home_score: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                              min="0"
+                              placeholder="-"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm text-gray-400 mb-2">Gols Visitante (opcional)</label>
+                            <input
+                              type="number"
+                              value={newMatch.away_score}
+                              onChange={(e) => setNewMatch({...newMatch, away_score: e.target.value})}
+                              className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                              min="0"
+                              placeholder="-"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={newMatch.is_finished}
+                              onChange={(e) => setNewMatch({...newMatch, is_finished: e.target.checked})}
+                              className="rounded"
+                            />
+                            <span className="text-sm">Partida encerrada</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={newMatch.predictions_closed}
+                              onChange={(e) => setNewMatch({...newMatch, predictions_closed: e.target.checked})}
+                              className="rounded"
+                            />
+                            <span className="text-sm">Palpites fechados</span>
+                          </label>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={() => {
+                              setShowAddMatch(false);
+                              setNewMatch({
+                                home_team: "",
+                                away_team: "",
+                                match_date: "",
+                                match_time: "",
+                                home_score: "",
+                                away_score: "",
+                                is_finished: false,
+                                predictions_closed: false
+                              });
+                            }}
+                            className="flex-1 px-4 py-3 bg-gray-700 rounded-xl hover:bg-gray-600"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={handleAddNewMatch}
+                            className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl font-bold hover:from-green-400 hover:to-emerald-500"
+                          >
+                            Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {maintenanceLoading && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-2xl p-8 text-center">
+                      <div className="animate-spin w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-gray-300">Processando...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Users Tab */}
             {activeTab === "users" && (
               <div className="space-y-4">
