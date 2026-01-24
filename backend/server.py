@@ -1461,6 +1461,39 @@ async def force_populate_matches(password: str):
         "total_matches_now": await db.matches.count_documents({})
     }
 
+@api_router.get("/admin/fix-predictions-championship")
+async def fix_predictions_championship(password: str):
+    """Corrige palpites que estão sem o campo championship"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Busca todos os palpites sem championship
+    predictions_without_champ = await db.predictions.find(
+        {"championship": {"$exists": False}}
+    ).to_list(10000)
+    
+    # Busca os matches para descobrir o championship
+    match_ids = list(set([p['match_id'] for p in predictions_without_champ]))
+    matches = await db.matches.find(
+        {"match_id": {"$in": match_ids}},
+        {"_id": 0, "match_id": 1, "championship": 1}
+    ).to_list(1000)
+    matches_dict = {m['match_id']: m.get('championship', 'carioca') for m in matches}
+    
+    fixed_count = 0
+    for pred in predictions_without_champ:
+        championship = matches_dict.get(pred['match_id'], 'carioca')
+        await db.predictions.update_one(
+            {"_id": pred['_id']},
+            {"$set": {"championship": championship}}
+        )
+        fixed_count += 1
+    
+    return {
+        "success": True,
+        "predictions_fixed": fixed_count
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to CallClub API! 🔥"}
