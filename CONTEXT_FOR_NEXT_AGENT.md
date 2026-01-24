@@ -32,6 +32,23 @@ If something is not explicitly requested, STOP and ask.
 
 ---
 
+## 🕐 REGRA CRÍTICA: FUSO HORÁRIO DOS JOGOS
+
+**Todos os horários de jogos devem ser salvos no fuso de BRASÍLIA (UTC-3).**
+
+- A API TheSportsDB retorna horários em UTC
+- O código em `/app/backend/server.py` (endpoint `force-populate`) já converte automaticamente UTC → Brasília
+- NUNCA salvar horários em UTC sem converter
+- O público do site é 100% brasileiro
+
+**Se criar novos endpoints que busquem dados de jogos:**
+1. Sempre converter horários de UTC para Brasília (subtrair 3 horas)
+2. Usar o padrão: `brasilia_datetime = utc_datetime - timedelta(hours=3)`
+
+**Esta regra se aplica a TODOS os campeonatos atuais e futuros.**
+
+---
+
 ## PROBLEMA ATUAL (CRÍTICO)
 
 **O banco de dados de PRODUÇÃO está vazio.**
