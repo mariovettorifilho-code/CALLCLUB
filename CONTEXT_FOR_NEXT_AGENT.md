@@ -13,6 +13,25 @@ If something is not explicitly requested, STOP and ask.
 
 ---
 
+## 🚨 REGRA CRÍTICA: PRESERVAÇÃO DO BANCO DE DADOS DO PREVIEW
+
+**NUNCA limpar, resetar ou apagar dados do banco MongoDB local do preview.**
+
+- O preview usa MongoDB local (dentro do container)
+- A produção usa MongoDB Atlas (nuvem)
+- Os dados do preview são VALIOSOS e devem ser preservados
+- Quando o banco do preview é resetado, perdemos dados como escudos dos times, palpites, etc.
+- Isso gera retrabalho e consumo desnecessário de créditos para re-sincronizar
+
+**Se precisar fazer qualquer operação no banco:**
+1. Faça BACKUP antes
+2. Pergunte ao usuário antes de executar
+3. Nunca use comandos como `drop()`, `deleteMany({})` ou similares sem autorização explícita
+
+**Esta regra deve ser seguida por TODOS os agentes em TODOS os forks deste projeto.**
+
+---
+
 ## PROBLEMA ATUAL (CRÍTICO)
 
 **O banco de dados de PRODUÇÃO está vazio.**
