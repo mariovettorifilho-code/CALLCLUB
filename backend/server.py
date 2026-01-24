@@ -1575,6 +1575,83 @@ async def set_current_round_manual(password: str, data: dict):
         "current_round": round_number
     }
 
+@api_router.post("/admin/update-match")
+async def update_match(password: str, data: dict):
+    """Atualiza uma partida manualmente"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    match_id = data.get("match_id")
+    if not match_id:
+        raise HTTPException(status_code=400, detail="match_id é obrigatório")
+    
+    update_data = {}
+    
+    if "home_team" in data:
+        update_data["home_team"] = data["home_team"]
+    if "away_team" in data:
+        update_data["away_team"] = data["away_team"]
+    if "match_date" in data:
+        update_data["match_date"] = data["match_date"]
+    if "home_score" in data:
+        update_data["home_score"] = data["home_score"]
+    if "away_score" in data:
+        update_data["away_score"] = data["away_score"]
+    if "is_finished" in data:
+        update_data["is_finished"] = data["is_finished"]
+    if "predictions_closed" in data:
+        update_data["predictions_closed"] = data["predictions_closed"]
+    
+    result = await db.matches.update_one(
+        {"match_id": match_id},
+        {"$set": update_data}
+    )
+    
+    # Se a partida foi marcada como encerrada e tem placar, recalcula pontos
+    if data.get("is_finished") and data.get("home_score") is not None and data.get("away_score") is not None:
+        await recalculate_all_points()
+    
+    return {"success": True, "modified": result.modified_count > 0}
+
+@api_router.post("/admin/add-match")
+async def add_match(password: str, data: dict):
+    """Adiciona uma nova partida manualmente"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    import uuid
+    match_id = str(uuid.uuid4())[:8]
+    
+    new_match = {
+        "match_id": match_id,
+        "championship": data.get("championship", "carioca"),
+        "round_number": data.get("round_number", 1),
+        "home_team": data.get("home_team", ""),
+        "away_team": data.get("away_team", ""),
+        "match_date": data.get("match_date", ""),
+        "home_score": data.get("home_score"),
+        "away_score": data.get("away_score"),
+        "is_finished": data.get("is_finished", False),
+        "predictions_closed": data.get("predictions_closed", False),
+        "home_badge": "",
+        "away_badge": "",
+        "venue": ""
+    }
+    
+    await db.matches.insert_one(new_match)
+    
+    return {"success": True, "match_id": match_id}
+
+@api_router.delete("/admin/delete-match")
+async def delete_match(password: str, match_id: str):
+    """Exclui uma partida"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    result = await db.matches.delete_one({"match_id": match_id})
+    
+    return {"success": True, "deleted": result.deleted_count > 0}
+
 @api_router.get("/user/{username}/stats-by-championship")
 async def get_user_stats_by_championship(username: str, championship: str = "carioca"):
     """Retorna estatísticas do usuário por campeonato"""
