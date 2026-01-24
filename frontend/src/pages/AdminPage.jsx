@@ -3,7 +3,9 @@ import axios from "axios";
 import { 
   Shield, Users, Warning, Check, X, Key, Star, Plus, 
   Trash, PencilSimple, Eye, EyeSlash, UserPlus, Crown,
-  ChartBar, Lock, LockOpen, Copy, ArrowClockwise
+  ChartBar, Lock, LockOpen, Copy, ArrowClockwise, Database,
+  Download, Upload, Wrench, CalendarBlank, SoccerBall, ListNumbers,
+  ClockCounterClockwise, Broom, MagnifyingGlass
 } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -30,10 +32,21 @@ export default function AdminPage() {
   const [generatedKey, setGeneratedKey] = useState("");
   const [showPins, setShowPins] = useState({});
   const [notification, setNotification] = useState(null);
+  
+  // Maintenance states
+  const [maintenanceResult, setMaintenanceResult] = useState(null);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+  const [viewRoundChamp, setViewRoundChamp] = useState("carioca");
+  const [viewRoundNum, setViewRoundNum] = useState(1);
+  const [roundMatches, setRoundMatches] = useState([]);
+  const [viewUserPredictions, setViewUserPredictions] = useState("");
+  const [userPredictions, setUserPredictions] = useState([]);
+  const [currentRounds, setCurrentRounds] = useState({});
+  const [debugInfo, setDebugInfo] = useState(null);
 
   const showNotification = (message, type = "success") => {
     setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), 4000);
   };
 
   const handleLogin = async () => {
@@ -58,12 +71,187 @@ export default function AdminPage() {
       setUsers(usersRes.data || []);
       setSecurityLogs(logsRes.data || []);
       setStats(statsRes.data || null);
+      
+      // Carrega rodadas atuais
+      const [cariocaRound, brasileiraoRound] = await Promise.all([
+        axios.get(`${API}/rounds/current?championship=carioca`),
+        axios.get(`${API}/rounds/current?championship=brasileirao`)
+      ]);
+      setCurrentRounds({
+        carioca: cariocaRound.data?.round_number || 1,
+        brasileirao: brasileiraoRound.data?.round_number || 1
+      });
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // ==================== MANUTENÇÃO ====================
+  
+  const handleSyncMatches = async () => {
+    setMaintenanceLoading(true);
+    setMaintenanceResult(null);
+    try {
+      const res = await axios.get(`${API}/admin/force-populate?password=${password}`);
+      setMaintenanceResult({
+        success: true,
+        title: "Sincronização de Partidas",
+        message: `Criadas: ${res.data.results?.matches_created || 0}, Atualizadas: ${res.data.results?.matches_updated || 0}`,
+        data: res.data
+      });
+      showNotification("Partidas sincronizadas com sucesso!");
+      loadData();
+    } catch (error) {
+      setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao sincronizar" });
+      showNotification("Erro ao sincronizar partidas", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleSyncResults = async () => {
+    setMaintenanceLoading(true);
+    setMaintenanceResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/sync-results`);
+      setMaintenanceResult({
+        success: true,
+        title: "Atualização de Resultados",
+        message: `Partidas atualizadas: ${res.data.matches_updated}, Usuários recalculados: ${res.data.users_recalculated}`,
+        data: res.data
+      });
+      showNotification("Resultados atualizados com sucesso!");
+      loadData();
+    } catch (error) {
+      setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao atualizar resultados" });
+      showNotification("Erro ao atualizar resultados", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleRecalculatePoints = async () => {
+    setMaintenanceLoading(true);
+    setMaintenanceResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/recalculate-points`);
+      setMaintenanceResult({
+        success: true,
+        title: "Recálculo de Pontos",
+        message: `Usuários recalculados: ${res.data.users_updated}`,
+        data: res.data
+      });
+      showNotification("Pontos recalculados com sucesso!");
+      loadData();
+    } catch (error) {
+      setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao recalcular" });
+      showNotification("Erro ao recalcular pontos", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleFixPredictions = async () => {
+    setMaintenanceLoading(true);
+    setMaintenanceResult(null);
+    try {
+      const res = await axios.get(`${API}/admin/fix-predictions-championship?password=${password}`);
+      setMaintenanceResult({
+        success: true,
+        title: "Correção de Palpites",
+        message: `Palpites corrigidos: ${res.data.predictions_fixed}`,
+        data: res.data
+      });
+      showNotification("Palpites corrigidos com sucesso!");
+    } catch (error) {
+      setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao corrigir" });
+      showNotification("Erro ao corrigir palpites", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleExportPredictions = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/export-predictions?password=${password}`);
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `palpites_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      showNotification(`Exportados ${res.data.total} palpites!`);
+    } catch (error) {
+      showNotification("Erro ao exportar", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleImportPredictions = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    setMaintenanceLoading(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const res = await axios.post(`${API}/admin/import-predictions?password=${password}`, data);
+      setMaintenanceResult({
+        success: true,
+        title: "Importação de Palpites",
+        message: `Importados: ${res.data.imported}, Pulados: ${res.data.skipped}`,
+        data: res.data
+      });
+      showNotification("Palpites importados com sucesso!");
+      loadData();
+    } catch (error) {
+      showNotification("Erro ao importar palpites", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleViewRoundMatches = async () => {
+    try {
+      const res = await axios.get(`${API}/matches/${viewRoundNum}?championship=${viewRoundChamp}`);
+      setRoundMatches(res.data || []);
+    } catch (error) {
+      showNotification("Erro ao carregar jogos", "error");
+    }
+  };
+
+  const handleViewUserPredictions = async () => {
+    if (!viewUserPredictions.trim()) return;
+    try {
+      const res = await axios.get(`${API}/user/${viewUserPredictions}/predictions`);
+      setUserPredictions(res.data.predictions || []);
+    } catch (error) {
+      showNotification("Erro ao carregar palpites do usuário", "error");
+    }
+  };
+
+  const handleDebugInfo = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/debug-matches?password=${password}`);
+      setDebugInfo(res.data);
+    } catch (error) {
+      showNotification("Erro ao carregar debug", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
+  const handleClearOldLogs = async () => {
+    if (!window.confirm("Tem certeza que deseja limpar logs antigos (mais de 30 dias)?")) return;
+    showNotification("Funcionalidade em desenvolvimento", "warning");
+  };
+
+  // ==================== USER MANAGEMENT ====================
 
   const handleBan = async (username, isBanned) => {
     try {
@@ -267,7 +455,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white p-4 md:p-6">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-xl shadow-lg animate-pulse ${
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-xl shadow-lg ${
           notification.type === "error" ? "bg-red-500" :
           notification.type === "warning" ? "bg-yellow-500 text-gray-900" :
           "bg-green-500"
@@ -313,6 +501,8 @@ export default function AdminPage() {
           {[
             { id: "dashboard", label: "Dashboard", icon: ChartBar },
             { id: "users", label: `Usuários (${users.length})`, icon: Users },
+            { id: "maintenance", label: "Manutenção", icon: Wrench },
+            { id: "diagnostics", label: "Diagnóstico", icon: MagnifyingGlass },
             { id: "security", label: `Segurança (${securityLogs.filter(l => l.type === "stolen_key_attempt").length})`, icon: Warning },
           ].map(tab => (
             <button
@@ -358,10 +548,30 @@ export default function AdminPage() {
                     <p className="text-3xl font-bold">{stats.total_predictions}</p>
                     <p className="text-green-300 text-sm">Palpites</p>
                   </div>
-                  <div className="bg-gradient-to-br from-red-500/20 to-red-600/10 rounded-2xl p-5 border border-red-500/30">
-                    <Warning size={28} className="text-red-400 mb-2" />
-                    <p className="text-3xl font-bold">{stats.security_alerts}</p>
-                    <p className="text-red-300 text-sm">Alertas</p>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-2xl p-5 border border-purple-500/30">
+                    <SoccerBall size={28} className="text-purple-400 mb-2" />
+                    <p className="text-3xl font-bold">{stats.total_matches}</p>
+                    <p className="text-purple-300 text-sm">Partidas</p>
+                  </div>
+                </div>
+
+                {/* Current Rounds */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
+                    <div className="flex items-center gap-3 mb-3">
+                      <CalendarBlank size={24} className="text-green-400" />
+                      <h3 className="font-bold">Campeonato Carioca</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-green-400">Rodada {currentRounds.carioca || 1}</p>
+                    <p className="text-gray-400 text-sm">Rodada atual</p>
+                  </div>
+                  <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
+                    <div className="flex items-center gap-3 mb-3">
+                      <CalendarBlank size={24} className="text-yellow-400" />
+                      <h3 className="font-bold">Campeonato Brasileiro</h3>
+                    </div>
+                    <p className="text-3xl font-bold text-yellow-400">Rodada {currentRounds.brasileirao || 1}</p>
+                    <p className="text-gray-400 text-sm">Rodada atual</p>
                   </div>
                 </div>
 
@@ -380,11 +590,11 @@ export default function AdminPage() {
                       <span className="text-sm">Adicionar Usuário</span>
                     </button>
                     <button
-                      onClick={() => setActiveTab("users")}
+                      onClick={() => setActiveTab("maintenance")}
                       className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors group"
                     >
-                      <Users size={28} className="text-blue-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm">Gerenciar Usuários</span>
+                      <Wrench size={28} className="text-orange-400 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm">Manutenção</span>
                     </button>
                     <button
                       onClick={() => setActiveTab("security")}
@@ -420,6 +630,221 @@ export default function AdminPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Maintenance Tab */}
+            {activeTab === "maintenance" && (
+              <div className="space-y-6">
+                {/* Result Display */}
+                {maintenanceResult && (
+                  <div className={`rounded-2xl p-5 border ${maintenanceResult.success ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                    <h4 className={`font-bold mb-2 ${maintenanceResult.success ? 'text-green-400' : 'text-red-400'}`}>
+                      {maintenanceResult.title}
+                    </h4>
+                    <p className="text-gray-300">{maintenanceResult.message}</p>
+                  </div>
+                )}
+
+                {/* Data Sync */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Database size={20} className="text-blue-400" />
+                    Dados e Sincronização
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <button
+                      onClick={handleSyncMatches}
+                      disabled={maintenanceLoading}
+                      className="flex flex-col items-center gap-2 p-4 bg-blue-500/20 rounded-xl hover:bg-blue-500/30 transition-colors border border-blue-500/30 disabled:opacity-50"
+                    >
+                      <ArrowClockwise size={28} className="text-blue-400" />
+                      <span className="text-sm font-medium">Sincronizar Partidas</span>
+                      <span className="text-xs text-gray-400">Busca jogos da API</span>
+                    </button>
+                    <button
+                      onClick={handleSyncResults}
+                      disabled={maintenanceLoading}
+                      className="flex flex-col items-center gap-2 p-4 bg-green-500/20 rounded-xl hover:bg-green-500/30 transition-colors border border-green-500/30 disabled:opacity-50"
+                    >
+                      <Check size={28} className="text-green-400" />
+                      <span className="text-sm font-medium">Atualizar Resultados</span>
+                      <span className="text-xs text-gray-400">Busca placares finais</span>
+                    </button>
+                    <button
+                      onClick={handleRecalculatePoints}
+                      disabled={maintenanceLoading}
+                      className="flex flex-col items-center gap-2 p-4 bg-yellow-500/20 rounded-xl hover:bg-yellow-500/30 transition-colors border border-yellow-500/30 disabled:opacity-50"
+                    >
+                      <ListNumbers size={28} className="text-yellow-400" />
+                      <span className="text-sm font-medium">Recalcular Pontos</span>
+                      <span className="text-xs text-gray-400">Recalcula rankings</span>
+                    </button>
+                    <button
+                      onClick={handleFixPredictions}
+                      disabled={maintenanceLoading}
+                      className="flex flex-col items-center gap-2 p-4 bg-purple-500/20 rounded-xl hover:bg-purple-500/30 transition-colors border border-purple-500/30 disabled:opacity-50"
+                    >
+                      <Wrench size={28} className="text-purple-400" />
+                      <span className="text-sm font-medium">Corrigir Palpites</span>
+                      <span className="text-xs text-gray-400">Sem championship</span>
+                    </button>
+                    <button
+                      onClick={handleExportPredictions}
+                      disabled={maintenanceLoading}
+                      className="flex flex-col items-center gap-2 p-4 bg-cyan-500/20 rounded-xl hover:bg-cyan-500/30 transition-colors border border-cyan-500/30 disabled:opacity-50"
+                    >
+                      <Download size={28} className="text-cyan-400" />
+                      <span className="text-sm font-medium">Exportar Palpites</span>
+                      <span className="text-xs text-gray-400">Backup JSON</span>
+                    </button>
+                    <label className="flex flex-col items-center gap-2 p-4 bg-orange-500/20 rounded-xl hover:bg-orange-500/30 transition-colors border border-orange-500/30 cursor-pointer">
+                      <Upload size={28} className="text-orange-400" />
+                      <span className="text-sm font-medium">Importar Palpites</span>
+                      <span className="text-xs text-gray-400">Restaurar backup</span>
+                      <input type="file" accept=".json" onChange={handleImportPredictions} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Logs Management */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <ClockCounterClockwise size={20} className="text-red-400" />
+                    Gerenciamento de Logs
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setActiveTab("security")}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors"
+                    >
+                      <Eye size={28} className="text-blue-400" />
+                      <span className="text-sm font-medium">Ver Logs de Segurança</span>
+                    </button>
+                    <button
+                      onClick={handleClearOldLogs}
+                      className="flex flex-col items-center gap-2 p-4 bg-gray-700/50 rounded-xl hover:bg-gray-700 transition-colors"
+                    >
+                      <Broom size={28} className="text-red-400" />
+                      <span className="text-sm font-medium">Limpar Logs Antigos</span>
+                    </button>
+                  </div>
+                </div>
+
+                {maintenanceLoading && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-2xl p-8 text-center">
+                      <div className="animate-spin w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-gray-300">Processando...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Diagnostics Tab */}
+            {activeTab === "diagnostics" && (
+              <div className="space-y-6">
+                {/* View Round Matches */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <SoccerBall size={20} className="text-green-400" />
+                    Ver Jogos de uma Rodada
+                  </h3>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <select
+                      value={viewRoundChamp}
+                      onChange={(e) => setViewRoundChamp(e.target.value)}
+                      className="px-4 py-2 bg-gray-700 rounded-lg text-white"
+                    >
+                      <option value="carioca">Carioca</option>
+                      <option value="brasileirao">Brasileirão</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={viewRoundNum}
+                      onChange={(e) => setViewRoundNum(parseInt(e.target.value) || 1)}
+                      min="1"
+                      max="38"
+                      className="px-4 py-2 bg-gray-700 rounded-lg text-white w-24"
+                      placeholder="Rodada"
+                    />
+                    <button
+                      onClick={handleViewRoundMatches}
+                      className="px-4 py-2 bg-green-500 rounded-lg font-medium hover:bg-green-600 transition-colors"
+                    >
+                      Buscar
+                    </button>
+                  </div>
+                  {roundMatches.length > 0 && (
+                    <div className="space-y-2">
+                      {roundMatches.map((match, i) => (
+                        <div key={i} className="bg-gray-700/50 rounded-lg p-3 flex justify-between items-center">
+                          <span>{match.home_team} vs {match.away_team}</span>
+                          <span className="text-sm text-gray-400">{match.match_date}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* View User Predictions */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Users size={20} className="text-blue-400" />
+                    Ver Palpites de um Usuário
+                  </h3>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <input
+                      type="text"
+                      value={viewUserPredictions}
+                      onChange={(e) => setViewUserPredictions(e.target.value)}
+                      className="px-4 py-2 bg-gray-700 rounded-lg text-white flex-1"
+                      placeholder="Nome do usuário"
+                    />
+                    <button
+                      onClick={handleViewUserPredictions}
+                      className="px-4 py-2 bg-blue-500 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+                    >
+                      Buscar
+                    </button>
+                  </div>
+                  {userPredictions.length > 0 && (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {userPredictions.map((pred, i) => (
+                        <div key={i} className="bg-gray-700/50 rounded-lg p-3">
+                          <div className="flex justify-between">
+                            <span>{pred.home_team} vs {pred.away_team}</span>
+                            <span className="font-bold">{pred.home_prediction} x {pred.away_prediction}</span>
+                          </div>
+                          <div className="text-sm text-gray-400 mt-1">
+                            Pontos: {pred.points || 0} | {pred.championship} R{pred.round_number}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Debug Info */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <Database size={20} className="text-purple-400" />
+                    Informações do Banco de Dados
+                  </h3>
+                  <button
+                    onClick={handleDebugInfo}
+                    disabled={maintenanceLoading}
+                    className="px-4 py-2 bg-purple-500 rounded-lg font-medium hover:bg-purple-600 transition-colors mb-4"
+                  >
+                    Carregar Debug
+                  </button>
+                  {debugInfo && (
+                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+                      <pre className="text-xs text-gray-300">{JSON.stringify(debugInfo, null, 2)}</pre>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
