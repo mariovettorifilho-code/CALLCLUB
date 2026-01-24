@@ -139,10 +139,18 @@ export default function PredictionsPage({ username }) {
 
       setAllRounds(roundsRes.data || []);
       
-      // Se tem rodada na URL, usa ela. Senão, usa a atual
+      // Se tem rodada na URL E é a primeira carga, usa ela
       const urlRound = searchParams.get('round');
-      if (urlRound && !selectedRound) {
+      const urlChamp = searchParams.get('championship');
+      
+      // Só usa a rodada da URL se o campeonato da URL é o mesmo selecionado
+      if (urlRound && urlChamp === selectedChampionship) {
         setSelectedRound(parseInt(urlRound));
+      } else {
+        // Caso contrário, usa a rodada atual do campeonato selecionado
+        const currentRoundNum = currentRes.data?.round_number || 1;
+        setSelectedRound(currentRoundNum);
+      }
       } else if (!selectedRound) {
         const currentRoundNum = currentRes.data?.round_number || 1;
         setSelectedRound(currentRoundNum);
