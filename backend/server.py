@@ -630,14 +630,16 @@ async def get_all_rounds(championship: str = "carioca"):
 @api_router.get("/matches/next")
 async def get_next_match(championship: str = "carioca"):
     """Retorna o próximo jogo não finalizado"""
-    now = datetime.now(timezone.utc)
+    # Usa horário de Brasília (UTC-3) para comparação
+    now_brasilia = datetime.now(timezone.utc) - timedelta(hours=3)
+    now_str = now_brasilia.strftime("%Y-%m-%dT%H:%M:%S")
     
     # Busca o próximo jogo que ainda não começou
     next_match = await db.matches.find_one(
         {
             "championship": championship,
             "is_finished": False,
-            "match_date": {"$gt": now}
+            "match_date": {"$gt": now_str}
         },
         {"_id": 0},
         sort=[("match_date", 1)]
