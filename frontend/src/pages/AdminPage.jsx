@@ -628,6 +628,7 @@ export default function AdminPage() {
           {[
             { id: "dashboard", label: "Dashboard", icon: ChartBar },
             { id: "users", label: `Usuários (${users.length})`, icon: Users },
+            { id: "matches", label: "Partidas", icon: SoccerBall },
             { id: "maintenance", label: "Manutenção", icon: Wrench },
             { id: "diagnostics", label: "Diagnóstico", icon: MagnifyingGlass },
             { id: "security", label: `Segurança (${securityLogs.filter(l => l.type === "stolen_key_attempt").length})`, icon: Warning },
