@@ -756,6 +756,48 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Set Current Round */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <CalendarBlank size={20} className="text-green-400" />
+                    Definir Rodada Atual Manualmente
+                  </h3>
+                  <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Campeonato</label>
+                      <select
+                        value={setRoundChamp}
+                        onChange={(e) => setSetRoundChamp(e.target.value)}
+                        className="px-4 py-2 bg-gray-700 rounded-lg text-white"
+                      >
+                        <option value="carioca">Carioca</option>
+                        <option value="brasileirao">Brasileirão</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-2">Rodada</label>
+                      <input
+                        type="number"
+                        value={setRoundNum}
+                        onChange={(e) => setSetRoundNum(parseInt(e.target.value) || 1)}
+                        min="1"
+                        max={setRoundChamp === 'carioca' ? 6 : 38}
+                        className="px-4 py-2 bg-gray-700 rounded-lg text-white w-24"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSetCurrentRound}
+                      disabled={maintenanceLoading}
+                      className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-medium hover:from-green-400 hover:to-emerald-500 transition-colors disabled:opacity-50"
+                    >
+                      Definir como Atual
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    Isso vai alterar qual rodada é considerada "atual" no sistema. Use quando a rodada não atualizar automaticamente.
+                  </p>
+                </div>
+
                 {maintenanceLoading && (
                   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-gray-800 rounded-2xl p-8 text-center">
