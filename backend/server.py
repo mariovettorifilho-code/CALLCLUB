@@ -807,23 +807,86 @@ async def get_detailed_ranking(championship_id: str):
 
 @api_router.get("/ranking/round/{round_number}")
 async def get_round_ranking(round_number: int, championship_id: str = "brasileirao"):
-    """Ranking de uma rodada específica"""
+    """Ranking detalhado de uma rodada específica (mesmas colunas da geral)"""
+    # Busca palpites da rodada
     predictions = await db.predictions.find({
         "round_number": round_number,
         "championship_id": championship_id
     }, {"_id": 0}).to_list(1000)
     
-    user_points = {}
+    # Busca partidas finalizadas da rodada
+    matches = await db.matches.find({
+        "round_number": round_number,
+        "championship_id": championship_id,
+        "is_finished": True
+    }, {"_id": 0}).to_list(100)
+    matches_dict = {m['match_id']: m for m in matches}
+    
+    # Busca info dos usuários
+    users = await db.users.find({}, {"_id": 0, "username": 1, "plan": 1}).to_list(1000)
+    user_info = {u['username']: u for u in users}
+    
+    # Calcula estatísticas por usuário
+    user_stats = {}
     for pred in predictions:
         username = pred['username']
-        points = pred.get('points') or 0
-        if username not in user_points:
-            user_points[username] = {"username": username, "points": 0, "perfect_count": 0}
-        user_points[username]['points'] += points
-        if points == 5:
-            user_points[username]['perfect_count'] += 1
+        match = matches_dict.get(pred['match_id'], {})
+        
+        if username not in user_stats:
+            user_stats[username] = {
+                "username": username,
+                "total_points": 0,
+                "correct_results": 0,
+                "correct_home_goals": 0,
+                "correct_away_goals": 0,
+                "exact_scores": 0,
+                "total_predictions": 0,
+                "plan": user_info.get(username, {}).get('plan', 'free')
+            }
+        
+        # Conta palpite mesmo se jogo não finalizou
+        user_stats[username]['total_predictions'] += 1
+        
+        if match.get('is_finished') and pred.get('points') is not None:
+            points = pred.get('points', 0)
+            user_stats[username]['total_points'] += points
+            
+            home_pred = pred.get('home_prediction')
+            away_pred = pred.get('away_prediction')
+            home_score = match.get('home_score')
+            away_score = match.get('away_score')
+            
+            if home_score is not None and away_score is not None:
+                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
+                
+                if pred_result == actual_result:
+                    user_stats[username]['correct_results'] += 1
+                if home_pred == home_score:
+                    user_stats[username]['correct_home_goals'] += 1
+                if away_pred == away_score:
+                    user_stats[username]['correct_away_goals'] += 1
+                if home_pred == home_score and away_pred == away_score:
+                    user_stats[username]['exact_scores'] += 1
     
-    ranking = sorted(user_points.values(), key=lambda x: x['points'], reverse=True)
+    # Calcula aproveitamento
+    for stats in user_stats.values():
+        if stats['total_predictions'] > 0:
+            max_possible = stats['total_predictions'] * 5
+            stats['efficiency'] = round((stats['total_points'] / max_possible) * 100, 1)
+        else:
+            stats['efficiency'] = 0
+    
+    # Ordena ranking
+    ranking = sorted(
+        user_stats.values(),
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']),
+        reverse=True
+    )
+    
+    for i, user in enumerate(ranking):
+        user['position'] = i + 1
+    
     return ranking
 
 
