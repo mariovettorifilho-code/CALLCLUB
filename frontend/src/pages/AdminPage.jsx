@@ -1049,8 +1049,11 @@ export default function AdminPage() {
                         onChange={(e) => setManageChamp(e.target.value)}
                         className="px-4 py-2 bg-gray-700 rounded-lg text-white"
                       >
-                        <option value="carioca">Campeonato Carioca</option>
-                        <option value="brasileirao">Campeonato Brasileiro</option>
+                        {championships.map(c => (
+                          <option key={c.championship_id} value={c.championship_id}>
+                            {c.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1060,7 +1063,7 @@ export default function AdminPage() {
                         value={manageRound}
                         onChange={(e) => setManageRound(parseInt(e.target.value) || 1)}
                         min="1"
-                        max={manageChamp === 'carioca' ? 6 : 38}
+                        max={championships.find(c => c.championship_id === manageChamp)?.total_rounds || 38}
                         className="px-4 py-2 bg-gray-700 rounded-lg text-white w-24"
                       />
                     </div>
