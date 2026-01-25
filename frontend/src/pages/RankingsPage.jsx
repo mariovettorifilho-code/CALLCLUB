@@ -52,12 +52,12 @@ export default function RankingsPage({ username }) {
     return <span className="text-lg font-bold text-text-primary">{position}º</span>;
   };
 
-  const getRowStyle = (position, isCurrentUser, isPremium) => {
+  const getRowStyle = (position, isCurrentUser, plan) => {
     if (isCurrentUser) return "bg-pitch-green/10 border-l-4 border-l-pitch-green";
     if (position === 1) return "bg-gradient-to-r from-yellow-50 to-amber-50";
     if (position === 2) return "bg-gradient-to-r from-gray-50 to-slate-50";
     if (position === 3) return "bg-gradient-to-r from-orange-50 to-amber-50";
-    if (isPremium) return "bg-gradient-to-r from-amber-50/50 to-yellow-50/50";
+    if (plan === "premium" || plan === "vip") return "bg-gradient-to-r from-amber-50/50 to-yellow-50/50";
     return "bg-white hover:bg-gray-50";
   };
 
