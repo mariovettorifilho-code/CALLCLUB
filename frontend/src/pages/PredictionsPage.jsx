@@ -242,7 +242,7 @@ export default function PredictionsPage({ username }) {
     return `${hours}h ${minutes}m`;
   };
 
-  // Modal Premium
+  // Modal de acesso restrito
   if (showPremiumModal) {
     return (
       <div className="space-y-6">
@@ -250,11 +250,11 @@ export default function PredictionsPage({ username }) {
           <div className="flex items-center gap-3 mb-4">
             <Star size={40} weight="fill" className="text-white" />
             <h1 className="font-heading text-3xl font-bold">
-              Conteúdo Premium
+              Campeonato não disponível
             </h1>
           </div>
           <p className="text-white/90 text-lg mb-2">
-            O Campeonato Brasileiro é exclusivo para membros premium do CallClub.
+            Você precisa fazer upgrade do seu plano para acessar este campeonato.
           </p>
         </div>
 
@@ -262,51 +262,29 @@ export default function PredictionsPage({ username }) {
           <div className="text-center mb-6">
             <Key size={48} className="mx-auto text-yellow-500 mb-4" />
             <h2 className="font-heading text-2xl font-bold text-text-primary mb-2">
-              Ative sua Chave do Clube
+              Upgrade para Premium
             </h2>
             <p className="text-text-secondary">
-              Digite a chave premium que você recebeu
+              Com o plano Premium você pode acessar até 2 campeonatos extras e criar suas próprias ligas!
             </p>
           </div>
 
           <div className="max-w-md mx-auto space-y-4">
-            <input
-              type="text"
-              value={premiumKey}
-              onChange={(e) => setPremiumKey(e.target.value.toUpperCase())}
-              placeholder="NOME-CLUB-XXXX"
-              className="w-full px-4 py-4 border-2 border-paper rounded-lg text-center text-xl font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-            />
-
-            {premiumError && (
-              <div className="bg-error/10 border border-error text-error px-4 py-3 rounded-lg text-sm text-center">
-                {premiumError}
-              </div>
-            )}
-
-            <button
-              onClick={activatePremiumKey}
-              disabled={premiumKey.length < 10 || activatingPremium}
-              className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {activatingPremium ? "Ativando..." : "🔓 Ativar Premium"}
-            </button>
-
             <button
               onClick={() => {
-                setSelectedChampionship("carioca");
+                const national = championships.find(c => c.access_type === "national");
+                setSelectedChampionship(national?.championship_id || "brasileirao");
                 setShowPremiumModal(false);
               }}
-              className="w-full text-text-secondary hover:text-text-primary py-2 transition-colors"
+              className="w-full bg-pitch-green text-white font-semibold py-4 px-6 rounded-lg hover:bg-pitch-green/90 transition-all"
             >
-              ← Voltar para o Carioca (gratuito)
+              ← Voltar para meus campeonatos
             </button>
           </div>
 
           <div className="mt-8 pt-6 border-t border-paper text-center">
             <p className="text-xs text-text-secondary">
-              ⚠️ Sua chave é pessoal e intransferível.<br/>
-              Tentativas de uso indevido são registradas e podem resultar em banimento.
+              Entre em contato com o administrador para fazer upgrade do seu plano.
             </p>
           </div>
         </div>
@@ -323,6 +301,8 @@ export default function PredictionsPage({ username }) {
     );
   }
 
+  const isPremium = userPlan === "premium" || userPlan === "vip";
+
   return (
     <div className="space-y-6">
       {/* Header com Seletores - FIXO NO TOPO */}
@@ -335,7 +315,7 @@ export default function PredictionsPage({ username }) {
           {isPremium && (
             <span className="ml-auto bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
               <Star size={12} weight="fill" />
-              PREMIUM
+              {userPlan.toUpperCase()}
             </span>
           )}
         </div>
