@@ -133,8 +133,8 @@ export default function PredictionsPage({ username }) {
     setLoading(true);
     try {
       const [roundsRes, currentRes] = await Promise.all([
-        axios.get(`${API}/rounds/all?championship=${selectedChampionship}`),
-        axios.get(`${API}/rounds/current?championship=${selectedChampionship}`)
+        axios.get(`${API}/rounds/all?championship_id=${selectedChampionship}`),
+        axios.get(`${API}/rounds/current?championship_id=${selectedChampionship}`)
       ]);
 
       setAllRounds(roundsRes.data || []);
@@ -161,8 +161,8 @@ export default function PredictionsPage({ username }) {
   const loadMatches = async () => {
     try {
       const [matchesRes, predictionsRes] = await Promise.all([
-        axios.get(`${API}/matches/${selectedRound}?championship=${selectedChampionship}`),
-        axios.get(`${API}/predictions/${username}?round_number=${selectedRound}&championship=${selectedChampionship}`)
+        axios.get(`${API}/matches/${selectedRound}?championship_id=${selectedChampionship}`),
+        axios.get(`${API}/predictions/${username}?round_number=${selectedRound}&championship_id=${selectedChampionship}`)
       ]);
 
       setMatches(matchesRes.data || []);
