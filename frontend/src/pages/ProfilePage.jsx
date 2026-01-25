@@ -172,7 +172,7 @@ export default function ProfilePage({ username }) {
   const level = getLevel(user.total_points || 0);
   const nextLevel = getNextLevel(user.total_points || 0);
   const levelProgress = getLevelProgress(user.total_points || 0);
-  const isPremium = user.plan === "premium" || user.plan === "vip" || isPremium;
+  const isPremium = user.plan === "premium" || user.plan === "vip" || user.is_premium;
 
   // Filtra palpites por campeonato primeiro
   const filteredByChampionship = selectedChampionship === "all"
