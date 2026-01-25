@@ -125,7 +125,7 @@ export default function AdminPage() {
       setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao sincronizar" });
       showNotification("Erro ao sincronizar partidas", "error");
     } finally {
-      setMaintenanceLoading(false));
+      setMaintenanceLoading(false);
     }
   };
 
