@@ -975,6 +975,29 @@ async def admin_add_championship(data: AdminAddChampionship):
     return {"success": True}
 
 
+@api_router.post("/admin/update-match")
+async def admin_update_match(data: AdminUpdateMatch):
+    """Atualiza resultado de uma partida"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    update_data = {"is_finished": data.is_finished}
+    if data.home_score is not None:
+        update_data["home_score"] = data.home_score
+    if data.away_score is not None:
+        update_data["away_score"] = data.away_score
+    
+    result = await db.matches.update_one(
+        {"match_id": data.match_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Partida não encontrada")
+    
+    return {"success": True, "modified": result.modified_count}
+
+
 @api_router.get("/admin/championships")
 async def admin_get_championships(password: str):
     """Lista campeonatos para admin"""
