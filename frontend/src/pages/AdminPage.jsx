@@ -36,18 +36,19 @@ export default function AdminPage() {
   // Maintenance states
   const [maintenanceResult, setMaintenanceResult] = useState(null);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
-  const [viewRoundChamp, setViewRoundChamp] = useState("carioca");
+  const [viewRoundChamp, setViewRoundChamp] = useState("brasileirao");
   const [viewRoundNum, setViewRoundNum] = useState(1);
   const [roundMatches, setRoundMatches] = useState([]);
   const [viewUserPredictions, setViewUserPredictions] = useState("");
   const [userPredictions, setUserPredictions] = useState([]);
   const [currentRounds, setCurrentRounds] = useState({});
   const [debugInfo, setDebugInfo] = useState(null);
-  const [setRoundChamp, setSetRoundChamp] = useState("carioca");
+  const [setRoundChamp, setSetRoundChamp] = useState("brasileirao");
   const [setRoundNum, setSetRoundNum] = useState(1);
+  const [championships, setChampionships] = useState([]);
   
   // Match management states
-  const [manageChamp, setManageChamp] = useState("carioca");
+  const [manageChamp, setManageChamp] = useState("brasileirao");
   const [manageRound, setManageRound] = useState(1);
   const [manageMatches, setManageMatches] = useState([]);
   const [editingMatch, setEditingMatch] = useState(null);
