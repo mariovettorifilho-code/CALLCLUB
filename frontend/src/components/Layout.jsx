@@ -7,7 +7,7 @@ export default function Layout({ username, onLogout, children }) {
   const navItems = [
     { path: "/", icon: House, label: "Home" },
     { path: "/predictions", icon: Trophy, label: "Palpites" },
-    { path: "/rankings", icon: ChartBar, label: "Rankings" },
+    { path: "/rankings", icon: ChartBar, label: "Classificação" },
     { path: "/profile", icon: User, label: "Perfil" }
   ];
 
