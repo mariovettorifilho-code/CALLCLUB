@@ -164,17 +164,19 @@
 - [x] Endpoints de gerenciamento de planos
 - [x] Migração de dados (Carioca removido, usuarios para PREMIUM)
 - [x] 8 campeonatos iniciais cadastrados
-- [x] 22 testes de API passando
+- [x] Endpoint `/api/admin/update-match` para definir resultados
+- [x] Liga de teste "Liga dos Crias" criada com Mario e Marcos
+- [x] Seed de dados: 5 partidas com resultados e palpites
 
 ### ✅ Frontend
 - [x] HomePage adaptada para planos
-- [x] Seção "Minhas Ligas" para Premium
+- [x] **Seção "Como Funciona"** com regras de pontuação e desempate
 - [x] Seletor de campeonatos dinâmico
 - [x] PredictionsPage com nova API
-- [x] RankingsPage com multi-campeonato
+- [x] **RankingsPage renomeada para "Classificação"**
 - [x] AdminPage atualizado
 - [x] ProfilePage - Bug fix: ranking.position undefined
-- [x] 14 testes de UI passando
+- [x] Menu de navegação: "Rankings" → "Classificação"
 
 ### ⏳ Pendente
 - [ ] Página de criar/gerenciar ligas
