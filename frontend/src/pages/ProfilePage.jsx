@@ -108,7 +108,8 @@ export default function ProfilePage({ username }) {
     }
     
     // Premium
-    if (isPremium) {
+    const userIsPremium = user.plan === "premium" || user.plan === "vip" || user.is_premium;
+    if (userIsPremium) {
       achievements.push("premium");
     }
     
