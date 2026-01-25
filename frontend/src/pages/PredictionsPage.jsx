@@ -10,7 +10,7 @@ const API = `${BACKEND_URL}/api`;
 export default function PredictionsPage({ username }) {
   const [searchParams] = useSearchParams();
   const [championships, setChampionships] = useState([]);
-  const [selectedChampionship, setSelectedChampionship] = useState("carioca");
+  const [selectedChampionship, setSelectedChampionship] = useState("brasileirao");
   const [allRounds, setAllRounds] = useState([]);
   const [selectedRound, setSelectedRound] = useState(null);
   const [matches, setMatches] = useState([]);
@@ -19,8 +19,8 @@ export default function PredictionsPage({ username }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
   
-  // Premium state
-  const [isPremium, setIsPremium] = useState(false);
+  // Premium/Plan state
+  const [userPlan, setUserPlan] = useState("free");
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [premiumKey, setPremiumKey] = useState("");
   const [premiumError, setPremiumError] = useState("");
@@ -40,22 +40,21 @@ export default function PredictionsPage({ username }) {
   }, [searchParams]);
 
   useEffect(() => {
-    loadChampionships();
-    checkPremiumStatus();
+    loadUserChampionships();
   }, []);
 
   useEffect(() => {
-    if (selectedChampionship) {
-      // Verifica se precisa de premium
-      const champ = championships.find(c => c.id === selectedChampionship);
-      if (champ?.premium && !isPremium) {
+    if (selectedChampionship && championships.length > 0) {
+      // Verifica se usuário tem acesso a esse campeonato
+      const hasAccess = championships.some(c => c.championship_id === selectedChampionship);
+      if (!hasAccess) {
         setShowPremiumModal(true);
       } else {
         setShowPremiumModal(false);
         loadRounds();
       }
     }
-  }, [selectedChampionship, isPremium, championships]);
+  }, [selectedChampionship, championships]);
 
   useEffect(() => {
     if (selectedRound && !showPremiumModal) {
