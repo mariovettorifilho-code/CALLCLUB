@@ -260,9 +260,12 @@ export default function ProfilePage({ username }) {
                   </span>
                 )}
               </div>
-              <p className={`flex items-center gap-2 ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>
+              <p className={`flex items-center gap-2 ${isPremium ? "text-white/80" : "text-bone/80"}`}>
                 <Medal size={16} weight="fill" />
-                #{ranking.position} de {ranking.total_users} palpiteiros
+                {ranking.position 
+                  ? `#${ranking.position} de ${ranking.total_users} palpiteiros`
+                  : "Sem ranking ainda - faça seus palpites!"
+                }
               </p>
               <p className={`text-sm ${level.color} font-bold mt-1`}>
                 {level.icon} {level.name}
