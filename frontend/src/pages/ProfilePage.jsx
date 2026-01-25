@@ -166,10 +166,12 @@ export default function ProfilePage({ username }) {
     );
   }
 
-  const { user, statistics, ranking, predictions } = userData;
+  const { user, statistics, predictions } = userData;
+  const ranking = userData.ranking || { position: null, total_users: 0 };
   const level = getLevel(user.total_points || 0);
   const nextLevel = getNextLevel(user.total_points || 0);
   const levelProgress = getLevelProgress(user.total_points || 0);
+  const isPremium = user.plan === "premium" || user.plan === "vip" || user.is_premium;
 
   // Filtra palpites por campeonato primeiro
   const filteredByChampionship = selectedChampionship === "all"
