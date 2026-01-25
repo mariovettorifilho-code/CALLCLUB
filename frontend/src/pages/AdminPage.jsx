@@ -237,13 +237,14 @@ export default function AdminPage() {
     setMaintenanceLoading(true);
     try {
       const res = await axios.post(`${API}/admin/set-current-round?password=${password}`, {
-        championship: setRoundChamp,
+        championship_id: setRoundChamp,
         round_number: setRoundNum
       });
+      const champName = championships.find(c => c.championship_id === setRoundChamp)?.name || setRoundChamp;
       setMaintenanceResult({
         success: true,
         title: "Rodada Atual Definida",
-        message: `${setRoundChamp === 'carioca' ? 'Carioca' : 'Brasileirão'} agora está na rodada ${setRoundNum}`,
+        message: `${champName} agora está na rodada ${setRoundNum}`,
         data: res.data
       });
       showNotification(`Rodada ${setRoundNum} definida como atual!`);
