@@ -333,8 +333,8 @@ export default function PredictionsPage({ username }) {
               className="w-full px-4 py-3 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
             >
               {championships.map((champ) => (
-                <option key={champ.id} value={champ.id}>
-                  {champ.name} {champ.premium && !isPremium ? "🔒" : champ.premium ? "⭐" : ""}
+                <option key={champ.championship_id} value={champ.championship_id}>
+                  {champ.name} {champ.access_type === "extra" ? "⭐" : champ.access_type === "league" ? "👥" : "🏠"}
                 </option>
               ))}
             </select>
