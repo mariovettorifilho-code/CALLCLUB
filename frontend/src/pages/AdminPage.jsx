@@ -881,8 +881,11 @@ export default function AdminPage() {
                         onChange={(e) => setSetRoundChamp(e.target.value)}
                         className="px-4 py-2 bg-gray-700 rounded-lg text-white"
                       >
-                        <option value="carioca">Carioca</option>
-                        <option value="brasileirao">Brasileirão</option>
+                        {championships.map(c => (
+                          <option key={c.championship_id} value={c.championship_id}>
+                            {c.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -892,7 +895,7 @@ export default function AdminPage() {
                         value={setRoundNum}
                         onChange={(e) => setSetRoundNum(parseInt(e.target.value) || 1)}
                         min="1"
-                        max={setRoundChamp === 'carioca' ? 6 : 38}
+                        max={championships.find(c => c.championship_id === setRoundChamp)?.total_rounds || 38}
                         className="px-4 py-2 bg-gray-700 rounded-lg text-white w-24"
                       />
                     </div>
@@ -935,8 +938,11 @@ export default function AdminPage() {
                       onChange={(e) => setViewRoundChamp(e.target.value)}
                       className="px-4 py-2 bg-gray-700 rounded-lg text-white"
                     >
-                      <option value="carioca">Carioca</option>
-                      <option value="brasileirao">Brasileirão</option>
+                      {championships.map(c => (
+                        <option key={c.championship_id} value={c.championship_id}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                     <input
                       type="number"
