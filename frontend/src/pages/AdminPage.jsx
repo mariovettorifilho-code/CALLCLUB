@@ -83,22 +83,20 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [usersRes, logsRes, statsRes] = await Promise.all([
+      const [usersRes, logsRes, statsRes, champsRes] = await Promise.all([
         axios.get(`${API}/admin/users?password=${password}`),
         axios.get(`${API}/admin/security-logs?password=${password}`),
-        axios.get(`${API}/admin/stats?password=${password}`)
+        axios.get(`${API}/admin/stats?password=${password}`),
+        axios.get(`${API}/admin/championships?password=${password}`)
       ]);
       setUsers(usersRes.data || []);
       setSecurityLogs(logsRes.data || []);
       setStats(statsRes.data || null);
+      setChampionships(champsRes.data || []);
       
-      // Carrega rodadas atuais
-      const [cariocaRound, brasileiraoRound] = await Promise.all([
-        axios.get(`${API}/rounds/current?championship=carioca`),
-        axios.get(`${API}/rounds/current?championship=brasileirao`)
-      ]);
+      // Carrega rodada atual do brasileirão
+      const brasileiraoRound = await axios.get(`${API}/rounds/current?championship_id=brasileirao`);
       setCurrentRounds({
-        carioca: cariocaRound.data?.round_number || 1,
         brasileirao: brasileiraoRound.data?.round_number || 1
       });
     } catch (error) {
@@ -110,24 +108,24 @@ export default function AdminPage() {
 
   // ==================== MANUTENÇÃO ====================
   
-  const handleSyncMatches = async () => {
+  const handleSyncMatches = async (championshipId = "brasileirao") => {
     setMaintenanceLoading(true);
     setMaintenanceResult(null);
     try {
-      const res = await axios.get(`${API}/admin/force-populate?password=${password}`);
+      const res = await axios.get(`${API}/admin/force-populate?password=${password}&championship_id=${championshipId}`);
       setMaintenanceResult({
         success: true,
         title: "Sincronização de Partidas",
         message: `Criadas: ${res.data.results?.matches_created || 0}, Atualizadas: ${res.data.results?.matches_updated || 0}`,
         data: res.data
       });
-      showNotification("Partidas sincronizadas com sucesso!");
+      showNotification(`Partidas de ${championshipId} sincronizadas com sucesso!`);
       loadData();
     } catch (error) {
       setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao sincronizar" });
       showNotification("Erro ao sincronizar partidas", "error");
     } finally {
-      setMaintenanceLoading(false);
+      setMaintenanceLoading(false));
     }
   };
 
