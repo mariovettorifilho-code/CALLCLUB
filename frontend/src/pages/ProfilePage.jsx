@@ -108,7 +108,7 @@ export default function ProfilePage({ username }) {
     }
     
     // Premium
-    if (user.is_premium) {
+    if (isPremium) {
       achievements.push("premium");
     }
     
@@ -171,7 +171,7 @@ export default function ProfilePage({ username }) {
   const level = getLevel(user.total_points || 0);
   const nextLevel = getNextLevel(user.total_points || 0);
   const levelProgress = getLevelProgress(user.total_points || 0);
-  const isPremium = user.plan === "premium" || user.plan === "vip" || user.is_premium;
+  const isPremium = user.plan === "premium" || user.plan === "vip" || isPremium;
 
   // Filtra palpites por campeonato primeiro
   const filteredByChampionship = selectedChampionship === "all"
@@ -231,12 +231,12 @@ export default function ProfilePage({ username }) {
     <div className="space-y-6">
       {/* Profile Header - Premium Style */}
       <div className={`rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden ${
-        user.is_premium 
+        isPremium 
           ? "bg-gradient-to-br from-yellow-500 via-yellow-600 to-amber-700 text-white" 
           : "bg-gradient-to-br from-pitch-green to-pitch-green/80 text-bone"
       }`}>
         {/* Premium Glow Effect */}
-        {user.is_premium && (
+        {isPremium && (
           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
         )}
         
@@ -244,7 +244,7 @@ export default function ProfilePage({ username }) {
           {/* Avatar & Name */}
           <div className="flex items-center gap-4">
             <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
-              user.is_premium 
+              isPremium 
                 ? "bg-white/20 ring-4 ring-white/50" 
                 : "bg-bone/20"
             }`}>
@@ -253,7 +253,7 @@ export default function ProfilePage({ username }) {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-heading text-3xl font-bold">{user.username}</h1>
-                {user.is_premium && (
+                {isPremium && (
                   <span className="bg-white/20 backdrop-blur px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                     <Diamond size={12} weight="fill" />
                     PREMIUM
@@ -275,25 +275,25 @@ export default function ProfilePage({ username }) {
 
           {/* Quick Stats */}
           <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <Trophy size={24} weight="fill" className="mx-auto mb-1 text-yellow-400" />
               <p className="text-2xl font-mono font-bold">{user.total_points || 0}</p>
-              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Pontos</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Pontos</p>
             </div>
-            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <Fire size={24} weight="fill" className="mx-auto mb-1 text-orange-400" />
               <p className="text-2xl font-mono font-bold">{user.max_perfect_streak || 0}</p>
-              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Sequência</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Sequência</p>
             </div>
-            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <Target size={24} weight="fill" className="mx-auto mb-1 text-red-400" />
               <p className="text-2xl font-mono font-bold">{statistics.perfect_scores || 0}</p>
-              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Placares Exatos</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Placares Exatos</p>
             </div>
-            <div className={`backdrop-blur rounded-lg p-3 text-center ${user.is_premium ? "bg-white/10" : "bg-bone/10"}`}>
-              <ChartBar size={24} weight="fill" className={`mx-auto mb-1 ${user.is_premium ? "text-white" : "text-bone"}`} />
+            <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
+              <ChartBar size={24} weight="fill" className={`mx-auto mb-1 ${isPremium ? "text-white" : "text-bone"}`} />
               <p className="text-2xl font-mono font-bold">{statistics.accuracy_rate || 0}%</p>
-              <p className={`text-xs ${user.is_premium ? "text-white/80" : "text-bone/80"}`}>Aproveitamento</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Aproveitamento</p>
             </div>
           </div>
         </div>
@@ -304,10 +304,10 @@ export default function ProfilePage({ username }) {
             <span>{level.icon} {level.name}</span>
             {nextLevel && <span>{nextLevel.icon} {nextLevel.name}</span>}
           </div>
-          <div className={`h-3 rounded-full overflow-hidden ${user.is_premium ? "bg-white/20" : "bg-bone/20"}`}>
+          <div className={`h-3 rounded-full overflow-hidden ${isPremium ? "bg-white/20" : "bg-bone/20"}`}>
             <div 
               className={`h-full rounded-full transition-all duration-500 ${
-                user.is_premium 
+                isPremium 
                   ? "bg-gradient-to-r from-white to-yellow-200" 
                   : "bg-gradient-to-r from-terracotta to-warning"
               }`}
@@ -315,7 +315,7 @@ export default function ProfilePage({ username }) {
             />
           </div>
           {nextLevel && (
-            <p className={`text-xs mt-1 text-center ${user.is_premium ? "text-white/70" : "text-bone/70"}`}>
+            <p className={`text-xs mt-1 text-center ${isPremium ? "text-white/70" : "text-bone/70"}`}>
               {nextLevel.minPoints - (user.total_points || 0)} pts para {nextLevel.name}
             </p>
           )}
