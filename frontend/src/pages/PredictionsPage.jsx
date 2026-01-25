@@ -211,7 +211,7 @@ export default function PredictionsPage({ username }) {
       await axios.post(`${API}/predictions`, {
         username,
         match_id: match.match_id,
-        championship: selectedChampionship,
+        championship_id: selectedChampionship,
         round_number: selectedRound,
         home_prediction: pred.home,
         away_prediction: pred.away
