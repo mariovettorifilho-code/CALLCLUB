@@ -5,7 +5,7 @@ import {
   Trash, PencilSimple, Eye, EyeSlash, UserPlus, Crown,
   ChartBar, Lock, LockOpen, Copy, ArrowClockwise, Database,
   Download, Upload, Wrench, CalendarBlank, SoccerBall, ListNumbers,
-  ClockCounterClockwise, Broom, MagnifyingGlass
+  ClockCounterClockwise, Broom, MagnifyingGlass, Trophy
 } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
