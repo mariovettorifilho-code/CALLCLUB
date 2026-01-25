@@ -465,6 +465,76 @@ export default function HomePage({ username }) {
         </div>
       </div>
 
+      {/* Como Funciona - Regras de Pontuação */}
+      <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-paper">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkle size={20} weight="fill" className="text-yellow-500" />
+          <h3 className="font-heading font-bold text-text-primary">Como Funciona</h3>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* 3 pts por resultado */}
+          <div className="bg-gray-50 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-lg">3</span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              pts por resultado certo (V/E/D)
+            </p>
+          </div>
+          
+          {/* +1 pt gol mandante */}
+          <div className="bg-blue-50 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-lg">+1</span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              pt por gol do mandante certo
+            </p>
+          </div>
+          
+          {/* +1 pt gol visitante */}
+          <div className="bg-orange-50 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-orange-400 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-lg">+1</span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              pt por gol do visitante certo
+            </p>
+          </div>
+          
+          {/* 5 pts máximo */}
+          <div className="bg-yellow-50 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-lg">5</span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              pts máximo (placar exato!)
+            </p>
+          </div>
+          
+          {/* 1º Desempate */}
+          <div className="bg-orange-100 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-sm flex items-center">1<Play size={12} weight="fill" /></span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              1º Desempate: total de placares exatos
+            </p>
+          </div>
+          
+          {/* 2º Desempate */}
+          <div className="bg-blue-100 rounded-xl p-4 text-center">
+            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-white font-bold text-sm flex items-center">2<Play size={12} weight="fill" /></span>
+            </div>
+            <p className="text-xs text-text-primary font-medium">
+              2º Desempate: acertos de resultado
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Campeonatos Disponíveis */}
       <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper">
         <div className="flex items-center gap-2 mb-4">
