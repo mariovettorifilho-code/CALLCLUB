@@ -84,37 +84,27 @@ export default function RankingsPage({ username }) {
         </div>
 
         {/* Championship Selector */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelectedChampionship("carioca")}
-            className={`px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 ${
-              selectedChampionship === "carioca"
-                ? "bg-pitch-green text-white shadow-lg shadow-pitch-green/30"
-                : "bg-white text-text-secondary border-2 border-paper hover:border-pitch-green"
-            }`}
-          >
-            🏆 Carioca
-          </button>
-          <button
-            onClick={() => setSelectedChampionship("brasileirao")}
-            className={`px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 ${
-              selectedChampionship === "brasileirao"
-                ? "bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-lg shadow-yellow-500/30"
-                : "bg-white text-text-secondary border-2 border-paper hover:border-yellow-500"
-            }`}
-          >
-            🇧🇷 Brasileirão
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {championships.map((champ) => (
+            <button
+              key={champ.championship_id}
+              onClick={() => setSelectedChampionship(champ.championship_id)}
+              className={`px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 ${
+                selectedChampionship === champ.championship_id
+                  ? "bg-gradient-to-r from-pitch-green to-emerald-600 text-white shadow-lg shadow-pitch-green/30"
+                  : "bg-white text-text-secondary border-2 border-paper hover:border-pitch-green"
+              }`}
+            >
+              {champ.access_type === "national" ? "🏠" : champ.access_type === "extra" ? "⭐" : "👥"}
+              {champ.name}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Info Bar */}
       {rankingData && (
-        <div className={`rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 ${
-          selectedChampionship === "brasileirao"
-            ? "bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-300"
-            : "bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300"
-        }`}>
+        <div className="rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300">
           <div className="flex items-center gap-4">
             <div className="text-center">
               <p className="text-xs text-text-secondary">Rodada Atual</p>
