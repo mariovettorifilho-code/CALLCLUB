@@ -65,64 +65,50 @@ export default function PredictionsPage({ username }) {
   const checkPremiumStatus = async () => {
     try {
       const res = await axios.get(`${API}/premium/status/${username}`);
-      setIsPremium(res.data.is_premium);
+      setUserPlan(res.data.plan || "free");
     } catch (error) {
-      console.error("Erro ao verificar premium:", error);
+      console.error("Erro ao verificar plano:", error);
     }
   };
 
   const activatePremiumKey = async () => {
+    // Legacy - não usado mais no novo modelo
     setActivatingPremium(true);
     setPremiumError("");
     
     try {
-      const res = await axios.post(`${API}/premium/activate`, {
-        username,
-        key: premiumKey
-      });
-      
-      if (res.data.success) {
-        // Confetes de celebração! 🎉
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF']
-        });
-        
-        // Segundo disparo para mais impacto
-        setTimeout(() => {
-          confetti({
-            particleCount: 100,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0 },
-            colors: ['#FFD700', '#FFA500']
-          });
-          confetti({
-            particleCount: 100,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1 },
-            colors: ['#FFD700', '#FFA500']
-          });
-        }, 250);
-        
-        setIsPremium(true);
-        setShowPremiumModal(false);
-        setPremiumKey("");
-      }
+      // No novo modelo, upgrade é feito via admin
+      setPremiumError("Entre em contato com o administrador para fazer upgrade do plano.");
     } catch (error) {
-      setPremiumError(error.response?.data?.detail || "Erro ao ativar chave");
+      setPremiumError(error.response?.data?.detail || "Erro ao ativar");
     } finally {
       setActivatingPremium(false);
     }
   };
 
-  const loadChampionships = async () => {
+  const loadUserChampionships = async () => {
     try {
-      const res = await axios.get(`${API}/championships`);
-      setChampionships(res.data || []);
+      const [champsRes, statusRes] = await Promise.all([
+        axios.get(`${API}/user/${username}/accessible-championships`),
+        axios.get(`${API}/premium/status/${username}`)
+      ]);
+      
+      setChampionships(champsRes.data || []);
+      setUserPlan(statusRes.data.plan || "free");
+      
+      // Define campeonato inicial
+      if (champsRes.data?.length > 0) {
+        const urlChamp = searchParams.get('championship');
+        const hasAccess = champsRes.data.some(c => c.championship_id === urlChamp);
+        
+        if (urlChamp && hasAccess) {
+          setSelectedChampionship(urlChamp);
+        } else {
+          // Usa o nacional
+          const national = champsRes.data.find(c => c.access_type === "national");
+          setSelectedChampionship(national?.championship_id || champsRes.data[0].championship_id);
+        }
+      }
     } catch (error) {
       console.error("Erro ao carregar campeonatos:", error);
     }
