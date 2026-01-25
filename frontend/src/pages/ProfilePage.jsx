@@ -633,8 +633,12 @@ export default function ProfilePage({ username }) {
               className="flex-1 px-4 py-2 border-2 border-paper rounded-lg bg-white text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-pitch-green"
             >
               <option value="all">🏆 Todos os Campeonatos</option>
-              <option value="carioca">⚪ Campeonato Carioca 2026</option>
-              <option value="brasileirao">🟡 Campeonato Brasileiro 2026</option>
+              <option value="brasileirao">🇧🇷 Campeonato Brasileiro</option>
+              <option value="serie_a">🇮🇹 Serie A</option>
+              <option value="la_liga">🇪🇸 La Liga</option>
+              <option value="premier_league">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+              <option value="libertadores">🏆 Libertadores</option>
+              <option value="champions_league">⭐ Champions League</option>
             </select>
 
             {/* Filtro de Rodada */}
