@@ -20,7 +20,7 @@ import string
 from models.schemas import (
     PlanType, PLAN_LIMITS, COUNTRY_NATIONAL_CHAMPIONSHIP,
     UserLogin, UserUpdateCountry, PredictionCreate, AdminLogin,
-    AdminAddUser, AdminUpdatePlan, AdminAddChampionship,
+    AdminAddUser, AdminUpdatePlan, AdminAddChampionship, AdminUpdateMatch,
     ChampionshipCreate, LeagueCreate, LeagueJoin
 )
 
