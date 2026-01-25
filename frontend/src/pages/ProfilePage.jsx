@@ -184,12 +184,12 @@ export default function ProfilePage({ username }) {
   // Pega as rodadas disponíveis para o campeonato selecionado
   const availableRounds = selectedChampionship === "all"
     ? [...new Set(predictions.map(p => p.round_number))].sort((a, b) => a - b)
-    : [...new Set(predictions.filter(p => p.championship === selectedChampionship).map(p => p.round_number))].sort((a, b) => a - b);
+    : [...new Set(predictions.filter(p => (p.championship_id || p.championship) === selectedChampionship).map(p => p.round_number))].sort((a, b) => a - b);
 
   // Agrupa por campeonato e rodada para exibição
   const groupedByChampionshipAndRound = {};
   filteredPredictions.forEach(pred => {
-    const champ = pred.championship || "carioca";
+    const champ = pred.championship_id || pred.championship || "brasileirao";
     const rn = pred.round_number;
     if (!groupedByChampionshipAndRound[champ]) {
       groupedByChampionshipAndRound[champ] = {};
@@ -202,8 +202,14 @@ export default function ProfilePage({ username }) {
 
   // Mapeamento de nomes de campeonatos
   const championshipNames = {
-    "carioca": "Campeonato Carioca 2026",
-    "brasileirao": "Campeonato Brasileiro 2026"
+    "brasileirao": "Campeonato Brasileiro 2026",
+    "serie_a": "Serie A (Itália)",
+    "la_liga": "La Liga (Espanha)",
+    "premier_league": "Premier League (Inglaterra)",
+    "bundesliga": "Bundesliga (Alemanha)",
+    "ligue_1": "Ligue 1 (França)",
+    "libertadores": "Copa Libertadores",
+    "champions_league": "UEFA Champions League"
   };
 
   const getPointsBadgeStyle = (points) => {
