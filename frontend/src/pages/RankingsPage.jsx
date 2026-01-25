@@ -1,18 +1,40 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ChartBar, Trophy, Star, SoccerBall, Percent } from "@phosphor-icons/react";
+import { ChartBar, Trophy, Star, SoccerBall, Percent, GlobeHemisphereWest } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 export default function RankingsPage({ username }) {
-  const [selectedChampionship, setSelectedChampionship] = useState("carioca");
+  const [championships, setChampionships] = useState([]);
+  const [selectedChampionship, setSelectedChampionship] = useState("brasileirao");
   const [rankingData, setRankingData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadRanking();
+    loadChampionships();
+  }, []);
+
+  useEffect(() => {
+    if (selectedChampionship) {
+      loadRanking();
+    }
   }, [selectedChampionship]);
+
+  const loadChampionships = async () => {
+    try {
+      const res = await axios.get(`${API}/user/${username}/accessible-championships`);
+      setChampionships(res.data || []);
+      
+      // Define campeonato inicial
+      if (res.data?.length > 0) {
+        const national = res.data.find(c => c.access_type === "national");
+        setSelectedChampionship(national?.championship_id || res.data[0].championship_id);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar campeonatos:", error);
+    }
+  };
 
   const loadRanking = async () => {
     setLoading(true);
