@@ -164,6 +164,7 @@
 - [x] Endpoints de gerenciamento de planos
 - [x] Migração de dados (Carioca removido, usuarios para PREMIUM)
 - [x] 8 campeonatos iniciais cadastrados
+- [x] 22 testes de API passando
 
 ### ✅ Frontend
 - [x] HomePage adaptada para planos
@@ -172,6 +173,8 @@
 - [x] PredictionsPage com nova API
 - [x] RankingsPage com multi-campeonato
 - [x] AdminPage atualizado
+- [x] ProfilePage - Bug fix: ranking.position undefined
+- [x] 14 testes de UI passando
 
 ### ⏳ Pendente
 - [ ] Página de criar/gerenciar ligas
