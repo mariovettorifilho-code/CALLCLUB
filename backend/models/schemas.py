@@ -181,6 +181,15 @@ class AdminAddChampionship(BaseModel):
     championship: ChampionshipCreate
 
 
+
+class AdminUpdateMatch(BaseModel):
+    password: str
+    match_id: str
+    home_score: Optional[int] = None
+    away_score: Optional[int] = None
+    is_finished: bool = False
+
+
 # ==================== PLAN LIMITS ====================
 PLAN_LIMITS = {
     PlanType.FREE: {
