@@ -684,22 +684,29 @@ export default function AdminPage() {
                 </div>
 
                 {/* Current Rounds */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CalendarBlank size={24} className="text-green-400" />
-                      <h3 className="font-bold">Campeonato Carioca</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-green-400">Rodada {currentRounds.carioca || 1}</p>
-                    <p className="text-gray-400 text-sm">Rodada atual</p>
+                <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
+                  <div className="flex items-center gap-3 mb-3">
+                    <CalendarBlank size={24} className="text-yellow-400" />
+                    <h3 className="font-bold">Campeonato Brasileiro</h3>
                   </div>
-                  <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CalendarBlank size={24} className="text-yellow-400" />
-                      <h3 className="font-bold">Campeonato Brasileiro</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-yellow-400">Rodada {currentRounds.brasileirao || 1}</p>
-                    <p className="text-gray-400 text-sm">Rodada atual</p>
+                  <p className="text-3xl font-bold text-yellow-400">Rodada {currentRounds.brasileirao || 1}</p>
+                  <p className="text-gray-400 text-sm">Rodada atual</p>
+                </div>
+
+                {/* Championships List */}
+                <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700">
+                  <h3 className="font-bold mb-4 flex items-center gap-2">
+                    <Trophy size={20} className="text-yellow-400" />
+                    Campeonatos Cadastrados ({championships.length})
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-2">
+                    {championships.slice(0, 6).map(champ => (
+                      <div key={champ.championship_id} className="flex items-center gap-2 p-2 bg-gray-700/30 rounded-lg">
+                        <span className={`w-3 h-3 rounded-full ${champ.is_active ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                        <span className="text-sm">{champ.name}</span>
+                        <span className="text-xs text-gray-500 ml-auto">{champ.country}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
