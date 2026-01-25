@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CallClub - Painel de Manutenção Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        /* Login */
+        .login-box {
+            max-width: 400px;
+            margin: 100px auto;
+            background: rgba(255,255,255,0.05);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fbbf24;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Config Bar */
+        .config-bar {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .config-bar label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .config-bar input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .config-bar input:focus {
+            outline: none;
+            border-color: #fbbf24;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.05);
+            color: #9ca3af;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(to right, #fbbf24, #f59e0b);
+            color: #000;
+            border: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h3 span {
+            font-size: 24px;
+        }
+
+        /* Buttons Grid */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .action-btn {
+            padding: 16px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-blue:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-green {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-green:hover {
+            background: rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-yellow {
+            background: rgba(234, 179, 8, 0.2);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .btn-yellow:hover {
+            background: rgba(234, 179, 8, 0.3);
+        }
+
+        .btn-purple {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-purple:hover {
+            background: rgba(168, 85, 247, 0.3);
+        }
+
+        .btn-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-red:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-cyan {
+            background: rgba(6, 182, 212, 0.2);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .btn-cyan:hover {
+            background: rgba(6, 182, 212, 0.3);
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #fbbf24, #f59e0b);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        /* Result Box */
+        .result-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .result-box.success {
+            border-color: rgba(34, 197, 94, 0.5);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .result-box.error {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* Form */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #fbbf24;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(0,0,0,0.3);
+            font-weight: 600;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .stat-card.blue .number { color: #60a5fa; }
+        .stat-card.yellow .number { color: #facc15; }
+        .stat-card.green .number { color: #4ade80; }
+        .stat-card.purple .number { color: #c084fc; }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        .notification.error {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(251, 191, 36, 0.3);
+            border-top-color: #fbbf24;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-green {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .badge-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .badge-yellow {
+            background: rgba(234, 179, 8, 0.2);
+            color: #facc15;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .btn-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification hidden" id="notification"></div>
+
+    <!-- Login Screen -->
+    <div class="login-box" id="loginScreen">
+        <h2>🔐 Painel de Manutenção</h2>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>URL da API</label>
+            <input type="text" id="apiUrl" value="" placeholder="https://seu-site.com">
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>Senha do Admin</label>
+            <input type="password" id="password" placeholder="Digite a senha">
+        </div>
+        <button class="action-btn btn-primary" style="width: 100%;" onclick="login()">
+            Entrar
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container hidden" id="mainContent">
+        <div class="header">
+            <h1>⚽ CallClub - Manutenção Manual</h1>
+            <p>Painel de emergência para gerenciar dados do sistema</p>
+        </div>
+
+        <!-- Config Bar -->
+        <div class="config-bar">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <strong>Conectado a:</strong> <span id="connectedUrl" style="color: #4ade80;"></span>
+                </div>
+                <button class="action-btn btn-red" style="padding: 8px 16px;" onclick="logout()">
+                    Sair
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="tab-btn" onclick="showTab('sync')">🔄 Sincronização</button>
+            <button class="tab-btn" onclick="showTab('matches')">⚽ Partidas</button>
+            <button class="tab-btn" onclick="showTab('users')">👥 Usuários</button>
+            <button class="tab-btn" onclick="showTab('rounds')">📅 Rodadas</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="tab-dashboard">
+            <div class="stats-grid" id="statsGrid">
+                <!-- Stats loaded dynamically -->
+            </div>
+            
+            <div class="card">
+                <h3><span>📋</span> Resultado da Última Operação</h3>
+                <div class="result-box" id="lastResult">Nenhuma operação realizada ainda.</div>
+            </div>
+        </div>
+
+        <!-- Sync Tab -->
+        <div class="tab-content" id="tab-sync">
+            <div class="card">
+                <h3><span>🔄</span> Dados e Sincronização</h3>
+                <div class="btn-grid">
+                    <button class="action-btn btn-blue" onclick="syncMatches()">
+                        <span style="font-size: 28px;">🔄</span>
+                        Sincronizar Partidas
+                        <small style="color: #9ca3af;">Busca jogos da API</small>
+                    </button>
+                    <button class="action-btn btn-green" onclick="syncResults()">
+                        <span style="font-size: 28px;">✅</span>
+                        Atualizar Resultados
+                        <small style="color: #9ca3af;">Busca placares finais</small>
+                    </button>
+                    <button class="action-btn btn-yellow" onclick="recalculatePoints()">
+                        <span style="font-size: 28px;">📊</span>
+                        Recalcular Pontos
+                        <small style="color: #9ca3af;">Atualiza rankings</small>
+                    </button>
+                    <button class="action-btn btn-purple" onclick="fixPredictions()">
+                        <span style="font-size: 28px;">🔧</span>
+                        Corrigir Palpites
+                        <small style="color: #9ca3af;">Sem championship</small>
+                    </button>
+                    <button class="action-btn btn-cyan" onclick="exportPredictions()">
+                        <span style="font-size: 28px;">📥</span>
+                        Exportar Palpites
+                        <small style="color: #9ca3af;">Backup JSON</small>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matches Tab -->
+        <div class="tab-content" id="tab-matches">
+            <div class="card">
+                <h3><span>⚽</span> Gerenciar Partidas</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="matchChamp">
+                            <option value="carioca">Campeonato Carioca</option>
+                            <option value="brasileirao">Campeonato Brasileiro</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="max-width: 100px;">
+                        <label>Rodada</label>
+                        <input type="number" id="matchRound" value="1" min="1" max="38">
+                    </div>
+                    <button class="action-btn btn-green" onclick="loadMatches()" style="height: 42px; margin-top: auto;">
+                        Carregar
+                    </button>
+                </div>
+                <div class="table-container" id="matchesTable">
+                    <!-- Table loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span>➕</span> Adicionar Nova Partida</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Mandante</label>
+                        <input type="text" id="newHomeTeam" placeholder="Ex: Flamengo">
+                    </div>
+                    <div class="form-group">
+                        <label>Visitante</label>
+                        <input type="text" id="newAwayTeam" placeholder="Ex: Fluminense">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" id="newMatchDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Horário</label>
+                        <input type="time" id="newMatchTime">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group" style="max-width: 100px;">
+                        <label>Gols Mandante</label>
+                        <input type="number" id="newHomeScore" min="0" placeholder="-">
+                    </div>
+                    <div class="form-group" style="max-width: 100px;">
+                        <label>Gols Visitante</label>
+                        <input type="number" id="newAwayScore" min="0" placeholder="-">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 20px; margin-top: 20px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="checkbox" id="newIsFinished"> Partida encerrada
+                        </label>
+                    </div>
+                </div>
+                <button class="action-btn btn-primary" onclick="addMatch()">
+                    Adicionar Partida
+                </button>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-content" id="tab-users">
+            <div class="card">
+                <h3><span>👥</span> Usuários do Sistema</h3>
+                <button class="action-btn btn-green" onclick="loadUsers()" style="margin-bottom: 20px;">
+                    Carregar Usuários
+                </button>
+                <div class="table-container" id="usersTable">
+                    <!-- Table loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><span>➕</span> Adicionar Novo Usuário</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome do Usuário</label>
+                        <input type="text" id="newUserName" placeholder="Ex: João">
+                    </div>
+                    <div class="form-group" style="max-width: 150px;">
+                        <label>PIN (4 dígitos)</label>
+                        <input type="text" id="newUserPin" placeholder="0000" maxlength="4">
+                    </div>
+                    <button class="action-btn btn-primary" onclick="addUser()" style="height: 42px; margin-top: auto;">
+                        Adicionar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rounds Tab -->
+        <div class="tab-content" id="tab-rounds">
+            <div class="card">
+                <h3><span>📅</span> Definir Rodada Atual</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Campeonato</label>
+                        <select id="roundChamp">
+                            <option value="carioca">Campeonato Carioca</option>
+                            <option value="brasileirao">Campeonato Brasileiro</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="max-width: 100px;">
+                        <label>Rodada</label>
+                        <input type="number" id="roundNum" value="1" min="1" max="38">
+                    </div>
+                    <button class="action-btn btn-primary" onclick="setCurrentRound()" style="height: 42px; margin-top: auto;">
+                        Definir como Atual
+                    </button>
+                </div>
+                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
+                    Isso vai alterar qual rodada é considerada "atual" no sistema.
+                </p>
+            </div>
+
+            <div class="card">
+                <h3><span>📊</span> Rodadas Atuais</h3>
+                <div id="currentRoundsInfo">
+                    <button class="action-btn btn-blue" onclick="loadCurrentRounds()">
+                        Verificar Rodadas Atuais
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let API_URL = '';
+        let PASSWORD = '';
+
+        // Notificação
+        function notify(message, type = 'success') {
+            const el = document.getElementById('notification');
+            el.textContent = message;
+            el.className = 'notification ' + type;
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        // Loading
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        // Resultado
+        function showResult(data, success = true) {
+            const el = document.getElementById('lastResult');
+            el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+            el.className = 'result-box ' + (success ? 'success' : 'error');
+        }
+
+        // Login
+        function login() {
+            API_URL = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+            PASSWORD = document.getElementById('password').value;
+
+            if (!API_URL || !PASSWORD) {
+                notify('Preencha todos os campos', 'error');
+                return;
+            }
+
+            // Tenta carregar stats para validar
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/stats?password=${PASSWORD}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Senha incorreta ou URL inválida');
+                    return res.json();
+                })
+                .then(data => {
+                    document.getElementById('loginScreen').classList.add('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    document.getElementById('connectedUrl').textContent = API_URL;
+                    loadStats();
+                    notify('Conectado com sucesso!');
+                })
+                .catch(err => {
+                    notify(err.message, 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        // Logout
+        function logout() {
+            API_URL = '';
+            PASSWORD = '';
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('password').value = '';
+        }
+
+        // Tabs
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // Load Stats
+        function loadStats() {
+            fetch(`${API_URL}/api/admin/stats?password=${PASSWORD}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('statsGrid').innerHTML = `
+                        <div class="stat-card blue">
+                            <div class="number">${data.total_users || 0}</div>
+                            <div class="label">Usuários</div>
+                        </div>
+                        <div class="stat-card yellow">
+                            <div class="number">${data.premium_users || 0}</div>
+                            <div class="label">Premium</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="number">${data.total_predictions || 0}</div>
+                            <div class="label">Palpites</div>
+                        </div>
+                        <div class="stat-card purple">
+                            <div class="number">${data.total_matches || 0}</div>
+                            <div class="label">Partidas</div>
+                        </div>
+                    `;
+                });
+        }
+
+        // ==================== SYNC ====================
+
+        function syncMatches() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/force-populate?password=${PASSWORD}`)
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Partidas sincronizadas!');
+                    loadStats();
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao sincronizar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function syncResults() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/sync-results`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Resultados atualizados!');
+                    loadStats();
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao atualizar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function recalculatePoints() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/recalculate-points`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Pontos recalculados!');
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao recalcular', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function fixPredictions() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/fix-predictions-championship?password=${PASSWORD}`)
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Palpites corrigidos!');
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao corrigir', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function exportPredictions() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/export-predictions?password=${PASSWORD}`)
+                .then(res => res.json())
+                .then(data => {
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `palpites_backup_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    showResult(`Exportados ${data.total} palpites`);
+                    notify('Backup baixado!');
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao exportar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        // ==================== MATCHES ====================
+
+        function loadMatches() {
+            const champ = document.getElementById('matchChamp').value;
+            const round = document.getElementById('matchRound').value;
+            
+            showLoading(true);
+            fetch(`${API_URL}/api/matches/${round}?championship=${champ}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        document.getElementById('matchesTable').innerHTML = '<p style="color: #9ca3af;">Nenhuma partida encontrada.</p>';
+                        return;
+                    }
+                    
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mandante</th>
+                                    <th>Visitante</th>
+                                    <th>Data/Hora</th>
+                                    <th>Placar</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.forEach(m => {
+                        const date = m.match_date ? new Date(m.match_date).toLocaleString('pt-BR') : '-';
+                        const score = (m.home_score !== null && m.away_score !== null) 
+                            ? `<strong>${m.home_score} x ${m.away_score}</strong>` 
+                            : '- x -';
+                        const status = m.is_finished 
+                            ? '<span class="badge badge-green">Encerrada</span>'
+                            : '<span class="badge badge-blue">Em aberto</span>';
+                        
+                        html += `
+                            <tr>
+                                <td>${m.home_team}</td>
+                                <td>${m.away_team}</td>
+                                <td style="font-size: 13px; color: #9ca3af;">${date}</td>
+                                <td>${score}</td>
+                                <td>${status}</td>
+                                <td>
+                                    <button class="action-btn btn-yellow" style="padding: 6px 12px; font-size: 12px;" 
+                                        onclick="editMatchPrompt('${m.match_id}', '${m.home_team}', '${m.away_team}', ${m.home_score}, ${m.away_score}, ${m.is_finished})">
+                                        Editar
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('matchesTable').innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('matchesTable').innerHTML = `<p style="color: #f87171;">Erro: ${err.message}</p>`;
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function editMatchPrompt(matchId, homeTeam, awayTeam, homeScore, awayScore, isFinished) {
+            const newHomeScore = prompt(`Gols ${homeTeam}:`, homeScore !== null ? homeScore : '');
+            if (newHomeScore === null) return;
+            
+            const newAwayScore = prompt(`Gols ${awayTeam}:`, awayScore !== null ? awayScore : '');
+            if (newAwayScore === null) return;
+            
+            const finished = confirm('Marcar partida como encerrada?');
+            
+            updateMatch(matchId, {
+                home_score: newHomeScore !== '' ? parseInt(newHomeScore) : null,
+                away_score: newAwayScore !== '' ? parseInt(newAwayScore) : null,
+                is_finished: finished
+            });
+        }
+
+        function updateMatch(matchId, updates) {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/update-match?password=${PASSWORD}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ match_id: matchId, ...updates })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Partida atualizada!');
+                    loadMatches();
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao atualizar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function addMatch() {
+            const champ = document.getElementById('matchChamp').value;
+            const round = parseInt(document.getElementById('matchRound').value);
+            const homeTeam = document.getElementById('newHomeTeam').value.trim();
+            const awayTeam = document.getElementById('newAwayTeam').value.trim();
+            const date = document.getElementById('newMatchDate').value;
+            const time = document.getElementById('newMatchTime').value;
+            const homeScore = document.getElementById('newHomeScore').value;
+            const awayScore = document.getElementById('newAwayScore').value;
+            const isFinished = document.getElementById('newIsFinished').checked;
+
+            if (!homeTeam || !awayTeam) {
+                notify('Preencha os times', 'error');
+                return;
+            }
+
+            const matchDate = date && time ? `${date}T${time}:00` : '';
+
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/add-match?password=${PASSWORD}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    championship: champ,
+                    round_number: round,
+                    home_team: homeTeam,
+                    away_team: awayTeam,
+                    match_date: matchDate,
+                    home_score: homeScore !== '' ? parseInt(homeScore) : null,
+                    away_score: awayScore !== '' ? parseInt(awayScore) : null,
+                    is_finished: isFinished
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Partida adicionada!');
+                    loadMatches();
+                    // Limpa campos
+                    document.getElementById('newHomeTeam').value = '';
+                    document.getElementById('newAwayTeam').value = '';
+                    document.getElementById('newMatchDate').value = '';
+                    document.getElementById('newMatchTime').value = '';
+                    document.getElementById('newHomeScore').value = '';
+                    document.getElementById('newAwayScore').value = '';
+                    document.getElementById('newIsFinished').checked = false;
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao adicionar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        // ==================== USERS ====================
+
+        function loadUsers() {
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/users?password=${PASSWORD}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        document.getElementById('usersTable').innerHTML = '<p style="color: #9ca3af;">Nenhum usuário encontrado.</p>';
+                        return;
+                    }
+                    
+                    let html = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>PIN</th>
+                                    <th>Pontos</th>
+                                    <th>Status</th>
+                                    <th>Premium</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.forEach(u => {
+                        const status = u.is_banned 
+                            ? '<span class="badge badge-red">Banido</span>'
+                            : '<span class="badge badge-green">Ativo</span>';
+                        const premium = u.is_premium 
+                            ? '<span class="badge badge-yellow">⭐ Premium</span>'
+                            : '-';
+                        
+                        html += `
+                            <tr>
+                                <td><strong>${u.username}</strong></td>
+                                <td style="font-family: monospace;">${u.pin}</td>
+                                <td style="font-weight: bold; font-size: 18px;">${u.total_points || 0}</td>
+                                <td>${status}</td>
+                                <td>${premium}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('usersTable').innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('usersTable').innerHTML = `<p style="color: #f87171;">Erro: ${err.message}</p>`;
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function addUser() {
+            const username = document.getElementById('newUserName').value.trim();
+            const pin = document.getElementById('newUserPin').value.trim();
+
+            if (!username || !pin) {
+                notify('Preencha todos os campos', 'error');
+                return;
+            }
+
+            if (pin.length !== 4 || !/^\d+$/.test(pin)) {
+                notify('PIN deve ter 4 dígitos', 'error');
+                return;
+            }
+
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/add-user`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: PASSWORD, username, pin })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify('Usuário adicionado!');
+                    loadUsers();
+                    document.getElementById('newUserName').value = '';
+                    document.getElementById('newUserPin').value = '';
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao adicionar', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        // ==================== ROUNDS ====================
+
+        function setCurrentRound() {
+            const champ = document.getElementById('roundChamp').value;
+            const round = parseInt(document.getElementById('roundNum').value);
+
+            showLoading(true);
+            fetch(`${API_URL}/api/admin/set-current-round?password=${PASSWORD}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ championship: champ, round_number: round })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    showResult(data);
+                    notify(`Rodada ${round} definida como atual!`);
+                })
+                .catch(err => {
+                    showResult(err.message, false);
+                    notify('Erro ao definir rodada', 'error');
+                })
+                .finally(() => showLoading(false));
+        }
+
+        function loadCurrentRounds() {
+            showLoading(true);
+            Promise.all([
+                fetch(`${API_URL}/api/rounds/current?championship=carioca`).then(r => r.json()),
+                fetch(`${API_URL}/api/rounds/current?championship=brasileirao`).then(r => r.json())
+            ])
+                .then(([carioca, brasileirao]) => {
+                    document.getElementById('currentRoundsInfo').innerHTML = `
+                        <div class="stats-grid" style="margin-top: 16px;">
+                            <div class="stat-card green">
+                                <div class="number">${carioca.round_number || 1}</div>
+                                <div class="label">Carioca - Rodada Atual</div>
+                            </div>
+                            <div class="stat-card yellow">
+                                <div class="number">${brasileirao.round_number || 1}</div>
+                                <div class="label">Brasileirão - Rodada Atual</div>
+                            </div>
+                        </div>
+                        <button class="action-btn btn-blue" onclick="loadCurrentRounds()" style="margin-top: 16px;">
+                            Atualizar
+                        </button>
+                    `;
+                })
+                .catch(err => {
+                    document.getElementById('currentRoundsInfo').innerHTML = `<p style="color: #f87171;">Erro: ${err.message}</p>`;
+                })
+                .finally(() => showLoading(false));
+        }
+
+        // Auto-detect URL
+        document.getElementById('apiUrl').value = window.location.origin;
+    </script>
+</body>
+</html>
