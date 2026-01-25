@@ -209,7 +209,7 @@ export default function HomePage({ username }) {
               className="inline-flex items-center gap-2 bg-white/20 backdrop-blur text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/30 transition-all"
             >
               <TrendUp size={20} weight="bold" />
-              Ver Ranking
+              Ver Classificação
             </Link>
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function HomePage({ username }) {
               </div>
               <div>
                 <p className="text-2xl font-bold text-text-primary">#{userRank || '-'}</p>
-                <p className="text-xs text-text-secondary">No Ranking</p>
+                <p className="text-xs text-text-secondary">Na Classificação</p>
               </div>
             </div>
           </div>
@@ -410,12 +410,12 @@ export default function HomePage({ username }) {
           </div>
         )}
 
-        {/* Top 5 Ranking */}
+        {/* Top 5 Classificação */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border-2 border-paper">
           <div className="bg-gradient-to-r from-yellow-500 to-amber-500 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-white">
               <Trophy size={20} weight="fill" />
-              <span className="font-semibold">Top 5 Ranking</span>
+              <span className="font-semibold">Top 5 Classificação</span>
             </div>
             <Link to="/rankings" className="text-white/80 text-sm hover:text-white">
               Ver completo →
