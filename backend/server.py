@@ -1,14 +1,34 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+"""
+CallClub - Backend API
+Nova arquitetura global com sistema de planos (FREE/PREMIUM/VIP)
+"""
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from typing import Optional, List
 import httpx
+import uuid
+import random
+import string
+
+# Importa schemas
+from models.schemas import (
+    PlanType, PLAN_LIMITS, COUNTRY_NATIONAL_CHAMPIONSHIP,
+    UserLogin, UserUpdateCountry, PredictionCreate, AdminLogin,
+    AdminAddUser, AdminUpdatePlan, ChampionshipCreate, LeagueCreate, LeagueJoin
+)
+
+# Importa serviços
+from services.country_detector import detect_country_by_ip, get_supported_countries
+from services.league_service import (
+    create_league, join_league_by_code, leave_league, 
+    delete_league, get_league_ranking, generate_invite_code
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -18,19 +38,18 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-app = FastAPI()
+app = FastAPI(title="CallClub API", version="2.0.0")
 api_router = APIRouter(prefix="/api")
 
-# ==================== HEALTH CHECK ENDPOINT ====================
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for Kubernetes"""
-    return {"status": "healthy"}
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# ==================== USUÁRIOS AUTORIZADOS COM PIN ====================
-# 📌 AQUI VOCÊ EDITA OS USUÁRIOS E PINS
-# Formato: "Nome": "PIN de 4 dígitos"
+# ==================== CONFIGURAÇÃO ====================
 
+ADMIN_PASSWORD = "callclub2026"
+
+# Usuários autorizados com PIN (mantido para compatibilidade)
 AUTHORIZED_USERS = {
     "Mario": "2412",
     "Marcos": "6969",
@@ -58,99 +77,90 @@ AUTHORIZED_USERS = {
     "Alexandre": "5050",
     "Renato": "6060",
     "Fabio": "7070",
-    # ⬇️ ADICIONE MAIS USUÁRIOS AQUI NO FORMATO: "Nome": "PIN" ⬇️
-    
 }
 
-# ==================== CHAVES PREMIUM (BRASILEIRÃO) ====================
-# 📌 AQUI VOCÊ EDITA AS CHAVES PREMIUM
-# Formato: "NOME-CLUB-XXXX": "Nome" (a chave aponta para o dono)
-# A chave SÓ funciona para o usuário correspondente
-
-PREMIUM_KEYS = {
-    "MARIO-CLUB-7X2K": "Mario",
-    "MARCOS-CLUB-9M4P": "Marcos",
-    "CARLOS-CLUB-4321": "Carlos",
-    # ⬇️ ADICIONE MAIS CHAVES PREMIUM AQUI ⬇️
-}
-
-# Usuários que já ativaram premium (preenchido automaticamente)
-# Armazenado no banco de dados
-
-# Senha do painel admin
-ADMIN_PASSWORD = "callclub2026"
-
-# ==================== CAMPEONATOS ====================
-CHAMPIONSHIPS = {
-    "carioca": {
-        "id": "5688",
-        "name": "Campeonato Carioca",
-        "season": "2026",
-        "total_rounds": 6
-    },
+# Campeonatos iniciais (para seed)
+INITIAL_CHAMPIONSHIPS = {
     "brasileirao": {
-        "id": "4351",
+        "championship_id": "brasileirao",
         "name": "Campeonato Brasileiro",
+        "country": "BR",
+        "api_id": "4351",
+        "is_national": True,
         "season": "2026",
         "total_rounds": 38
+    },
+    "serie_a": {
+        "championship_id": "serie_a",
+        "name": "Serie A",
+        "country": "IT",
+        "api_id": "4332",
+        "is_national": True,
+        "season": "2024-2025",
+        "total_rounds": 38
+    },
+    "la_liga": {
+        "championship_id": "la_liga",
+        "name": "La Liga",
+        "country": "ES",
+        "api_id": "4335",
+        "is_national": True,
+        "season": "2024-2025",
+        "total_rounds": 38
+    },
+    "premier_league": {
+        "championship_id": "premier_league",
+        "name": "Premier League",
+        "country": "EN",
+        "api_id": "4328",
+        "is_national": True,
+        "season": "2024-2025",
+        "total_rounds": 38
+    },
+    "bundesliga": {
+        "championship_id": "bundesliga",
+        "name": "Bundesliga",
+        "country": "DE",
+        "api_id": "4331",
+        "is_national": True,
+        "season": "2024-2025",
+        "total_rounds": 34
+    },
+    "ligue_1": {
+        "championship_id": "ligue_1",
+        "name": "Ligue 1",
+        "country": "FR",
+        "api_id": "4334",
+        "is_national": True,
+        "season": "2024-2025",
+        "total_rounds": 34
+    },
+    "libertadores": {
+        "championship_id": "libertadores",
+        "name": "Copa Libertadores",
+        "country": "SA",  # South America
+        "api_id": "4480",
+        "is_national": False,
+        "season": "2026",
+        "total_rounds": 6  # Fase de grupos
+    },
+    "champions_league": {
+        "championship_id": "champions_league",
+        "name": "UEFA Champions League",
+        "country": "EU",
+        "api_id": "4480",
+        "is_national": False,
+        "season": "2024-2025",
+        "total_rounds": 8
     }
 }
 
-# ==================== MODELS ====================
-class User(BaseModel):
-    username: str
-    total_points: int = 0
-    perfect_streak: int = 0  # Sequência de acertos perfeitos (5 pts)
-    max_perfect_streak: int = 0
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class Match(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    match_id: str
-    championship: str = "carioca"  # carioca ou brasileirao
-    round_number: int
-    home_team: str
-    away_team: str
-    home_score: Optional[int] = None
-    away_score: Optional[int] = None
-    match_date: datetime
-    is_finished: bool = False
+# ==================== HEALTH CHECK ====================
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "version": "2.0.0"}
 
-class Prediction(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    username: str
-    match_id: str
-    championship: str = "carioca"
-    round_number: int
-    home_prediction: int
-    away_prediction: int
-    points: Optional[int] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class Round(BaseModel):
-    championship: str = "carioca"
-    round_number: int
-    is_current: bool = True
-    deadline: datetime
-
-class NameCheck(BaseModel):
-    username: str
-    pin: str
-
-class PredictionCreate(BaseModel):
-    username: str
-    match_id: str
-    championship: str = "carioca"
-    round_number: int
-    home_prediction: int
-    away_prediction: int
-
-class PremiumKeyActivation(BaseModel):
-    username: str
-    key: str
-
-class AdminLogin(BaseModel):
-    password: str
 
 # ==================== HELPER FUNCTIONS ====================
 def calculate_points(prediction: dict, match: dict) -> int:
@@ -159,10 +169,13 @@ def calculate_points(prediction: dict, match: dict) -> int:
         return 0
     
     points = 0
-    home_real = match['home_score']
-    away_real = match['away_score']
-    home_pred = prediction['home_prediction']
-    away_pred = prediction['away_prediction']
+    home_real = match.get('home_score')
+    away_real = match.get('away_score')
+    home_pred = prediction.get('home_prediction')
+    away_pred = prediction.get('away_prediction')
+    
+    if home_real is None or away_real is None:
+        return 0
     
     # Resultado correto (V/E/D): 3 pontos
     real_result = 'H' if home_real > away_real else ('A' if away_real > home_real else 'D')
@@ -180,465 +193,367 @@ def calculate_points(prediction: dict, match: dict) -> int:
     
     return points
 
-# ==================== ROUTES ====================
 
-# ========== CAMPEONATOS ==========
-@api_router.get("/championships")
-async def get_championships():
-    """Retorna lista de campeonatos disponíveis"""
-    return [
-        {"id": "carioca", "name": "Campeonato Carioca 2026", "premium": False},
-        {"id": "brasileirao", "name": "Campeonato Brasileiro 2026", "premium": True}
-    ]
+def get_user_national_championship(country: str) -> str:
+    """Retorna o campeonato nacional do país do usuário"""
+    return COUNTRY_NATIONAL_CHAMPIONSHIP.get(country, "brasileirao")
 
-# ========== SISTEMA PREMIUM ==========
-@api_router.get("/premium/status/{username}")
-async def get_premium_status(username: str):
-    """Verifica se usuário é premium"""
-    user = await db.users.find_one({"username": username}, {"_id": 0})
-    is_premium = user.get("is_premium", False) if user else False
-    return {"username": username, "is_premium": is_premium}
 
-@api_router.post("/premium/activate")
-async def activate_premium(data: PremiumKeyActivation):
-    """Ativa chave premium para usuário"""
-    key = data.key.upper().strip()
-    username = data.username
+async def check_user_can_access_championship(username: str, championship_id: str) -> bool:
+    """Verifica se usuário pode acessar um campeonato"""
+    user = await db.users.find_one({"username": username})
+    if not user:
+        return False
     
-    # Verifica se a chave existe
-    if key not in PREMIUM_KEYS:
-        # Loga tentativa de chave inválida
-        await db.security_logs.insert_one({
-            "type": "invalid_key",
-            "username": username,
-            "attempted_key": key,
-            "timestamp": datetime.now(timezone.utc)
-        })
-        raise HTTPException(status_code=403, detail="Chave inválida. Verifique e tente novamente.")
+    plan = user.get("plan", "free")
+    country = user.get("country", "BR")
     
-    # Verifica se a chave pertence ao usuário correto
-    key_owner = PREMIUM_KEYS[key]
-    if key_owner != username:
-        # ALERTA DE SEGURANÇA: Tentativa de usar chave de outro!
-        await db.security_logs.insert_one({
-            "type": "stolen_key_attempt",
-            "username": username,
-            "attempted_key": key,
-            "key_owner": key_owner,
-            "timestamp": datetime.now(timezone.utc),
-            "severity": "HIGH"
-        })
-        raise HTTPException(
-            status_code=403, 
-            detail=f"🚫 ACESSO NEGADO. Esta chave pertence a outro membro. Tentativa registrada."
-        )
+    # Campeonato nacional sempre liberado
+    national = get_user_national_championship(country)
+    if championship_id == national:
+        return True
     
-    # Ativa premium para o usuário
-    await db.users.update_one(
-        {"username": username},
-        {"$set": {"is_premium": True, "premium_activated_at": datetime.now(timezone.utc)}},
-        upsert=True
-    )
+    # Premium/VIP pode acessar extras
+    if plan in ["premium", "vip"]:
+        extras = user.get("extra_championships", [])
+        if championship_id in extras:
+            return True
+        
+        # Verifica ligas que participa
+        joined = user.get("joined_leagues", [])
+        for league_id in joined:
+            league = await db.leagues.find_one({"league_id": league_id})
+            if league and league.get("championship_id") == championship_id:
+                return True
     
-    # Loga ativação bem-sucedida
-    await db.security_logs.insert_one({
-        "type": "premium_activated",
-        "username": username,
-        "key": key,
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": "🎉 Premium ativado com sucesso! Bem-vindo ao Brasileirão!"}
+    return False
 
-# ========== PAINEL ADMIN ==========
-@api_router.post("/admin/login")
-async def admin_login(data: AdminLogin):
-    """Verifica senha do admin"""
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Senha incorreta")
-    return {"success": True}
 
-@api_router.get("/admin/users")
-async def admin_get_users(password: str):
-    """Lista todos os usuários (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    users = await db.users.find({}, {"_id": 0}).to_list(1000)
-    
-    # Adiciona info de chave premium e PIN para cada usuário
-    for user in users:
-        username = user.get("username")
-        # Procura se tem chave
-        user_key = None
-        for key, owner in PREMIUM_KEYS.items():
-            if owner == username:
-                user_key = key
-                break
-        user["premium_key"] = user_key
-        # Adiciona PIN
-        user["pin"] = AUTHORIZED_USERS.get(username, "N/A")
-    
-    return users
-
-@api_router.get("/admin/security-logs")
-async def admin_get_security_logs(password: str):
-    """Lista logs de segurança (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    logs = await db.security_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(100)
-    return logs
-
-@api_router.post("/admin/ban-user")
-async def admin_ban_user(password: str, username: str):
-    """Bane um usuário (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    await db.users.update_one(
-        {"username": username},
-        {"$set": {"is_banned": True, "banned_at": datetime.now(timezone.utc)}}
-    )
-    
-    await db.security_logs.insert_one({
-        "type": "user_banned",
-        "username": username,
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": f"Usuário {username} banido com sucesso"}
-
-@api_router.post("/admin/unban-user")
-async def admin_unban_user(password: str, username: str):
-    """Remove ban de um usuário (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    await db.users.update_one(
-        {"username": username},
-        {"$set": {"is_banned": False}}
-    )
-    
-    return {"success": True, "message": f"Ban removido de {username}"}
-
-# ========== NOVOS ENDPOINTS ADMIN ==========
-
-class AddUserRequest(BaseModel):
-    password: str
-    username: str
-    pin: str
-
-class UpdatePinRequest(BaseModel):
-    password: str
-    username: str
-    new_pin: str
-
-class TogglePremiumRequest(BaseModel):
-    password: str
-    username: str
-    is_premium: bool
-
-class GenerateKeyRequest(BaseModel):
-    password: str
-    username: str
-
-@api_router.post("/admin/add-user")
-async def admin_add_user(data: AddUserRequest):
-    """Adiciona novo usuário (requer senha admin)"""
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    # Verifica se já existe
-    if data.username in AUTHORIZED_USERS:
-        raise HTTPException(status_code=400, detail="Usuário já existe")
-    
-    # Adiciona na whitelist (em memória - para persistir, editar server.py)
-    AUTHORIZED_USERS[data.username] = data.pin
-    
-    # Conta usuários para definir número de pioneiro
-    user_count = await db.users.count_documents({})
-    pioneer_num = user_count + 1 if user_count < 100 else None
-    
-    # Cria no banco
-    await db.users.insert_one({
-        "username": data.username,
-        "total_points": 0,
-        "is_premium": False,
-        "is_banned": False,
-        "achievements": ["pioneer"] if pioneer_num else [],
-        "pioneer_number": pioneer_num,
-        "created_at": datetime.now(timezone.utc)
-    })
-    
-    await db.security_logs.insert_one({
-        "type": "user_added",
-        "username": data.username,
-        "added_by": "admin",
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": f"Usuário {data.username} adicionado!", "pioneer_number": pioneer_num}
-
-@api_router.post("/admin/update-pin")
-async def admin_update_pin(data: UpdatePinRequest):
-    """Atualiza PIN de um usuário (requer senha admin)"""
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    if data.username not in AUTHORIZED_USERS:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    
-    # Atualiza em memória
-    AUTHORIZED_USERS[data.username] = data.new_pin
-    
-    await db.security_logs.insert_one({
-        "type": "pin_updated",
-        "username": data.username,
-        "updated_by": "admin",
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": f"PIN de {data.username} atualizado!"}
-
-@api_router.post("/admin/toggle-premium")
-async def admin_toggle_premium(data: TogglePremiumRequest):
-    """Ativa/desativa premium de um usuário (requer senha admin)"""
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    update_data = {"is_premium": data.is_premium}
-    
-    if data.is_premium:
-        update_data["premium_activated_at"] = datetime.now(timezone.utc)
-        # Adiciona conquista de premium
-        await db.users.update_one(
-            {"username": data.username},
-            {"$addToSet": {"achievements": "premium"}}
-        )
-    else:
-        update_data["premium_key"] = None
-        # Remove conquista de premium
-        await db.users.update_one(
-            {"username": data.username},
-            {"$pull": {"achievements": "premium"}}
-        )
-    
-    await db.users.update_one(
-        {"username": data.username},
-        {"$set": update_data}
-    )
-    
-    action = "ativado" if data.is_premium else "desativado"
-    await db.security_logs.insert_one({
-        "type": f"premium_{action}",
-        "username": data.username,
-        "updated_by": "admin",
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": f"Premium {action} para {data.username}!"}
-
-@api_router.post("/admin/generate-key")
-async def admin_generate_key(data: GenerateKeyRequest):
-    """Gera nova chave premium para usuário (requer senha admin)"""
-    if data.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    import random
-    import string
-    
-    # Gera chave única no formato NOME-CLUB-XXXX
-    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-    new_key = f"{data.username.upper()}-CLUB-{suffix}"
-    
-    # Adiciona na lista de chaves (em memória)
-    PREMIUM_KEYS[new_key] = data.username
-    
-    await db.security_logs.insert_one({
-        "type": "key_generated",
-        "username": data.username,
-        "key": new_key,
-        "generated_by": "admin",
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "key": new_key, "message": f"Chave gerada: {new_key}"}
-
-@api_router.delete("/admin/remove-user")
-async def admin_remove_user(password: str, username: str):
-    """Remove um usuário completamente (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    # Remove da whitelist
-    if username in AUTHORIZED_USERS:
-        del AUTHORIZED_USERS[username]
-    
-    # Remove chaves premium associadas
-    keys_to_remove = [k for k, v in PREMIUM_KEYS.items() if v == username]
-    for key in keys_to_remove:
-        del PREMIUM_KEYS[key]
-    
-    # Remove do banco
-    await db.users.delete_one({"username": username})
-    await db.predictions.delete_many({"username": username})
-    
-    await db.security_logs.insert_one({
-        "type": "user_removed",
-        "username": username,
-        "removed_by": "admin",
-        "timestamp": datetime.now(timezone.utc)
-    })
-    
-    return {"success": True, "message": f"Usuário {username} removido completamente"}
-
-@api_router.get("/admin/stats")
-async def admin_get_stats(password: str):
-    """Retorna estatísticas gerais (requer senha admin)"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    total_users = await db.users.count_documents({})
-    premium_users = await db.users.count_documents({"is_premium": True})
-    banned_users = await db.users.count_documents({"is_banned": True})
-    total_predictions = await db.predictions.count_documents({})
-    total_matches = await db.matches.count_documents({})
-    finished_matches = await db.matches.count_documents({"status": "finished"})
-    
-    # Alertas de segurança
-    security_alerts = await db.security_logs.count_documents({"type": "stolen_key_attempt"})
-    
-    return {
-        "total_users": total_users,
-        "premium_users": premium_users,
-        "banned_users": banned_users,
-        "total_predictions": total_predictions,
-        "total_matches": total_matches,
-        "finished_matches": finished_matches,
-        "security_alerts": security_alerts
-    }
-
-# ========== AUTENTICAÇÃO ==========
+# ==================== AUTENTICAÇÃO ====================
 @api_router.post("/auth/check-name")
-async def check_name(data: NameCheck):
-    """Verifica se o nome e PIN estão corretos"""
-    # Verifica se usuário existe
+async def check_name(data: UserLogin, request: Request):
+    """Login por nome e PIN"""
     if data.username not in AUTHORIZED_USERS:
         raise HTTPException(status_code=403, detail="Nome não autorizado. Entre em contato com o administrador.")
     
-    # Verifica se PIN está correto
     if AUTHORIZED_USERS[data.username] != data.pin:
         raise HTTPException(status_code=403, detail="PIN incorreto. Tente novamente.")
     
-    # Verifica se usuário está banido
     user = await db.users.find_one({"username": data.username}, {"_id": 0})
+    
     if user and user.get("is_banned"):
-        raise HTTPException(status_code=403, detail="🚫 Sua conta foi suspensa. Entre em contato com o administrador.")
+        raise HTTPException(status_code=403, detail="🚫 Sua conta foi suspensa.")
     
-    # Cria usuário se não existir no banco
+    # Detecta país por IP se for novo usuário
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    detected_country = await detect_country_by_ip(client_ip)
+    
     if not user:
-        # Conta quantos usuários existem para definir número de pioneiro
+        # Novo usuário - todos são PREMIUM (pioneiros beta)
         total_users = await db.users.count_documents({})
-        pioneer_number = total_users + 1 if total_users < 100 else None
+        pioneer_num = total_users + 1 if total_users < 100 else None
         
-        new_user = User(username=data.username)
-        user_data = new_user.model_dump()
-        user_data["pioneer_number"] = pioneer_number
-        user_data["first_login"] = datetime.now(timezone.utc)
-        
-        await db.users.insert_one(user_data)
+        user = {
+            "username": data.username,
+            "plan": "premium",  # Beta testers são premium
+            "country": detected_country,
+            "total_points": 0,
+            "owned_leagues": [],
+            "joined_leagues": [],
+            "extra_championships": [],
+            "achievements": ["pioneer", "beta_tester"] if pioneer_num else ["beta_tester"],
+            "pioneer_number": pioneer_num,
+            "is_banned": False,
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.users.insert_one(user)
     
-    return {"success": True, "username": data.username}
-
-@api_router.get("/rounds/current")
-async def get_current_round(championship: str = "carioca"):
-    """Retorna a rodada atual de um campeonato baseado nos jogos não finalizados"""
-    # Busca a primeira rodada que tem jogo não finalizado (essa é a rodada atual)
-    next_unfinished = await db.matches.find_one(
-        {"championship": championship, "is_finished": False},
-        sort=[("round_number", 1), ("match_date", 1)]
-    )
-    
-    if next_unfinished:
-        current_round_num = next_unfinished.get("round_number", 1)
-    else:
-        # Se todos os jogos estão finalizados, pega a última rodada
-        last_match = await db.matches.find_one(
-            {"championship": championship},
-            sort=[("round_number", -1)]
-        )
-        current_round_num = last_match.get("round_number", 1) if last_match else 1
-    
-    # Atualiza as rodadas no banco
-    await db.rounds.update_many(
-        {"championship": championship},
-        {"$set": {"is_current": False}}
-    )
-    await db.rounds.update_one(
-        {"championship": championship, "round_number": current_round_num},
-        {"$set": {"is_current": True}},
-        upsert=True
-    )
+    # Remove _id antes de retornar
+    user.pop("_id", None)
     
     return {
-        "championship": championship,
-        "round_number": current_round_num,
-        "is_current": True
+        "success": True, 
+        "username": data.username,
+        "user": user
     }
 
-@api_router.get("/rounds/all")
-async def get_all_rounds(championship: str = "carioca"):
-    """Retorna todas as rodadas de um campeonato"""
-    # Define total de rodadas por campeonato
-    total_rounds_map = {"carioca": 6, "brasileirao": 38}
-    total_rounds = total_rounds_map.get(championship, 38)
+
+@api_router.post("/auth/update-country")
+async def update_user_country(data: UserUpdateCountry):
+    """Atualiza país do usuário manualmente"""
+    supported = [c["code"] for c in get_supported_countries()]
+    if data.country not in supported:
+        raise HTTPException(status_code=400, detail="País não suportado")
     
-    # Busca rodadas existentes
-    rounds = await db.rounds.find(
-        {"championship": championship}, 
+    result = await db.users.update_one(
+        {"username": data.username},
+        {"$set": {"country": data.country}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Retorna campeonato nacional do novo país
+    national = get_user_national_championship(data.country)
+    
+    return {
+        "success": True,
+        "country": data.country,
+        "national_championship": national
+    }
+
+
+@api_router.get("/countries")
+async def get_countries():
+    """Lista países suportados"""
+    return get_supported_countries()
+
+
+# ==================== USUÁRIO ====================
+@api_router.get("/user/{username}")
+async def get_user_profile(username: str):
+    """Retorna perfil completo do usuário"""
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Busca campeonato nacional
+    country = user.get("country", "BR")
+    national_champ = get_user_national_championship(country)
+    
+    # Busca ligas
+    joined_leagues = []
+    for league_id in user.get("joined_leagues", []):
+        league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
+        if league:
+            joined_leagues.append(league)
+    
+    # Busca palpites recentes
+    predictions = await db.predictions.find(
+        {"username": username},
         {"_id": 0}
-    ).sort("round_number", 1).to_list(100)
+    ).sort("created_at", -1).limit(50).to_list(50)
     
-    existing_rounds = {r['round_number'] for r in rounds}
-    
-    # Busca a rodada atual
-    current_round_data = await get_current_round(championship)
-    current_round_num = current_round_data.get("round_number", 1)
-    
-    # Cria rodadas faltantes
-    for rn in range(1, total_rounds + 1):
-        if rn not in existing_rounds:
-            await db.rounds.insert_one({
-                "championship": championship,
-                "round_number": rn,
-                "is_current": rn == current_round_num
+    # Enriquece palpites com dados das partidas
+    enriched_predictions = []
+    for pred in predictions:
+        match = await db.matches.find_one({"match_id": pred["match_id"]}, {"_id": 0})
+        if match:
+            enriched_predictions.append({
+                **pred,
+                "home_team": match.get("home_team", "?"),
+                "away_team": match.get("away_team", "?"),
+                "home_score": match.get("home_score"),
+                "away_score": match.get("away_score"),
+                "is_finished": match.get("is_finished", False),
+                "match_date": match.get("match_date")
             })
     
-    # Busca novamente com todas as rodadas
-    rounds = await db.rounds.find(
-        {"championship": championship}, 
-        {"_id": 0}
-    ).sort("round_number", 1).to_list(100)
+    # Calcula estatísticas
+    preds_with_points = [p for p in predictions if p.get("points") is not None]
+    total_points = sum(p.get("points", 0) for p in preds_with_points)
+    perfect_scores = sum(1 for p in preds_with_points if p.get("points") == 5)
     
-    # Atualiza is_current
-    for r in rounds:
-        r['is_current'] = r['round_number'] == current_round_num
+    # Limites do plano
+    plan = user.get("plan", "free")
+    plan_limits = PLAN_LIMITS.get(PlanType(plan), PLAN_LIMITS[PlanType.FREE])
     
-    return rounds
+    return {
+        "user": user,
+        "national_championship": national_champ,
+        "joined_leagues": joined_leagues,
+        "predictions": enriched_predictions,
+        "statistics": {
+            "total_points": total_points,
+            "perfect_scores": perfect_scores,
+            "games_played": len(preds_with_points)
+        },
+        "plan_info": {
+            "plan": plan,
+            "limits": plan_limits
+        }
+    }
 
+
+@api_router.get("/user/{username}/accessible-championships")
+async def get_user_accessible_championships(username: str):
+    """Retorna campeonatos que o usuário pode acessar"""
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    country = user.get("country", "BR")
+    plan = user.get("plan", "free")
+    national_id = get_user_national_championship(country)
+    
+    # Busca campeonato nacional
+    accessible = []
+    
+    national = await db.championships.find_one({"championship_id": national_id}, {"_id": 0})
+    if national:
+        national["access_type"] = "national"
+        accessible.append(national)
+    
+    # Premium/VIP: extras e ligas
+    if plan in ["premium", "vip"]:
+        # Campeonatos extras
+        for champ_id in user.get("extra_championships", []):
+            champ = await db.championships.find_one({"championship_id": champ_id}, {"_id": 0})
+            if champ:
+                champ["access_type"] = "extra"
+                accessible.append(champ)
+        
+        # Campeonatos das ligas
+        for league_id in user.get("joined_leagues", []):
+            league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
+            if league:
+                champ = await db.championships.find_one(
+                    {"championship_id": league.get("championship_id")}, 
+                    {"_id": 0}
+                )
+                if champ and champ not in accessible:
+                    champ["access_type"] = "league"
+                    champ["league_name"] = league.get("name")
+                    accessible.append(champ)
+    
+    return accessible
+
+
+# ==================== CAMPEONATOS ====================
+@api_router.get("/championships")
+async def get_championships():
+    """Lista todos os campeonatos disponíveis no sistema"""
+    championships = await db.championships.find(
+        {"is_active": True}, 
+        {"_id": 0}
+    ).to_list(100)
+    return championships
+
+
+@api_router.get("/championships/{championship_id}")
+async def get_championship(championship_id: str):
+    """Detalhes de um campeonato específico"""
+    champ = await db.championships.find_one(
+        {"championship_id": championship_id},
+        {"_id": 0}
+    )
+    if not champ:
+        raise HTTPException(status_code=404, detail="Campeonato não encontrado")
+    return champ
+
+
+@api_router.get("/championships/country/{country}")
+async def get_championships_by_country(country: str):
+    """Lista campeonatos de um país específico"""
+    championships = await db.championships.find(
+        {"country": country, "is_active": True},
+        {"_id": 0}
+    ).to_list(100)
+    return championships
+
+
+# ==================== LIGAS ====================
+@api_router.post("/leagues/create")
+async def create_new_league(data: LeagueCreate):
+    """Cria uma nova liga (requer premium)"""
+    user = await db.users.find_one({"username": data.owner_username})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    plan = user.get("plan", "free")
+    if plan == "free":
+        raise HTTPException(status_code=403, detail="Usuários FREE não podem criar ligas. Faça upgrade para PREMIUM!")
+    
+    # Verifica limite de ligas
+    owned = user.get("owned_leagues", [])
+    limits = PLAN_LIMITS.get(PlanType(plan), PLAN_LIMITS[PlanType.FREE])
+    max_leagues = limits.get("max_leagues_owned", 0)
+    
+    if max_leagues != -1 and len(owned) >= max_leagues:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Limite de {max_leagues} ligas atingido para seu plano"
+        )
+    
+    # Verifica se campeonato existe
+    champ = await db.championships.find_one({"championship_id": data.championship_id})
+    if not champ:
+        raise HTTPException(status_code=404, detail="Campeonato não encontrado")
+    
+    league = await create_league(db, data.name, data.owner_username, data.championship_id)
+    league.pop("_id", None)
+    
+    return {"success": True, "league": league}
+
+
+@api_router.post("/leagues/join")
+async def join_league(data: LeagueJoin):
+    """Entra em uma liga pelo código de convite"""
+    result = await join_league_by_code(db, data.username, data.invite_code)
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Liga não encontrada ou código inválido")
+    
+    if result.get("error") == "already_member":
+        raise HTTPException(status_code=400, detail="Você já é membro desta liga")
+    
+    if result.get("error") == "league_full":
+        raise HTTPException(status_code=400, detail="Liga cheia")
+    
+    league = result.get("league", {})
+    league.pop("_id", None)
+    
+    return {"success": True, "league": league}
+
+
+@api_router.post("/leagues/{league_id}/leave")
+async def leave_league_endpoint(league_id: str, username: str):
+    """Sai de uma liga"""
+    success = await leave_league(db, username, league_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Não foi possível sair da liga")
+    return {"success": True}
+
+
+@api_router.get("/leagues/{league_id}")
+async def get_league(league_id: str):
+    """Detalhes de uma liga"""
+    league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
+    if not league:
+        raise HTTPException(status_code=404, detail="Liga não encontrada")
+    
+    # Busca ranking da liga
+    ranking = await get_league_ranking(db, league_id, league.get("championship_id"))
+    
+    return {"league": league, "ranking": ranking}
+
+
+@api_router.get("/leagues/user/{username}")
+async def get_user_leagues(username: str):
+    """Lista ligas do usuário"""
+    user = await db.users.find_one({"username": username})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    joined_ids = user.get("joined_leagues", [])
+    leagues = await db.leagues.find(
+        {"league_id": {"$in": joined_ids}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return leagues
+
+
+# ==================== PARTIDAS ====================
 @api_router.get("/matches/next")
-async def get_next_match(championship: str = "carioca"):
+async def get_next_match(championship_id: str = "brasileirao"):
     """Retorna o próximo jogo não finalizado"""
-    from datetime import timedelta
-    # Usa horário de Brasília (UTC-3) para comparação
     now_brasilia = datetime.now(timezone.utc) - timedelta(hours=3)
     now_str = now_brasilia.strftime("%Y-%m-%dT%H:%M:%S")
     
-    # Busca o próximo jogo que ainda não começou
     next_match = await db.matches.find_one(
         {
-            "championship": championship,
+            "championship_id": championship_id,
             "is_finished": False,
             "match_date": {"$gt": now_str}
         },
@@ -647,9 +562,8 @@ async def get_next_match(championship: str = "carioca"):
     )
     
     if not next_match:
-        # Se não encontrar, busca qualquer jogo não finalizado
         next_match = await db.matches.find_one(
-            {"championship": championship, "is_finished": False},
+            {"championship_id": championship_id, "is_finished": False},
             {"_id": 0},
             sort=[("match_date", 1)]
         )
@@ -658,37 +572,13 @@ async def get_next_match(championship: str = "carioca"):
 
 
 @api_router.get("/matches/{round_number}")
-async def get_matches(round_number: int, championship: str = "carioca"):
-    """Retorna os jogos de uma rodada ordenados por data"""
+async def get_matches(round_number: int, championship_id: str = "brasileirao"):
+    """Retorna jogos de uma rodada"""
     matches = await db.matches.find(
-        {"round_number": round_number, "championship": championship}, 
+        {"round_number": round_number, "championship_id": championship_id},
         {"_id": 0}
     ).sort("match_date", 1).to_list(100)
     return matches
-
-
-@api_router.get("/matches/{match_id}/popular-prediction")
-async def get_popular_prediction(match_id: str):
-    """Retorna o palpite mais votado para um jogo"""
-    pipeline = [
-        {"$match": {"match_id": match_id}},
-        {"$group": {
-            "_id": {"home": "$home_prediction", "away": "$away_prediction"},
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"count": -1}},
-        {"$limit": 1}
-    ]
-    
-    result = await db.predictions.aggregate(pipeline).to_list(1)
-    
-    if result:
-        return {
-            "home_prediction": result[0]["_id"]["home"],
-            "away_prediction": result[0]["_id"]["away"],
-            "count": result[0]["count"]
-        }
-    return None
 
 
 @api_router.get("/matches/popular-predictions/batch")
@@ -711,7 +601,6 @@ async def get_popular_predictions_batch(match_ids: str):
     
     results = await db.predictions.aggregate(pipeline).to_list(1000)
     
-    # Agrupa por match_id e pega o mais votado de cada
     popular_by_match = {}
     for r in results:
         mid = r["_id"]["match_id"]
@@ -725,112 +614,129 @@ async def get_popular_predictions_batch(match_ids: str):
     return popular_by_match
 
 
+# ==================== RODADAS ====================
+@api_router.get("/rounds/current")
+async def get_current_round(championship_id: str = "brasileirao"):
+    """Retorna a rodada atual"""
+    next_unfinished = await db.matches.find_one(
+        {"championship_id": championship_id, "is_finished": False},
+        sort=[("round_number", 1), ("match_date", 1)]
+    )
+    
+    if next_unfinished:
+        current_round = next_unfinished.get("round_number", 1)
+    else:
+        last_match = await db.matches.find_one(
+            {"championship_id": championship_id},
+            sort=[("round_number", -1)]
+        )
+        current_round = last_match.get("round_number", 1) if last_match else 1
+    
+    return {
+        "championship_id": championship_id,
+        "round_number": current_round
+    }
+
+
+@api_router.get("/rounds/all")
+async def get_all_rounds(championship_id: str = "brasileirao"):
+    """Retorna todas as rodadas"""
+    champ = await db.championships.find_one({"championship_id": championship_id})
+    total_rounds = champ.get("total_rounds", 38) if champ else 38
+    
+    current_data = await get_current_round(championship_id)
+    current = current_data.get("round_number", 1)
+    
+    rounds = []
+    for rn in range(1, total_rounds + 1):
+        rounds.append({
+            "championship_id": championship_id,
+            "round_number": rn,
+            "is_current": rn == current
+        })
+    
+    return rounds
+
+
+# ==================== PALPITES ====================
 @api_router.post("/predictions")
 async def create_prediction(pred: PredictionCreate):
     """Salva um palpite"""
-    # Verifica se usuário é autorizado
     if pred.username not in AUTHORIZED_USERS:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
     
-    # Verifica se já existe palpite para esse jogo
+    # Verifica se já existe
     existing = await db.predictions.find_one({
         "username": pred.username,
         "match_id": pred.match_id
     })
     
     if existing:
-        # Atualiza palpite
         await db.predictions.update_one(
             {"username": pred.username, "match_id": pred.match_id},
             {"$set": {
                 "home_prediction": pred.home_prediction,
                 "away_prediction": pred.away_prediction,
-                "championship": pred.championship
+                "championship_id": pred.championship_id,
+                "league_id": pred.league_id
             }}
         )
     else:
-        # Cria novo palpite
-        new_pred = Prediction(**pred.model_dump())
-        await db.predictions.insert_one(new_pred.model_dump())
+        await db.predictions.insert_one({
+            "username": pred.username,
+            "match_id": pred.match_id,
+            "championship_id": pred.championship_id,
+            "league_id": pred.league_id,
+            "round_number": pred.round_number,
+            "home_prediction": pred.home_prediction,
+            "away_prediction": pred.away_prediction,
+            "points": None,
+            "created_at": datetime.now(timezone.utc)
+        })
     
     return {"success": True}
 
+
 @api_router.get("/predictions/{username}")
-async def get_user_predictions(username: str, round_number: int, championship: str = "carioca"):
-    """Retorna os palpites de um usuário em uma rodada"""
+async def get_user_predictions(username: str, round_number: int, championship_id: str = "brasileirao"):
+    """Retorna palpites do usuário"""
     predictions = await db.predictions.find({
         "username": username,
         "round_number": round_number,
-        "championship": championship
+        "championship_id": championship_id
     }, {"_id": 0}).to_list(100)
     return predictions
 
-@api_router.get("/ranking/round/{round_number}")
-async def get_round_ranking(round_number: int, championship: str = "carioca"):
-    """Retorna ranking da rodada"""
-    # Busca todos os palpites da rodada
-    predictions = await db.predictions.find({
-        "round_number": round_number,
-        "championship": championship
-    }, {"_id": 0}).to_list(1000)
-    
-    # Busca info de premium de todos os usuários
-    users = await db.users.find({}, {"_id": 0, "username": 1, "is_premium": 1}).to_list(1000)
-    user_premium = {u['username']: u.get('is_premium', False) for u in users}
-    
-    # Agrupa por usuário e soma pontos
-    user_points = {}
-    for pred in predictions:
-        username = pred['username']
-        points = pred.get('points') or 0  # Garante que None vira 0
-        if username not in user_points:
-            user_points[username] = {
-                "username": username, 
-                "points": 0, 
-                "perfect_count": 0,
-                "is_premium": user_premium.get(username, False)
-            }
-        user_points[username]['points'] += points
-        if points == 5:
-            user_points[username]['perfect_count'] += 1
-    
-    # Ordena por pontos
-    ranking = sorted(user_points.values(), key=lambda x: x['points'], reverse=True)
-    return ranking
 
-@api_router.get("/ranking/detailed/{championship}")
-async def get_detailed_ranking(championship: str):
-    """Retorna ranking detalhado com todas as estatísticas por campeonato"""
+# ==================== RANKINGS ====================
+@api_router.get("/ranking/detailed/{championship_id}")
+async def get_detailed_ranking(championship_id: str):
+    """Ranking detalhado por campeonato"""
+    champ = await db.championships.find_one({"championship_id": championship_id})
+    total_rounds = champ.get("total_rounds", 38) if champ else 38
     
-    # Define total de rodadas por campeonato (fixo)
-    total_rounds_map = {"carioca": 6, "brasileirao": 38}
-    total_rounds = total_rounds_map.get(championship, 38)
+    # Rodada atual
+    current_data = await get_current_round(championship_id)
+    current_round = current_data.get("round_number", 1)
     
-    # Busca a rodada atual do campeonato
-    current_round_match = await db.matches.find_one(
-        {"championship": championship, "is_finished": False},
-        sort=[("round_number", 1)]
-    )
-    current_round = current_round_match.get("round_number", 1) if current_round_match else 1
-    
-    # Busca todos os palpites do campeonato
+    # Busca palpites do campeonato
     predictions = await db.predictions.find(
-        {"championship": championship},
+        {"championship_id": championship_id},
         {"_id": 0}
     ).to_list(10000)
     
-    # Busca todas as partidas para calcular estatísticas detalhadas
+    # Busca partidas finalizadas
     matches = await db.matches.find(
-        {"championship": championship},
+        {"championship_id": championship_id},
         {"_id": 0}
     ).to_list(1000)
     matches_dict = {m['match_id']: m for m in matches}
     
-    # Busca info de premium e pioneiro de todos os usuários
-    users = await db.users.find({}, {"_id": 0, "username": 1, "is_premium": 1, "pioneer_number": 1}).to_list(1000)
+    # Busca info dos usuários
+    users = await db.users.find({}, {"_id": 0, "username": 1, "plan": 1, "pioneer_number": 1}).to_list(1000)
     user_info = {u['username']: u for u in users}
     
-    # Agrupa estatísticas por usuário
+    # Calcula estatísticas por usuário
     user_stats = {}
     for pred in predictions:
         username = pred['username']
@@ -840,286 +746,391 @@ async def get_detailed_ranking(championship: str):
             user_stats[username] = {
                 "username": username,
                 "total_points": 0,
-                "correct_results": 0,  # Acertos de resultado (V/E/D)
-                "correct_home_goals": 0,  # Acertos gols mandante
-                "correct_away_goals": 0,  # Acertos gols visitante
-                "exact_scores": 0,  # Placares exatos
-                "total_predictions": 0,  # Apenas jogos realizados
-                "is_premium": user_info.get(username, {}).get('is_premium', False),
+                "correct_results": 0,
+                "correct_home_goals": 0,
+                "correct_away_goals": 0,
+                "exact_scores": 0,
+                "total_predictions": 0,
+                "plan": user_info.get(username, {}).get('plan', 'free'),
                 "pioneer_number": user_info.get(username, {}).get('pioneer_number')
             }
         
-        # Só conta palpites e estatísticas de jogos JÁ REALIZADOS (finalizados)
-        if match.get('is_finished'):
+        if match.get('is_finished') and pred.get('points') is not None:
             user_stats[username]['total_predictions'] += 1
+            points = pred.get('points', 0)
+            user_stats[username]['total_points'] += points
             
-            if pred.get('points') is not None:
-                points = pred.get('points') or 0
-                user_stats[username]['total_points'] += points
+            home_pred = pred.get('home_prediction')
+            away_pred = pred.get('away_prediction')
+            home_score = match.get('home_score')
+            away_score = match.get('away_score')
+            
+            if home_score is not None and away_score is not None:
+                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
                 
-                home_pred = pred.get('home_prediction')
-                away_pred = pred.get('away_prediction')
-                home_score = match.get('home_score')
-                away_score = match.get('away_score')
-                
-                if home_score is not None and away_score is not None:
-                    # Verifica acerto de resultado (V/E/D)
-                    pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
-                    actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
-                    if pred_result == actual_result:
-                        user_stats[username]['correct_results'] += 1
-                    
-                    # Verifica acerto de gols do mandante
-                    if home_pred == home_score:
-                        user_stats[username]['correct_home_goals'] += 1
-                    
-                    # Verifica acerto de gols do visitante
-                    if away_pred == away_score:
-                        user_stats[username]['correct_away_goals'] += 1
-                    
-                    # Verifica placar exato
-                    if home_pred == home_score and away_pred == away_score:
-                        user_stats[username]['exact_scores'] += 1
+                if pred_result == actual_result:
+                    user_stats[username]['correct_results'] += 1
+                if home_pred == home_score:
+                    user_stats[username]['correct_home_goals'] += 1
+                if away_pred == away_score:
+                    user_stats[username]['correct_away_goals'] += 1
+                if home_pred == home_score and away_pred == away_score:
+                    user_stats[username]['exact_scores'] += 1
     
-    # Calcula aproveitamento para cada usuário
-    for username, stats in user_stats.items():
+    # Calcula aproveitamento
+    for stats in user_stats.values():
         if stats['total_predictions'] > 0:
-            max_possible = stats['total_predictions'] * 5  # 5 pontos máximo por jogo
-            stats['efficiency'] = round((stats['total_points'] / max_possible) * 100, 1) if max_possible > 0 else 0
+            max_possible = stats['total_predictions'] * 5
+            stats['efficiency'] = round((stats['total_points'] / max_possible) * 100, 1)
         else:
             stats['efficiency'] = 0
     
-    # Ordena por pontos totais, depois por placares exatos (1º desempate), depois por acertos de resultado (2º desempate)
+    # Ordena ranking
     ranking = sorted(
-        user_stats.values(), 
-        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']), 
+        user_stats.values(),
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']),
         reverse=True
     )
     
-    # Adiciona posição
     for i, user in enumerate(ranking):
         user['position'] = i + 1
     
     return {
-        "championship": championship,
+        "championship_id": championship_id,
         "current_round": current_round,
         "total_rounds": total_rounds,
         "ranking": ranking
     }
 
-@api_router.get("/ranking/general")
-async def get_general_ranking():
-    """Retorna ranking geral (todas as rodadas)"""
-    users = await db.users.find({}, {"_id": 0}).to_list(1000)
+
+@api_router.get("/ranking/round/{round_number}")
+async def get_round_ranking(round_number: int, championship_id: str = "brasileirao"):
+    """Ranking de uma rodada específica"""
+    predictions = await db.predictions.find({
+        "round_number": round_number,
+        "championship_id": championship_id
+    }, {"_id": 0}).to_list(1000)
     
-    # Ordena por pontos totais, depois por total de placares exatos
-    ranking = sorted(
-        users, 
-        key=lambda x: (x.get('total_points', 0), x.get('exact_scores', 0), x.get('correct_results', 0)), 
-        reverse=True
-    )
+    user_points = {}
+    for pred in predictions:
+        username = pred['username']
+        points = pred.get('points') or 0
+        if username not in user_points:
+            user_points[username] = {"username": username, "points": 0, "perfect_count": 0}
+        user_points[username]['points'] += points
+        if points == 5:
+            user_points[username]['perfect_count'] += 1
+    
+    ranking = sorted(user_points.values(), key=lambda x: x['points'], reverse=True)
     return ranking
 
-@api_router.get("/ranking/user-position/{username}")
-async def get_user_ranking_position(username: str, championship: str = "carioca"):
-    """Retorna a posição do usuário em um campeonato específico"""
-    ranking_data = await get_detailed_ranking(championship)
+
+@api_router.get("/ranking/league/{league_id}")
+async def get_league_ranking_endpoint(league_id: str):
+    """Ranking de uma liga específica"""
+    league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
+    if not league:
+        raise HTTPException(status_code=404, detail="Liga não encontrada")
     
-    for player in ranking_data.get("ranking", []):
-        if player.get("username") == username:
-            return {
-                "championship": championship,
-                "position": player.get("position"),
-                "total_points": player.get("total_points", 0),
-                "exact_scores": player.get("exact_scores", 0),
-                "correct_results": player.get("correct_results", 0)
-            }
+    ranking = await get_league_ranking(db, league_id, league.get("championship_id"))
     
     return {
-        "championship": championship,
-        "position": None,
-        "total_points": 0,
-        "exact_scores": 0,
-        "correct_results": 0
+        "league": league,
+        "ranking": ranking
     }
 
-@api_router.get("/user/{username}")
-async def get_user_profile(username: str):
-    """Retorna perfil completo do usuário com estatísticas"""
-    user = await db.users.find_one({"username": username}, {"_id": 0})
-    if not user:
-        # Cria usuário se não existir
-        user = {"username": username, "total_points": 0, "max_perfect_streak": 0, "perfect_streak": 0}
+
+# ==================== ADMIN ====================
+@api_router.post("/admin/login")
+async def admin_login(data: AdminLogin):
+    """Login do admin"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Senha incorreta")
+    return {"success": True}
+
+
+@api_router.get("/admin/users")
+async def admin_get_users(password: str):
+    """Lista todos os usuários"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
-    # Busca histórico de palpites
-    predictions = await db.predictions.find({"username": username}, {"_id": 0}).to_list(1000)
+    users = await db.users.find({}, {"_id": 0}).to_list(1000)
     
-    # Busca matches para enriquecer os palpites
-    match_ids = [p['match_id'] for p in predictions]
-    matches = await db.matches.find({"match_id": {"$in": match_ids}}, {"_id": 0}).to_list(1000)
-    matches_dict = {m['match_id']: m for m in matches}
+    for user in users:
+        user["pin"] = AUTHORIZED_USERS.get(user.get("username"), "N/A")
     
-    # Enriquece palpites com dados dos jogos
-    enriched_predictions = []
-    for pred in predictions:
-        match = matches_dict.get(pred['match_id'], {})
-        # Usa o championship do palpite, ou pega do match se não existir
-        champ = pred.get('championship') or match.get('championship', 'carioca')
-        enriched_predictions.append({
-            **pred,
-            "championship": champ,  # Garante que sempre tem o championship
-            "home_team": match.get("home_team", "?"),
-            "away_team": match.get("away_team", "?"),
-            "home_score": match.get("home_score"),
-            "away_score": match.get("away_score"),
-            "is_finished": match.get("is_finished", False),
-            "match_date": match.get("match_date")
-        })
+    return users
+
+
+@api_router.get("/admin/stats")
+async def admin_get_stats(password: str):
+    """Estatísticas gerais"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
-    # Ordena por rodada (desc) e depois por data
-    enriched_predictions.sort(key=lambda x: (-x.get('round_number', 0), x.get('match_date') or ''))
-    
-    # Calcula estatísticas
-    total_predictions = len(predictions)
-    predictions_with_points = [p for p in predictions if p.get('points') is not None]
-    total_points_earned = sum(p.get('points', 0) for p in predictions_with_points)
-    perfect_scores = sum(1 for p in predictions_with_points if p.get('points') == 5)
-    correct_results = sum(1 for p in predictions_with_points if p.get('points', 0) >= 3)
-    
-    # Agrupa por rodada para estatísticas
-    rounds_played = set(p.get('round_number') for p in predictions)
-    points_by_round = {}
-    for pred in predictions:
-        rn = pred.get('round_number', 0)
-        if rn not in points_by_round:
-            points_by_round[rn] = 0
-        points_by_round[rn] += pred.get('points', 0) or 0
-    
-    # Calcula posição no ranking
-    all_users = await db.users.find({}, {"_id": 0}).to_list(1000)
-    sorted_users = sorted(all_users, key=lambda x: (-x.get('total_points', 0), -x.get('max_perfect_streak', 0)))
-    ranking_position = next((i + 1 for i, u in enumerate(sorted_users) if u['username'] == username), 0)
-    total_users = len(sorted_users)
+    total_users = await db.users.count_documents({})
+    premium_users = await db.users.count_documents({"plan": "premium"})
+    vip_users = await db.users.count_documents({"plan": "vip"})
+    free_users = await db.users.count_documents({"plan": "free"})
+    total_predictions = await db.predictions.count_documents({})
+    total_matches = await db.matches.count_documents({})
+    total_leagues = await db.leagues.count_documents({})
+    total_championships = await db.championships.count_documents({})
     
     return {
-        "user": user,
+        "total_users": total_users,
+        "premium_users": premium_users,
+        "vip_users": vip_users,
+        "free_users": free_users,
         "total_predictions": total_predictions,
-        "predictions": enriched_predictions,
-        "statistics": {
-            "total_points": total_points_earned,
-            "perfect_scores": perfect_scores,
-            "correct_results": correct_results,
-            "games_played": len(predictions_with_points),
-            "rounds_played": len(rounds_played),
-            "points_by_round": points_by_round,
-            "avg_points_per_game": round(total_points_earned / len(predictions_with_points), 2) if predictions_with_points else 0,
-            "accuracy_rate": round(correct_results / len(predictions_with_points) * 100, 1) if predictions_with_points else 0
-        },
-        "ranking": {
-            "position": ranking_position,
-            "total_users": total_users
-        }
+        "total_matches": total_matches,
+        "total_leagues": total_leagues,
+        "total_championships": total_championships
     }
 
-async def recalculate_all_points():
-    """Recalcula pontos de TODOS os usuários baseado nos jogos finalizados"""
+
+@api_router.post("/admin/add-user")
+async def admin_add_user(data: AdminAddUser):
+    """Adiciona novo usuário"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
-    # Busca todos os jogos finalizados
-    finished_matches = await db.matches.find({"is_finished": True}, {"_id": 0}).to_list(1000)
-    matches_dict = {m['match_id']: m for m in finished_matches}
+    if data.username in AUTHORIZED_USERS:
+        raise HTTPException(status_code=400, detail="Usuário já existe")
     
-    # Busca todos os palpites
-    all_predictions = await db.predictions.find({}, {"_id": 0}).to_list(10000)
+    AUTHORIZED_USERS[data.username] = data.pin
     
-    # Calcula pontos para cada palpite
-    user_stats = {}
+    total = await db.users.count_documents({})
+    pioneer = total + 1 if total < 100 else None
     
-    for pred in all_predictions:
-        username = pred['username']
-        match_id = pred['match_id']
-        
-        # Inicializa stats do usuário
-        if username not in user_stats:
-            user_stats[username] = {
-                'total_points': 0,
-                'predictions_by_round': {},
-                'perfect_sequence': []
-            }
-        
-        # Se o jogo terminou, calcula pontos
-        if match_id in matches_dict:
-            match = matches_dict[match_id]
-            points = calculate_points(pred, match)
-            
-            # Atualiza palpite com pontos
-            await db.predictions.update_one(
-                {"username": username, "match_id": match_id},
-                {"$set": {"points": points}}
-            )
-            
-            user_stats[username]['total_points'] += points
-            
-            # Rastreia acertos perfeitos para calcular sequência
-            round_num = pred.get('round_number', 1)
-            if round_num not in user_stats[username]['predictions_by_round']:
-                user_stats[username]['predictions_by_round'][round_num] = []
-            user_stats[username]['predictions_by_round'][round_num].append(points)
+    await db.users.insert_one({
+        "username": data.username,
+        "plan": data.plan,
+        "country": data.country,
+        "total_points": 0,
+        "owned_leagues": [],
+        "joined_leagues": [],
+        "extra_championships": [],
+        "achievements": ["pioneer"] if pioneer else [],
+        "pioneer_number": pioneer,
+        "is_banned": False,
+        "created_at": datetime.now(timezone.utc)
+    })
     
-    # Calcula sequência máxima de acertos perfeitos para cada usuário
-    for username, stats in user_stats.items():
-        max_streak = 0
-        current_streak = 0
-        
-        # Ordena por rodada e calcula streak
-        for round_num in sorted(stats['predictions_by_round'].keys()):
-            for points in stats['predictions_by_round'][round_num]:
-                if points == 5:
-                    current_streak += 1
-                    max_streak = max(max_streak, current_streak)
-                else:
-                    current_streak = 0
-        
-        # Atualiza usuário no banco
-        await db.users.update_one(
-            {"username": username},
-            {"$set": {
-                "total_points": stats['total_points'],
-                "max_perfect_streak": max_streak
-            }},
-            upsert=True
-        )
+    return {"success": True, "pioneer_number": pioneer}
+
+
+@api_router.post("/admin/update-plan")
+async def admin_update_plan(data: AdminUpdatePlan):
+    """Atualiza plano de um usuário"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
     
-    return len(user_stats)
+    result = await db.users.update_one(
+        {"username": data.username},
+        {"$set": {"plan": data.plan}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Log
+    await db.security_logs.insert_one({
+        "type": "plan_updated",
+        "username": data.username,
+        "new_plan": data.plan,
+        "timestamp": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True}
+
+
+@api_router.post("/admin/add-championship")
+async def admin_add_championship(data: AdminAddChampionship):
+    """Adiciona novo campeonato"""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    champ = data.championship
+    
+    existing = await db.championships.find_one({"championship_id": champ.championship_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Campeonato já existe")
+    
+    await db.championships.insert_one({
+        "championship_id": champ.championship_id,
+        "name": champ.name,
+        "country": champ.country,
+        "api_id": champ.api_id,
+        "is_national": champ.is_national,
+        "season": champ.season,
+        "total_rounds": champ.total_rounds,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    return {"success": True}
+
+
+@api_router.get("/admin/championships")
+async def admin_get_championships(password: str):
+    """Lista campeonatos para admin"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    championships = await db.championships.find({}, {"_id": 0}).to_list(100)
+    return championships
+
+
+@api_router.get("/admin/leagues")
+async def admin_get_leagues(password: str):
+    """Lista ligas para admin"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    leagues = await db.leagues.find({}, {"_id": 0}).to_list(1000)
+    return leagues
+
+
+@api_router.get("/admin/security-logs")
+async def admin_get_security_logs(password: str):
+    """Lista logs de segurança"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    logs = await db.security_logs.find({}, {"_id": 0}).sort("timestamp", -1).to_list(100)
+    return logs
+
+
+# ==================== SYNC & MAINTENANCE ====================
+@api_router.get("/admin/init-championships")
+async def init_championships(password: str):
+    """Inicializa campeonatos no banco"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    created = 0
+    for champ_id, champ_data in INITIAL_CHAMPIONSHIPS.items():
+        existing = await db.championships.find_one({"championship_id": champ_id})
+        if not existing:
+            await db.championships.insert_one({
+                **champ_data,
+                "is_active": True,
+                "created_at": datetime.now(timezone.utc)
+            })
+            created += 1
+    
+    return {"success": True, "championships_created": created}
+
+
+@api_router.get("/admin/force-populate")
+async def force_populate_matches(password: str, championship_id: str = "brasileirao"):
+    """Popula partidas de um campeonato da API"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    champ = await db.championships.find_one({"championship_id": championship_id})
+    if not champ:
+        raise HTTPException(status_code=404, detail="Campeonato não encontrado")
+    
+    api_id = champ.get("api_id")
+    season = champ.get("season", "2026")
+    total_rounds = champ.get("total_rounds", 38)
+    
+    results = {"matches_created": 0, "matches_updated": 0, "errors": []}
+    
+    async with httpx.AsyncClient(timeout=120.0) as http_client:
+        for round_num in range(1, total_rounds + 1):
+            try:
+                url = f"https://www.thesportsdb.com/api/v1/json/3/eventsround.php?id={api_id}&r={round_num}&s={season}"
+                response = await http_client.get(url)
+                data = response.json()
+                
+                if data and data.get("events"):
+                    for event in data["events"]:
+                        match_id = str(event["idEvent"])
+                        
+                        home_score = None
+                        away_score = None
+                        is_finished = False
+                        
+                        if event.get("intHomeScore") not in [None, ""]:
+                            try:
+                                home_score = int(event["intHomeScore"])
+                                away_score = int(event.get("intAwayScore") or 0)
+                                is_finished = True
+                            except:
+                                pass
+                        
+                        # Converte horário UTC para Brasília
+                        match_date_str = event.get("dateEvent", "")
+                        match_time_str = event.get("strTime", "00:00:00")
+                        if match_time_str and match_date_str:
+                            try:
+                                utc_dt = datetime.strptime(f"{match_date_str} {match_time_str[:8]}", "%Y-%m-%d %H:%M:%S")
+                                brasilia_dt = utc_dt - timedelta(hours=3)
+                                match_date_str = brasilia_dt.strftime("%Y-%m-%dT%H:%M:%S")
+                            except:
+                                match_date_str = f"{match_date_str}T{match_time_str[:5]}:00"
+                        
+                        match_data = {
+                            "match_id": match_id,
+                            "championship_id": championship_id,
+                            "round_number": round_num,
+                            "home_team": event.get("strHomeTeam", ""),
+                            "away_team": event.get("strAwayTeam", ""),
+                            "home_badge": event.get("strHomeTeamBadge", ""),
+                            "away_badge": event.get("strAwayTeamBadge", ""),
+                            "match_date": match_date_str,
+                            "home_score": home_score,
+                            "away_score": away_score,
+                            "is_finished": is_finished,
+                            "venue": event.get("strVenue", "")
+                        }
+                        
+                        result = await db.matches.update_one(
+                            {"match_id": match_id},
+                            {"$set": match_data},
+                            upsert=True
+                        )
+                        
+                        if result.upserted_id:
+                            results["matches_created"] += 1
+                        elif result.modified_count > 0:
+                            results["matches_updated"] += 1
+                            
+            except Exception as e:
+                results["errors"].append(f"R{round_num}: {str(e)}")
+    
+    return {"success": True, "results": results}
 
 
 @api_router.post("/admin/sync-results")
-async def sync_results_from_api():
-    """Sincroniza resultados da API TheSportsDB e recalcula pontos"""
-    
-    API_KEY = "3"
-    SEASON = "2026"
-    
-    championships = [
-        {"id": "5688", "name": "carioca", "rounds": 6},
-        {"id": "4351", "name": "brasileirao", "rounds": 38}
-    ]
+async def sync_results():
+    """Sincroniza resultados e recalcula pontos"""
+    championships = await db.championships.find({"is_active": True}, {"_id": 0}).to_list(100)
     
     updated_matches = 0
     
     async with httpx.AsyncClient(timeout=60.0) as http_client:
         for champ in championships:
-            for round_num in range(1, champ["rounds"] + 1):
-                url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
-                
+            api_id = champ.get("api_id")
+            season = champ.get("season", "2026")
+            total_rounds = champ.get("total_rounds", 38)
+            champ_id = champ.get("championship_id")
+            
+            for round_num in range(1, total_rounds + 1):
                 try:
+                    url = f"https://www.thesportsdb.com/api/v1/json/3/eventsround.php?id={api_id}&r={round_num}&s={season}"
                     response = await http_client.get(url)
                     data = response.json()
                     
-                    if data and "events" in data and data["events"]:
+                    if data and data.get("events"):
                         for event in data["events"]:
                             match_id = str(event["idEvent"])
                             
-                            # Verifica se tem placar
                             home_score_raw = event.get("intHomeScore")
                             away_score_raw = event.get("intAwayScore")
                             
@@ -1128,7 +1139,6 @@ async def sync_results_from_api():
                                     home_score = int(home_score_raw)
                                     away_score = int(away_score_raw)
                                     
-                                    # Atualiza no banco
                                     result = await db.matches.update_one(
                                         {"match_id": match_id},
                                         {"$set": {
@@ -1139,609 +1149,212 @@ async def sync_results_from_api():
                                     )
                                     if result.modified_count > 0:
                                         updated_matches += 1
-                                except (ValueError, TypeError):
+                                except:
                                     pass
                 except Exception as e:
-                    logging.error(f"Erro ao buscar {champ['name']} rodada {round_num}: {e}")
+                    logger.error(f"Erro sync {champ_id} R{round_num}: {e}")
     
-    # Recalcula pontos de todos os usuários
+    # Recalcula pontos
     users_updated = await recalculate_all_points()
     
-    return {
-        "success": True, 
-        "matches_updated": updated_matches,
-        "users_recalculated": users_updated
-    }
+    return {"success": True, "matches_updated": updated_matches, "users_recalculated": users_updated}
 
 
 @api_router.post("/admin/recalculate-points")
-async def admin_recalculate_points():
-    """Força recálculo de pontos de todos os usuários"""
-    users_updated = await recalculate_all_points()
-    return {"success": True, "users_updated": users_updated}
+async def admin_recalculate():
+    """Força recálculo de pontos"""
+    count = await recalculate_all_points()
+    return {"success": True, "users_updated": count}
 
 
-@api_router.post("/admin/update-results")
-async def update_match_results(match_id: str, home_score: int, away_score: int):
-    """Atualiza resultado de um jogo específico e recalcula pontos"""
-    # Atualiza jogo
-    await db.matches.update_one(
-        {"match_id": match_id},
-        {"$set": {
-            "home_score": home_score,
-            "away_score": away_score,
-            "is_finished": True
-        }}
-    )
+async def recalculate_all_points():
+    """Recalcula pontos de todos os usuários"""
+    finished_matches = await db.matches.find({"is_finished": True}, {"_id": 0}).to_list(10000)
+    matches_dict = {m['match_id']: m for m in finished_matches}
     
-    # Recalcula pontos de todos os usuários
-    users_updated = await recalculate_all_points()
+    all_predictions = await db.predictions.find({}).to_list(100000)
     
-    return {"success": True, "users_recalculated": users_updated}
-
-# ==================== SEED DATA ====================
-@api_router.post("/admin/seed-data")
-async def seed_initial_data():
-    """Cria dados de exemplo para testar"""
-    # Limpa dados existentes
-    await db.matches.delete_many({})
-    await db.rounds.delete_many({})
+    user_stats = {}
     
-    # Cria rodada 1
-    round_1 = Round(
-        round_number=1,
-        is_current=True,
-        deadline=datetime.now(timezone.utc)
-    )
-    await db.rounds.insert_one(round_1.model_dump())
-    
-    # Cria jogos de exemplo
-    sample_matches = [
-        Match(match_id="1", round_number=1, home_team="Flamengo", away_team="Vasco", match_date=datetime.now(timezone.utc)),
-        Match(match_id="2", round_number=1, home_team="Palmeiras", away_team="Corinthians", match_date=datetime.now(timezone.utc)),
-        Match(match_id="3", round_number=1, home_team="São Paulo", away_team="Santos", match_date=datetime.now(timezone.utc)),
-        Match(match_id="4", round_number=1, home_team="Grêmio", away_team="Internacional", match_date=datetime.now(timezone.utc)),
-        Match(match_id="5", round_number=1, home_team="Atlético-MG", away_team="Cruzeiro", match_date=datetime.now(timezone.utc)),
-    ]
-    
-    for match in sample_matches:
-        await db.matches.insert_one(match.model_dump())
-    
-    return {"success": True, "message": "Dados iniciais criados!"}
-
-@api_router.get("/admin/init-production")
-async def init_production_database(password: str):
-    """Inicializa o banco de produção com jogos e usuários"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    import httpx
-    import logging
-    
-    results = {
-        "users_created": 0,
-        "matches_created": 0,
-        "rounds_created": 0,
-        "errors": []
-    }
-    
-    # 1. Criar usuários autorizados
-    for username, pin in AUTHORIZED_USERS.items():
-        existing = await db.users.find_one({"username": username})
-        if not existing:
-            is_premium = any(owner == username for owner in PREMIUM_KEYS.values())
-            premium_key = next((k for k, v in PREMIUM_KEYS.items() if v == username), None)
-            user_count = await db.users.count_documents({})
-            pioneer_num = user_count + 1 if user_count < 100 else None
-            
-            await db.users.insert_one({
-                "username": username,
-                "total_points": 0,
-                "is_premium": is_premium,
-                "premium_key": premium_key,
-                "is_banned": False,
-                "achievements": ["pioneer"] if pioneer_num else [],
-                "pioneer_number": pioneer_num
-            })
-            results["users_created"] += 1
-    
-    # 2. Criar rodadas primeiro
-    for champ, total_rounds in [("carioca", 6), ("brasileirao", 38)]:
-        for rn in range(1, total_rounds + 1):
-            existing = await db.rounds.find_one({"championship": champ, "round_number": rn})
-            if not existing:
-                await db.rounds.insert_one({
-                    "championship": champ,
-                    "round_number": rn,
-                    "is_current": rn == 1
-                })
-                results["rounds_created"] += 1
-    
-    # 3. Sincronizar jogos
-    API_KEY = "3"
-    SEASON = "2026"
-    
-    championships = [
-        {"id": "5688", "name": "carioca", "rounds": 6},
-        {"id": "4351", "name": "brasileirao", "rounds": 38}
-    ]
-    
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            for champ in championships:
-                for round_num in range(1, champ["rounds"] + 1):
-                    try:
-                        url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
-                        response = await client.get(url)
-                        data = response.json()
-                        
-                        if data and data.get("events"):
-                            for event in data["events"]:
-                                match_id = str(event["idEvent"])
-                                
-                                existing = await db.matches.find_one({"match_id": match_id})
-                                if not existing:
-                                    home_score = None
-                                    away_score = None
-                                    is_finished = False
-                                    
-                                    if event.get("intHomeScore") is not None and event.get("intHomeScore") != "":
-                                        try:
-                                            home_score = int(event["intHomeScore"])
-                                            away_score = int(event["intAwayScore"]) if event.get("intAwayScore") else 0
-                                            is_finished = True
-                                        except:
-                                            pass
-                                    
-                                    match_data = {
-                                        "match_id": match_id,
-                                        "round_number": round_num,
-                                        "home_team": event.get("strHomeTeam", ""),
-                                        "away_team": event.get("strAwayTeam", ""),
-                                        "home_badge": event.get("strHomeTeamBadge", ""),
-                                        "away_badge": event.get("strAwayTeamBadge", ""),
-                                        "match_date": event.get("dateEvent", ""),
-                                        "match_time": event.get("strTime", ""),
-                                        "status": event.get("strStatus", ""),
-                                        "home_score": home_score,
-                                        "away_score": away_score,
-                                        "is_finished": is_finished,
-                                        "championship": champ["name"],
-                                        "league_id": champ["id"]
-                                    }
-                                    await db.matches.insert_one(match_data)
-                                    results["matches_created"] += 1
-                    except Exception as e:
-                        results["errors"].append(f"{champ['name']} R{round_num}: {str(e)}")
-    except Exception as e:
-        results["errors"].append(f"HTTP Error: {str(e)}")
-    
-    return {"success": True, "results": results}
-
-@api_router.get("/admin/debug-matches")
-async def debug_matches(password: str):
-    """Debug endpoint para verificar como os matches estão salvos no banco"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    # Conta por championship
-    carioca_count = await db.matches.count_documents({"championship": "carioca"})
-    brasileirao_count = await db.matches.count_documents({"championship": "brasileirao"})
-    
-    # Pega 3 amostras de cada
-    carioca_samples = await db.matches.find({"championship": "carioca"}, {"_id": 0}).limit(3).to_list(3)
-    brasileirao_samples = await db.matches.find({"championship": "brasileirao"}, {"_id": 0}).limit(3).to_list(3)
-    
-    # Busca sem filtro de championship
-    all_samples = await db.matches.find({}, {"_id": 0}).limit(5).to_list(5)
-    
-    # Pega valores únicos de championship
-    pipeline = [{"$group": {"_id": "$championship", "count": {"$sum": 1}}}]
-    championships = await db.matches.aggregate(pipeline).to_list(10)
-    
-    # Pega valores únicos de round_number pra carioca
-    pipeline2 = [
-        {"$match": {"championship": "carioca"}},
-        {"$group": {"_id": "$round_number", "count": {"$sum": 1}}},
-        {"$sort": {"_id": 1}}
-    ]
-    rounds = await db.matches.aggregate(pipeline2).to_list(50)
-    
-    # DEBUG: Verificar palpites
-    total_predictions = await db.predictions.count_documents({})
-    predictions_carioca = await db.predictions.count_documents({"championship": "carioca"})
-    predictions_brasileirao = await db.predictions.count_documents({"championship": "brasileirao"})
-    predictions_sem_championship = await db.predictions.count_documents({"championship": {"$exists": False}})
-    predictions_samples = await db.predictions.find({}, {"_id": 0}).limit(5).to_list(5)
-    
-    return {
-        "total_matches": await db.matches.count_documents({}),
-        "carioca_count": carioca_count,
-        "brasileirao_count": brasileirao_count,
-        "championships_breakdown": championships,
-        "carioca_rounds": rounds,
-        "carioca_samples": carioca_samples,
-        "brasileirao_samples": brasileirao_samples,
-        "all_samples": all_samples,
-        "predictions_debug": {
-            "total": total_predictions,
-            "carioca": predictions_carioca,
-            "brasileirao": predictions_brasileirao,
-            "sem_championship": predictions_sem_championship,
-            "samples": predictions_samples
-        }
-    }
-
-@api_router.get("/admin/force-populate")
-async def force_populate_matches(password: str):
-    """Força a população de partidas buscando da API do TheSportsDB"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    import httpx
-    
-    results = {"matches_created": 0, "errors": [], "matches_updated": 0}
-    API_KEY = "3"
-    SEASON = "2026"
-    
-    championships = [
-        {"id": "5688", "name": "carioca", "rounds": 6},
-        {"id": "4351", "name": "brasileirao", "rounds": 38}
-    ]
-    
-    async with httpx.AsyncClient(timeout=120.0) as http_client:
-        for champ in championships:
-            for round_num in range(1, champ["rounds"] + 1):
-                try:
-                    url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/eventsround.php?id={champ['id']}&r={round_num}&s={SEASON}"
-                    response = await http_client.get(url)
-                    data = response.json()
-                    
-                    if data and data.get("events"):
-                        for event in data["events"]:
-                            match_id = str(event["idEvent"])
-                            
-                            home_score = None
-                            away_score = None
-                            is_finished = False
-                            
-                            if event.get("intHomeScore") not in [None, ""]:
-                                try:
-                                    home_score = int(event["intHomeScore"])
-                                    away_score = int(event.get("intAwayScore") or 0)
-                                    is_finished = True
-                                except:
-                                    pass
-                            
-                            # Converte horário UTC para Brasília (UTC-3)
-                            match_date_str = event.get("dateEvent", "")
-                            match_time_str = event.get("strTime", "00:00:00")
-                            if match_time_str and match_date_str:
-                                from datetime import datetime, timedelta
-                                try:
-                                    utc_datetime = datetime.strptime(f"{match_date_str} {match_time_str[:8]}", "%Y-%m-%d %H:%M:%S")
-                                    brasilia_datetime = utc_datetime - timedelta(hours=3)
-                                    match_date_str = brasilia_datetime.strftime("%Y-%m-%dT%H:%M:%S")
-                                except:
-                                    match_date_str = f"{match_date_str}T{match_time_str[:5]}:00"
-                            
-                            match_data = {
-                                "match_id": match_id,
-                                "round_number": round_num,
-                                "home_team": event.get("strHomeTeam", ""),
-                                "away_team": event.get("strAwayTeam", ""),
-                                "home_badge": event.get("strHomeTeamBadge", ""),
-                                "away_badge": event.get("strAwayTeamBadge", ""),
-                                "match_date": match_date_str,
-                                "home_score": home_score,
-                                "away_score": away_score,
-                                "is_finished": is_finished,
-                                "championship": champ["name"],
-                                "event_id": match_id,
-                                "venue": event.get("strVenue", "")
-                            }
-                            
-                            # Usa upsert para criar ou atualizar
-                            result = await db.matches.update_one(
-                                {"match_id": match_id},
-                                {"$set": match_data},
-                                upsert=True
-                            )
-                            
-                            if result.upserted_id:
-                                results["matches_created"] += 1
-                            elif result.modified_count > 0:
-                                results["matches_updated"] += 1
-                                
-                except Exception as e:
-                    results["errors"].append(f"{champ['name']} R{round_num}: {str(e)}")
-    
-    # Também cria as rodadas se não existirem
-    for champ_key, total_rounds in [("carioca", 6), ("brasileirao", 38)]:
-        for rn in range(1, total_rounds + 1):
-            await db.rounds.update_one(
-                {"championship": champ_key, "round_number": rn},
-                {"$setOnInsert": {"is_current": rn == 1}},
-                upsert=True
-            )
-    
-    return {
-        "success": True,
-        "results": results,
-        "total_matches_now": await db.matches.count_documents({})
-    }
-
-@api_router.get("/admin/fix-predictions-championship")
-async def fix_predictions_championship(password: str):
-    """Corrige palpites que estão sem o campo championship"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    # Busca todos os palpites sem championship
-    predictions_without_champ = await db.predictions.find(
-        {"championship": {"$exists": False}}
-    ).to_list(10000)
-    
-    # Busca os matches para descobrir o championship
-    match_ids = list(set([p['match_id'] for p in predictions_without_champ]))
-    matches = await db.matches.find(
-        {"match_id": {"$in": match_ids}},
-        {"_id": 0, "match_id": 1, "championship": 1}
-    ).to_list(1000)
-    matches_dict = {m['match_id']: m.get('championship', 'carioca') for m in matches}
-    
-    fixed_count = 0
-    for pred in predictions_without_champ:
-        championship = matches_dict.get(pred['match_id'], 'carioca')
-        await db.predictions.update_one(
-            {"_id": pred['_id']},
-            {"$set": {"championship": championship}}
-        )
-        fixed_count += 1
-    
-    return {
-        "success": True,
-        "predictions_fixed": fixed_count
-    }
-
-@api_router.get("/admin/export-predictions")
-async def export_predictions(password: str):
-    """Exporta todos os palpites para migração"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    predictions = await db.predictions.find({}, {"_id": 0}).to_list(10000)
-    return {"predictions": predictions, "total": len(predictions)}
-
-@api_router.post("/admin/import-predictions")
-async def import_predictions(password: str, data: dict):
-    """Importa palpites de outro ambiente"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    predictions = data.get("predictions", [])
-    imported = 0
-    skipped = 0
-    
-    for pred in predictions:
-        # Verifica se já existe
-        existing = await db.predictions.find_one({
-            "username": pred.get("username"),
-            "match_id": pred.get("match_id")
-        })
+    for pred in all_predictions:
+        username = pred['username']
+        match_id = pred['match_id']
         
-        if not existing:
-            # Remove _id se existir
-            pred.pop("_id", None)
-            await db.predictions.insert_one(pred)
-            imported += 1
-        else:
-            skipped += 1
+        if username not in user_stats:
+            user_stats[username] = {'total_points': 0}
+        
+        if match_id in matches_dict:
+            match = matches_dict[match_id]
+            points = calculate_points(pred, match)
+            
+            await db.predictions.update_one(
+                {"_id": pred["_id"]},
+                {"$set": {"points": points}}
+            )
+            
+            user_stats[username]['total_points'] += points
     
-    # Recalcula pontos de todos os usuários
-    await recalculate_all_points()
+    for username, stats in user_stats.items():
+        await db.users.update_one(
+            {"username": username},
+            {"$set": {"total_points": stats['total_points']}},
+            upsert=True
+        )
+    
+    return len(user_stats)
+
+
+@api_router.get("/admin/migrate-users-to-premium")
+async def migrate_users_to_premium(password: str):
+    """Migra todos os usuários existentes para PREMIUM (pioneiros beta)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    result = await db.users.update_many(
+        {},
+        {
+            "$set": {"plan": "premium"},
+            "$addToSet": {"achievements": "beta_tester"}
+        }
+    )
+    
+    return {"success": True, "users_updated": result.modified_count}
+
+
+@api_router.get("/admin/migrate-championship-field")
+async def migrate_championship_field(password: str):
+    """Migra campo 'championship' para 'championship_id' nos matches e predictions"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Migra matches
+    matches_updated = 0
+    async for match in db.matches.find({"championship": {"$exists": True}}):
+        old_champ = match.get("championship")
+        await db.matches.update_one(
+            {"_id": match["_id"]},
+            {
+                "$set": {"championship_id": old_champ},
+                "$unset": {"championship": ""}
+            }
+        )
+        matches_updated += 1
+    
+    # Migra predictions
+    preds_updated = 0
+    async for pred in db.predictions.find({"championship": {"$exists": True}}):
+        old_champ = pred.get("championship")
+        await db.predictions.update_one(
+            {"_id": pred["_id"]},
+            {
+                "$set": {"championship_id": old_champ},
+                "$unset": {"championship": ""}
+            }
+        )
+        preds_updated += 1
+    
+    return {
+        "success": True, 
+        "matches_updated": matches_updated,
+        "predictions_updated": preds_updated
+    }
+
+
+@api_router.get("/admin/remove-carioca")
+async def remove_carioca_data(password: str):
+    """Remove todos os dados do Campeonato Carioca"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Remove matches
+    matches_result = await db.matches.delete_many({
+        "$or": [
+            {"championship": "carioca"},
+            {"championship_id": "carioca"}
+        ]
+    })
+    
+    # Remove predictions
+    preds_result = await db.predictions.delete_many({
+        "$or": [
+            {"championship": "carioca"},
+            {"championship_id": "carioca"}
+        ]
+    })
+    
+    # Remove rounds
+    rounds_result = await db.rounds.delete_many({
+        "$or": [
+            {"championship": "carioca"},
+            {"championship_id": "carioca"}
+        ]
+    })
+    
+    # Remove campeonato
+    champ_result = await db.championships.delete_many({"championship_id": "carioca"})
     
     return {
         "success": True,
-        "imported": imported,
-        "skipped": skipped
+        "matches_deleted": matches_result.deleted_count,
+        "predictions_deleted": preds_result.deleted_count,
+        "rounds_deleted": rounds_result.deleted_count,
+        "championship_deleted": champ_result.deleted_count
     }
 
-@api_router.post("/admin/set-current-round")
-async def set_current_round_manual(password: str, data: dict):
-    """Define manualmente qual é a rodada atual de um campeonato"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    championship = data.get("championship", "carioca")
-    round_number = data.get("round_number", 1)
-    
-    # Remove is_current de todas as rodadas do campeonato
-    await db.rounds.update_many(
-        {"championship": championship},
-        {"$set": {"is_current": False}}
-    )
-    
-    # Define a nova rodada como atual
-    await db.rounds.update_one(
-        {"championship": championship, "round_number": round_number},
-        {"$set": {"is_current": True}},
-        upsert=True
-    )
-    
-    return {
-        "success": True,
-        "championship": championship,
-        "current_round": round_number
-    }
 
-@api_router.post("/admin/update-match")
-async def update_match(password: str, data: dict):
-    """Atualiza uma partida manualmente"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    match_id = data.get("match_id")
-    if not match_id:
-        raise HTTPException(status_code=400, detail="match_id é obrigatório")
-    
-    update_data = {}
-    
-    if "home_team" in data:
-        update_data["home_team"] = data["home_team"]
-    if "away_team" in data:
-        update_data["away_team"] = data["away_team"]
-    if "match_date" in data:
-        update_data["match_date"] = data["match_date"]
-    if "home_score" in data:
-        update_data["home_score"] = data["home_score"]
-    if "away_score" in data:
-        update_data["away_score"] = data["away_score"]
-    if "is_finished" in data:
-        update_data["is_finished"] = data["is_finished"]
-    if "predictions_closed" in data:
-        update_data["predictions_closed"] = data["predictions_closed"]
-    
-    result = await db.matches.update_one(
-        {"match_id": match_id},
-        {"$set": update_data}
-    )
-    
-    # Se a partida foi marcada como encerrada e tem placar, recalcula pontos
-    if data.get("is_finished") and data.get("home_score") is not None and data.get("away_score") is not None:
-        await recalculate_all_points()
-    
-    return {"success": True, "modified": result.modified_count > 0}
+# ==================== COMPATIBILIDADE ====================
+# Endpoints mantidos para compatibilidade com frontend antigo
 
-@api_router.post("/admin/add-match")
-async def add_match(password: str, data: dict):
-    """Adiciona uma nova partida manualmente"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    import uuid
-    match_id = str(uuid.uuid4())[:8]
-    
-    new_match = {
-        "match_id": match_id,
-        "championship": data.get("championship", "carioca"),
-        "round_number": data.get("round_number", 1),
-        "home_team": data.get("home_team", ""),
-        "away_team": data.get("away_team", ""),
-        "match_date": data.get("match_date", ""),
-        "home_score": data.get("home_score"),
-        "away_score": data.get("away_score"),
-        "is_finished": data.get("is_finished", False),
-        "predictions_closed": data.get("predictions_closed", False),
-        "home_badge": "",
-        "away_badge": "",
-        "venue": ""
-    }
-    
-    await db.matches.insert_one(new_match)
-    
-    return {"success": True, "match_id": match_id}
-
-@api_router.delete("/admin/delete-match")
-async def delete_match(password: str, match_id: str):
-    """Exclui uma partida"""
-    if password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=403, detail="Não autorizado")
-    
-    result = await db.matches.delete_one({"match_id": match_id})
-    
-    return {"success": True, "deleted": result.deleted_count > 0}
-
-@api_router.get("/user/{username}/stats-by-championship")
-async def get_user_stats_by_championship(username: str, championship: str = "carioca"):
-    """Retorna estatísticas do usuário por campeonato"""
+@api_router.get("/premium/status/{username}")
+async def get_premium_status(username: str):
+    """Verifica status premium (compatibilidade)"""
     user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        return {"username": username, "is_premium": False, "plan": "free"}
     
-    # Busca palpites do campeonato
-    predictions = await db.predictions.find(
-        {"username": username, "championship": championship},
-        {"_id": 0}
-    ).to_list(1000)
-    
-    # Busca matches para saber quais estão finalizados
-    match_ids = [p['match_id'] for p in predictions]
-    matches = await db.matches.find(
-        {"match_id": {"$in": match_ids}},
-        {"_id": 0}
-    ).to_list(1000)
-    matches_dict = {m['match_id']: m for m in matches}
-    
-    # Calcula estatísticas
-    total_points = 0
-    perfect_scores = 0
-    correct_results = 0
-    total_finished = 0
-    
-    for pred in predictions:
-        match = matches_dict.get(pred['match_id'], {})
-        if match.get('is_finished'):
-            total_finished += 1
-            points = pred.get('points', 0) or 0
-            total_points += points
-            
-            if points == 5:
-                perfect_scores += 1
-            
-            # Verifica acerto de resultado
-            home_pred = pred.get('home_prediction', 0)
-            away_pred = pred.get('away_prediction', 0)
-            home_score = match.get('home_score', 0)
-            away_score = match.get('away_score', 0)
-            
-            if home_score is not None and away_score is not None:
-                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
-                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
-                if pred_result == actual_result:
-                    correct_results += 1
-    
-    accuracy_rate = round(total_points / (total_finished * 5) * 100, 1) if total_finished > 0 else 0
-    
-    # Busca posição no ranking do campeonato
-    ranking_data = await get_detailed_ranking(championship)
-    position = None
-    for player in ranking_data.get("ranking", []):
-        if player.get("username") == username:
-            position = player.get("position")
-            break
-    
+    plan = user.get("plan", "free")
     return {
-        "championship": championship,
-        "total_points": total_points,
-        "perfect_scores": perfect_scores,
-        "correct_results": correct_results,
-        "total_predictions": total_finished,
-        "accuracy_rate": accuracy_rate,
-        "position": position
+        "username": username,
+        "is_premium": plan in ["premium", "vip"],
+        "plan": plan
     }
 
-@api_router.get("/")
-async def root():
-    return {"message": "Welcome to CallClub API! 🔥"}
 
-# Include router
-app.include_router(api_router)
-
+# ==================== CORS ====================
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Registra router
+app.include_router(api_router)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+
+# ==================== STARTUP ====================
+@app.on_event("startup")
+async def startup_event():
+    """Inicialização da aplicação"""
+    logger.info("🚀 CallClub API v2.0.0 iniciando...")
+    
+    # Garante índices
+    await db.users.create_index("username", unique=True)
+    await db.matches.create_index("match_id", unique=True)
+    await db.championships.create_index("championship_id", unique=True)
+    await db.leagues.create_index("league_id", unique=True)
+    await db.leagues.create_index("invite_code", unique=True)
+    
+    # Conta campeonatos
+    champ_count = await db.championships.count_documents({})
+    if champ_count == 0:
+        logger.info("📊 Inicializando campeonatos...")
+        for champ_id, champ_data in INITIAL_CHAMPIONSHIPS.items():
+            await db.championships.update_one(
+                {"championship_id": champ_id},
+                {"$setOnInsert": {**champ_data, "is_active": True, "created_at": datetime.now(timezone.utc)}},
+                upsert=True
+            )
+    
+    logger.info("✅ CallClub API pronta!")
