@@ -257,7 +257,7 @@ export default function AdminPage() {
 
   const handleViewRoundMatches = async () => {
     try {
-      const res = await axios.get(`${API}/matches/${viewRoundNum}?championship=${viewRoundChamp}`);
+      const res = await axios.get(`${API}/matches/${viewRoundNum}?championship_id=${viewRoundChamp}`);
       setRoundMatches(res.data || []);
     } catch (error) {
       showNotification("Erro ao carregar jogos", "error");
@@ -278,7 +278,7 @@ export default function AdminPage() {
   
   const loadManageMatches = async () => {
     try {
-      const res = await axios.get(`${API}/matches/${manageRound}?championship=${manageChamp}`);
+      const res = await axios.get(`${API}/matches/${manageRound}?championship_id=${manageChamp}`);
       setManageMatches(res.data || []);
     } catch (error) {
       showNotification("Erro ao carregar jogos", "error");
