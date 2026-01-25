@@ -3,7 +3,7 @@ import axios from "axios";
 import { 
   Trophy, Fire, TrendUp, Clock, CalendarBlank, Timer, SoccerBall, 
   Star, Crown, Lightning, Sparkle, Medal, ArrowRight, Diamond, GlobeHemisphereWest,
-  Users, Plus
+  Users, Plus, Target, Play
 } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 
