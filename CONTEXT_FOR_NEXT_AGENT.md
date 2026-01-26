@@ -1,118 +1,187 @@
-# CALLCLUB – CONTEXTO OPERACIONAL (LEIA ANTES DE AGIR)
+# CallClub - Context for Next Agent
+## 🏷️ Versão 1.0 (V1) - Estado Consolidado
 
-## ⚠️ REGRAS ABSOLUTAS
-- DO NOT refactor
-- DO NOT optimize
-- DO NOT improve
-- DO NOT innovate
-- DO NOT change existing behavior
-- DO NOT add features unless explicitly requested
-- DO NOT act proactively
-
-If something is not explicitly requested, STOP and ask.
+**Última atualização:** 26/01/2026  
+**Status:** Produção Ready
 
 ---
 
-## 🚨 REGRA CRÍTICA: PRESERVAÇÃO DO BANCO DE DADOS DO PREVIEW
+## 1. Visão Geral do Produto
 
-**NUNCA limpar, resetar ou apagar dados do banco MongoDB local do preview.**
+**CallClub** é uma plataforma de palpites esportivos que começou como um projeto entre amigos brasileiros e evoluiu para uma arquitetura global escalável.
 
-- O preview usa MongoDB local (dentro do container)
-- A produção usa MongoDB Atlas (nuvem)
-- Os dados do preview são VALIOSOS e devem ser preservados
-- Quando o banco do preview é resetado, perdemos dados como escudos dos times, palpites, etc.
-- Isso gera retrabalho e consumo desnecessário de créditos para re-sincronizar
+### Propósito
+- Permitir usuários fazerem palpites em partidas de futebol
+- Competir em classificações com amigos
+- Criar ligas privadas para grupos específicos
 
-**Se precisar fazer qualquer operação no banco:**
-1. Faça BACKUP antes
-2. Pergunte ao usuário antes de executar
-3. Nunca use comandos como `drop()`, `deleteMany({})` ou similares sem autorização explícita
-
-**Esta regra deve ser seguida por TODOS os agentes em TODOS os forks deste projeto.**
+### Fase Atual
+- **Beta fechado** com amigos próximos
+- Todos os beta testers têm plano PREMIUM
+- Foco em validação e refinamento
 
 ---
 
-## 🕐 REGRA CRÍTICA: FUSO HORÁRIO DOS JOGOS
+## 2. Decisões de Negócio 🔒
 
-**Todos os horários de jogos devem ser salvos no fuso de BRASÍLIA (UTC-3).**
+### 2.1 Modelo de Planos
+```
+FREE     → Campeonato nacional do país (automático por IP)
+PREMIUM  → +2 campeonatos extras + criar até 2 ligas
+VIP      → Ilimitado (não implementar ainda)
+```
 
-- A API TheSportsDB retorna horários em UTC
-- O código em `/app/backend/server.py` (endpoint `force-populate`) já converte automaticamente UTC → Brasília
-- NUNCA salvar horários em UTC sem converter
-- O público do site é 100% brasileiro
+**Decisão:** Beta testers são PREMIUM por padrão para testar todas as features.
 
-**Se criar novos endpoints que busquem dados de jogos:**
-1. Sempre converter horários de UTC para Brasília (subtrair 3 horas)
-2. Usar o padrão: `brasilia_datetime = utc_datetime - timedelta(hours=3)`
+### 2.2 Campeonato Carioca
+**REMOVIDO** da V1. Decisão estratégica de focar em campeonatos nacionais de cada país, não regionais.
 
-**Esta regra se aplica a TODOS os campeonatos atuais e futuros.**
+### 2.3 Sistema de Pontuação
+```
+3 pts = Resultado correto (V/E/D)
++1 pt = Gols do mandante correto
++1 pt = Gols do visitante correto
+= 5 pts máximo (placar exato)
+```
 
----
-
-## PROBLEMA ATUAL (CRÍTICO)
-
-**O banco de dados de PRODUÇÃO está vazio.**
-
-- URL de produção: `https://scoreguess-9.emergent.host`
-- O site está funcionando, mas sem dados (jogos, usuários, rodadas)
-- Foi criado o endpoint `/api/admin/init-production?password=callclub2026` para popular o banco
-- O endpoint foi corrigido de POST para GET
-- Último resultado mostrou: 24 usuários, 240 partidas, 42 rodadas criados
-- MAS as partidas não estão aparecendo na API (retorna array vazio)
-
-**Próximo passo necessário:**
-1. Fazer REDEPLOY para enviar o código corrigido
-2. Acessar: `https://scoreguess-9.emergent.host/api/admin/init-production?password=callclub2026`
-3. Verificar se os dados foram criados corretamente
+**Desempate:** 1º placares exatos → 2º acertos de resultado
 
 ---
 
-## ESTADO ATUAL DO SISTEMA
-- Projeto funcional em PREVIEW (dados existem)
-- Projeto SEM DADOS em PRODUÇÃO (banco Atlas vazio)
-- Backend: FastAPI (arquivo crítico: server.py)
-- Frontend: React + Tailwind CSS
-- Banco de dados: MongoDB (local no preview, Atlas em produção)
-- API externa: TheSportsDB
+## 3. O que NÃO deve ser mudado sem validação ⚠️
+
+### 3.1 Regras de Pontuação
+- Sistema de 3+1+1 pontos está validado
+- Critérios de desempate estão definidos
+- **Não alterar** sem aprovação explícita do PO
+
+### 3.2 Estrutura de Planos
+- FREE/PREMIUM/VIP está definido
+- Limites de ligas (0/2/ilimitado) estão fixos
+- **Não criar** novos planos sem validação
+
+### 3.3 Autenticação
+- Login por nome + PIN de 4 dígitos
+- Lista de usuários autorizados no backend
+- **Não implementar** cadastro público sem validação
+
+### 3.4 Credenciais de Admin
+- Senha do admin: `callclub2026`
+- **Não alterar** sem comunicar ao PO
+
+### 3.5 Dados dos Beta Testers
+- Mario (2412) e Marcos (6969) são contas de teste oficial
+- Liga "Liga dos Crias" é seed oficial
+- **Não deletar** esses dados
 
 ---
 
-## ENDPOINTS ADICIONADOS RECENTEMENTE
-- `GET /health` - Health check para Kubernetes
-- `GET /api/admin/init-production?password=callclub2026` - Inicializa banco de produção
+## 4. Arquitetura Técnica
+
+### Stack Atual
+| Componente | Tecnologia |
+|------------|------------|
+| Frontend | React 18 + Tailwind CSS |
+| Backend | FastAPI + Motor |
+| Database | MongoDB |
+| API Externa | TheSportsDB |
+
+### Endpoints Críticos
+```
+POST /api/auth/check-name     → Login
+GET  /api/championships       → Lista campeonatos
+GET  /api/matches/{round}     → Partidas da rodada
+POST /api/predictions         → Salvar palpite
+GET  /api/ranking/detailed/{champ} → Classificação geral
+GET  /api/ranking/round/{round}    → Classificação por rodada
+```
+
+### Variáveis de Ambiente
+```bash
+# Backend (.env)
+MONGO_URL=...
+DB_NAME=...
+
+# Frontend (.env)
+REACT_APP_BACKEND_URL=...
+```
 
 ---
 
-## FUNCIONALIDADES QUE NÃO PODEM SER ALTERADAS
-- Sistema de pontuação (máximo 5 pontos)
-- Critérios de ranking e desempate
-- Autenticação por Nome + PIN
-- Sistema Premium por chave pessoal
-- Detecção de fraude
-- Gamificação existente
-- Estrutura atual dos rankings
+## 5. Padrões de Código
+
+### Nomenclatura
+- `championship_id` (não `championship`)
+- `round_number` (não `round` sozinho)
+- Português para UI, inglês para código
+
+### MongoDB
+- Sempre excluir `_id` nas respostas
+- Usar `championship_id` como campo padrão
+- Datas em UTC, conversão para Brasília no backend
+
+### Frontend
+- Componentes em `/pages/` para rotas
+- Shadcn/UI em `/components/ui/`
+- Phosphor Icons para ícones
 
 ---
 
-## ARQUIVOS CRÍTICOS
-- /app/backend/server.py
-- /app/backend/sync_thesportsdb.py
-- /app/frontend/src/App.js
-- /app/frontend/src/pages/PredictionsPage.jsx
-- /app/frontend/src/pages/RankingsPage.jsx
+## 6. Histórico de Problemas Resolvidos
+
+| Problema | Solução | Data |
+|----------|---------|------|
+| position undefined | Fallback no ProfilePage | 25/01/2026 |
+| Timezone incorreto | Conversão UTC-3 no backend | 25/01/2026 |
+| Carioca vs Brasileirão | Removido Carioca | 25/01/2026 |
+| Ranking por rodada incompleto | Mesmas colunas da geral | 26/01/2026 |
 
 ---
 
-## CREDENCIAIS
-- Admin: senha `callclub2026` (URL: /admin)
-- Mario: PIN `2412`, Chave Premium `MARIO-CLUB-7X2K`
-- Marcos: PIN `6969`, Chave Premium `MARCOS-CLUB-9M4P`
-- Carlos: PIN `1234`, Chave Premium `CARLOS-CLUB-4321`
+## 7. Próximos Passos Planejados
+
+### V1.1 (Ajustes de UX)
+- UI para criar/entrar em ligas
+- Configuração manual de país
+- Refinamentos visuais
+
+### V1.2 (Expansão)
+- Seletor de campeonatos extras (Premium)
+- Feed de atividades
+
+### V2.0 (Escala)
+- Plano VIP
+- Outros esportes
+- Monetização
 
 ---
 
-## MODO DE TRABALHO
-- Aguarde uma tarefa específica e delimitada
-- Faça SOMENTE o que foi pedido
-- Se houver qualquer risco de efeito colateral, PARE e avise
-- O usuário está frustrado com cobranças - seja direto e eficiente
+## 8. Contatos e Recursos
+
+### Admin Panel
+- URL: `/admin`
+- Senha: `callclub2026`
+
+### Usuários de Teste
+- Mario: PIN 2412
+- Marcos: PIN 6969
+
+### Documentação
+- PRD: `/app/memory/PRD.md`
+- Changelog: `/app/memory/CHANGELOG.md`
+- Este arquivo: `/app/CONTEXT_FOR_NEXT_AGENT.md`
+
+---
+
+## 9. Regras para Agentes Futuros
+
+1. **Ler este arquivo** antes de qualquer implementação
+2. **Não alterar** regras de pontuação ou planos sem validação
+3. **Não deletar** dados de seed (Mario, Marcos, Liga dos Crias)
+4. **Manter** nomenclatura `championship_id`
+5. **Testar** antes de finalizar qualquer feature
+6. **Documentar** mudanças significativas no CHANGELOG
+
+---
+
+**CallClub V1.0 - Base Estável ✅**
