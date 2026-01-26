@@ -1156,9 +1156,17 @@ async def admin_add_championship(data: AdminAddChampionship):
 
 @api_router.post("/admin/update-match")
 async def admin_update_match(data: AdminUpdateMatch):
-    """Atualiza resultado de uma partida"""
+    """
+    Atualiza resultado de uma partida.
+    Se marcado como finalizado, calcula pontos automaticamente.
+    """
     if data.password != ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Busca a partida atual
+    match = await db.matches.find_one({"match_id": data.match_id})
+    if not match:
+        raise HTTPException(status_code=404, detail="Partida não encontrada")
     
     update_data = {"is_finished": data.is_finished}
     if data.home_score is not None:
@@ -1166,15 +1174,68 @@ async def admin_update_match(data: AdminUpdateMatch):
     if data.away_score is not None:
         update_data["away_score"] = data.away_score
     
-    result = await db.matches.update_one(
+    # Atualiza a partida
+    await db.matches.update_one(
         {"match_id": data.match_id},
         {"$set": update_data}
     )
     
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Partida não encontrada")
+    points_calculated = 0
     
-    return {"success": True, "modified": result.modified_count}
+    # Se marcou como finalizado, calcula pontos imediatamente
+    if data.is_finished and data.home_score is not None and data.away_score is not None:
+        # Busca todos os palpites dessa partida
+        predictions = await db.predictions.find({
+            "match_id": data.match_id
+        }).to_list(1000)
+        
+        # Calcula pontos para cada palpite
+        for pred in predictions:
+            points = calculate_points(pred, {
+                "home_score": data.home_score,
+                "away_score": data.away_score,
+                "is_finished": True
+            })
+            
+            # Atualiza o palpite com os pontos
+            await db.predictions.update_one(
+                {"_id": pred["_id"]},
+                {"$set": {"points": points}}
+            )
+            points_calculated += 1
+        
+        # Atualiza totais dos usuários
+        await update_user_totals()
+        
+        logger.info(f"Jogo {data.match_id} finalizado: {data.home_score}x{data.away_score}. {points_calculated} palpites calculados.")
+    
+    return {
+        "success": True,
+        "match_id": data.match_id,
+        "is_finished": data.is_finished,
+        "predictions_calculated": points_calculated
+    }
+
+
+async def update_user_totals():
+    """Recalcula totais de pontos de todos os usuários"""
+    # Agrupa pontos por usuário
+    pipeline = [
+        {"$match": {"points": {"$ne": None}}},
+        {"$group": {
+            "_id": "$username",
+            "total_points": {"$sum": "$points"}
+        }}
+    ]
+    
+    results = await db.predictions.aggregate(pipeline).to_list(1000)
+    
+    # Atualiza cada usuário
+    for r in results:
+        await db.users.update_one(
+            {"username": r["_id"]},
+            {"$set": {"total_points": r["total_points"]}}
+        )
 
 
 @api_router.get("/admin/championships")
