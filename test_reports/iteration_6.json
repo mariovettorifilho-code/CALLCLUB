@@ -1,0 +1,103 @@
+{
+  "summary": "Domain Rules Testing Complete - LIGAS ≠ CAMPEONATOS. All 8 features tested and working correctly. Tela de Palpites shows ONLY official championships (no leagues), Classificação shows championships + leagues, Create Liga dropdown shows ONLY official championships, all championship names have year (2026), tab renamed to 'Entrar em uma liga'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_domain_rules.py",
+    "/app/test_reports/pytest/pytest_domain_rules.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_domain_rules.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 tests passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "mario_premium": {"username": "Mario", "pin": "2412", "role": "Owner of 2 leagues (Liga dos Crias, Os Boleiros)"},
+    "joao_premium": {"username": "João", "pin": "3456", "role": "Can create leagues"},
+    "marcos_premium": {"username": "Marcos", "pin": "6969", "role": "Member of 3 leagues"}
+  },
+  "seed_data_creation": "None - using existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Domain rules fully implemented and tested. Key changes: 1) New endpoint /api/user/{username}/official-championships returns ONLY is_official=True championships (no leagues), 2) PredictionsPage uses official-championships endpoint, 3) RankingsPage uses accessible-championships endpoint (includes leagues), 4) LeaguesPage dropdown uses official-championships endpoint, 5) All championships have year (2026) in name, 6) Tab renamed to 'Entrar em uma liga', 7) Leagues 'Liga dos Crias' and 'Os Boleiros' now point to 'brasileirao' championship.",
+  "tests_executed": [
+    {
+      "category": "Backend API Tests - Domain Rules",
+      "tests": [
+        {"test": "GET /api/user/Mario/official-championships", "result": "PASS - Returns only official championships (no leagues)", "status": "✅"},
+        {"test": "Official championships have year (2026)", "result": "PASS - All have 2026 in name", "status": "✅"},
+        {"test": "GET /api/user/Mario/accessible-championships", "result": "PASS - Returns 3 entries (1 national + 2 leagues)", "status": "✅"},
+        {"test": "Accessible championships have league_name", "result": "PASS - League entries have league_name field", "status": "✅"},
+        {"test": "GET /api/championships", "result": "PASS - All have is_official=True and year 2026", "status": "✅"},
+        {"test": "Liga dos Crias points to brasileirao", "result": "PASS - championship_id=brasileirao", "status": "✅"},
+        {"test": "Os Boleiros points to brasileirao", "result": "PASS - championship_id=brasileirao", "status": "✅"},
+        {"test": "GET /api/predictions/Mario", "result": "PASS - Returns predictions for brasileirao", "status": "✅"},
+        {"test": "GET /api/matches/1?championship_id=brasileirao", "result": "PASS - Returns matches", "status": "✅"},
+        {"test": "GET /api/ranking/detailed/brasileirao", "result": "PASS - Returns ranking with Mario and Marcos", "status": "✅"},
+        {"test": "GET /api/ranking/league/{league_id}", "result": "PASS - Returns league ranking", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Predictions Page",
+      "tests": [
+        {"test": "Predictions dropdown shows ONLY official championships", "result": "PASS - Only 'Campeonato Brasileiro – Série A (2026) 🏠'", "status": "✅"},
+        {"test": "No leagues in Predictions dropdown", "result": "PASS - No Liga dos Crias, Os Boleiros, or Liga dos Alphas", "status": "✅"},
+        {"test": "Predictions work normally", "result": "PASS - 10 match cards, 20 input fields visible", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Rankings Page",
+      "tests": [
+        {"test": "Rankings shows championships + leagues", "result": "PASS - Mario sees 3 buttons (1 national + 2 leagues)", "status": "✅"},
+        {"test": "Rankings shows league names", "result": "PASS - Shows '(Liga dos Crias)', '(Os Boleiros)'", "status": "✅"},
+        {"test": "Marcos sees 4 buttons (1 national + 3 leagues)", "result": "PASS - Includes Liga dos Alphas", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Leagues Page",
+      "tests": [
+        {"test": "Tab renamed to 'Entrar em uma liga'", "result": "PASS - Tab text is 'Entrar em uma liga'", "status": "✅"},
+        {"test": "Create Liga dropdown shows ONLY official championships", "result": "PASS - Only 'Campeonato Brasileiro – Série A (2026)'", "status": "✅"},
+        {"test": "Dropdown options have year (2026)", "result": "PASS - All options have 2026", "status": "✅"}
+      ]
+    }
+  ],
+  "verified_features": [
+    "1. Tela de Palpites mostra APENAS campeonatos oficiais (sem ligas) ✅",
+    "2. API /api/user/{username}/official-championships retorna apenas oficiais ✅",
+    "3. Tela de Classificação mostra campeonatos + ligas ✅",
+    "4. API /api/user/{username}/accessible-championships inclui ligas ✅",
+    "5. Dropdown 'Criar Liga' mostra APENAS campeonatos oficiais ✅",
+    "6. Campeonatos têm ano no nome (2026) ✅",
+    "7. Tab renomeada para 'Entrar em uma liga' ✅",
+    "8. Palpites funcionam normalmente no campeonato oficial ✅"
+  ],
+  "championships_data": {
+    "official_championships": [
+      {"id": "brasileirao", "name": "Campeonato Brasileiro – Série A (2026)", "is_official": true},
+      {"id": "libertadores", "name": "Copa Libertadores da América (2026)", "is_official": true},
+      {"id": "copa_brasil", "name": "Copa do Brasil (2026)", "is_official": true},
+      {"id": "copa_mundo", "name": "Copa do Mundo (2026)", "is_official": true}
+    ],
+    "leagues": [
+      {"id": "2087b6f7", "name": "Liga dos Crias", "championship_id": "brasileirao", "owner": "Mario"},
+      {"id": "57455f18", "name": "Os Boleiros", "championship_id": "brasileirao", "owner": "Mario"},
+      {"id": "2641b9cc", "name": "Liga dos Alphas", "championship_id": "brasileirao", "owner": "Marcos"}
+    ]
+  },
+  "api_endpoints_tested": {
+    "official_championships": "/api/user/{username}/official-championships - Returns ONLY is_official=True championships",
+    "accessible_championships": "/api/user/{username}/accessible-championships - Returns championships + leagues for rankings"
+  }
+}
