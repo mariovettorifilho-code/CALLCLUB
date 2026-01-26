@@ -222,14 +222,14 @@
 
 ---
 
-## 10. Roadmap Pós-V1
+## 10. Roadmap
 
-### V1.1 (Próximo)
-- [ ] UI de Ligas (criar, entrar por código)
+### V1.1 ✅ (Atual - Concluída)
+- [x] UI de Ligas (criar, entrar por código)
 - [ ] Configurações de país manual
 - [ ] Ajustes finais de UX
 
-### V1.2
+### V1.2 (Próximo)
 - [ ] Campeonatos extras para Premium
 - [ ] Feed de atividades
 
