@@ -378,7 +378,7 @@ async def get_user_profile(username: str):
 
 @api_router.get("/user/{username}/accessible-championships")
 async def get_user_accessible_championships(username: str):
-    """Retorna campeonatos que o usuário pode acessar"""
+    """Retorna campeonatos que o usuário pode acessar (para Classificação - inclui ligas)"""
     user = await db.users.find_one({"username": username}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
@@ -404,7 +404,7 @@ async def get_user_accessible_championships(username: str):
                 champ["access_type"] = "extra"
                 accessible.append(champ)
         
-        # Campeonatos das ligas (sempre adiciona, pois cada liga tem ranking separado)
+        # Campeonatos das ligas (para rankings - cada liga tem ranking separado)
         for league_id in user.get("joined_leagues", []):
             league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
             if league:
@@ -420,6 +420,44 @@ async def get_user_accessible_championships(username: str):
                     league_champ["league_id"] = league.get("league_id")
                     accessible.append(league_champ)
     
+    return accessible
+
+
+@api_router.get("/user/{username}/official-championships")
+async def get_user_official_championships(username: str):
+    """Retorna APENAS campeonatos oficiais (para Palpites - SEM ligas)"""
+    user = await db.users.find_one({"username": username}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    country = user.get("country", "BR")
+    plan = user.get("plan", "free")
+    national_id = get_user_national_championship(country)
+    
+    # Busca APENAS campeonatos oficiais (is_official=True)
+    accessible = []
+    
+    # Campeonato nacional sempre disponível
+    national = await db.championships.find_one(
+        {"championship_id": national_id, "is_official": True}, 
+        {"_id": 0}
+    )
+    if national:
+        national["access_type"] = "national"
+        accessible.append(national)
+    
+    # Premium/VIP: campeonatos extras oficiais
+    if plan in ["premium", "vip"]:
+        for champ_id in user.get("extra_championships", []):
+            champ = await db.championships.find_one(
+                {"championship_id": champ_id, "is_official": True}, 
+                {"_id": 0}
+            )
+            if champ and champ not in accessible:
+                champ["access_type"] = "extra"
+                accessible.append(champ)
+    
+    # NOTA: Ligas NUNCA aparecem aqui - palpites são feitos no campeonato oficial
     return accessible
 
 
