@@ -1,11 +1,11 @@
 # CallClub - Product Requirements Document
-## 🏷️ Versão 1.1.1 - UX Ligas Privadas
+## 🏷️ Versão 1.1.2 - Compartilhamento WhatsApp
 
-**Status:** ✅ V1.1.1 CONSOLIDADA  
+**Status:** ✅ V1.1.2 CONSOLIDADA  
 **Data de Consolidação:** 26/01/2026  
 **Ambiente:** Produção Ready  
 **Escopo V1:** 🔒 LOCKED  
-**Novidade V1.1.1:** Ajustes de UX - Ligas idênticas ao FREE
+**Novidade V1.1.2:** Botão "Convidar" via WhatsApp + Serie A seedada
 
 ---
 
@@ -146,7 +146,7 @@
 - [x] **Cálculo automático de pontos ao finalizar jogo**
 - [x] Ver campeonatos cadastrados
 
-### Ligas Privadas (V1.1 + V1.1.1) ✅
+### Ligas Privadas (V1.1 + V1.1.1 + V1.1.2) ✅
 - [x] Backend: criar, entrar, sair, ranking
 - [x] **Frontend: UI completa de gerenciamento**
 - [x] Página /leagues com 3 tabs (Minhas Ligas, Criar Liga, Entrar)
@@ -154,6 +154,7 @@
 - [x] Entrar via código de convite (6 caracteres)
 - [x] Visualizar ligas criadas e participadas separadamente
 - [x] Copiar código de convite
+- [x] **Botão "Convidar" via WhatsApp** 🆕
 - [x] **Página de detalhes idêntica ao FREE:**
   - [x] Tabs: Geral e Por Rodada
   - [x] Mesmas colunas: Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, %
@@ -163,6 +164,7 @@
 - [x] Sair de liga (não-donos)
 - [x] Limite de 2 ligas por PREMIUM
 - [x] Bloqueio para usuários FREE
+- [x] **Serie A com jogos seedados** 🆕
 
 ---
 
@@ -229,14 +231,15 @@
 
 ## 10. Roadmap
 
-### V1.1.1 ✅ (Atual - Concluída)
-- [x] Ligas com mesma estrutura do FREE (tabs, colunas, modal)
-- [x] Seletores mostram nome da liga
-- [x] LeaguesPage separando "criadas" e "participo"
-- [ ] Histórico de palpites no perfil inclui ligas
-- [ ] Configurações de país manual
+### V1.1.2 ✅ (Atual - Concluída)
+- [x] Botão "Convidar" via WhatsApp
+- [x] Jogos Serie A seedados (25 jogos, 5 rodadas)
+- [x] Filtro de ligas no histórico de palpites
+- [x] Corrigido warning de React key
 
 ### V1.2 (Próximo)
+- [ ] Notificação quando novo membro entra na liga
+- [ ] Troféu da Rodada (destaque para quem fez mais pontos)
 - [ ] Campeonatos extras para Premium
 - [ ] Feed de atividades
 
