@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { House, ChartBar, Trophy, User, SignOut } from "@phosphor-icons/react";
+import { House, ChartBar, Trophy, User, SignOut, UsersThree } from "@phosphor-icons/react";
 
 export default function Layout({ username, onLogout, children }) {
   const location = useLocation();
@@ -8,6 +8,7 @@ export default function Layout({ username, onLogout, children }) {
     { path: "/", icon: House, label: "Home" },
     { path: "/predictions", icon: Trophy, label: "Palpites" },
     { path: "/rankings", icon: ChartBar, label: "Classificação" },
+    { path: "/leagues", icon: UsersThree, label: "Ligas" },
     { path: "/profile", icon: User, label: "Perfil" }
   ];
 

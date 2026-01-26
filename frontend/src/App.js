@@ -6,6 +6,8 @@ import HomePage from "./pages/HomePage";
 import PredictionsPage from "./pages/PredictionsPage";
 import RankingsPage from "./pages/RankingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import LeaguesPage from "./pages/LeaguesPage";
+import LeagueDetailPage from "./pages/LeagueDetailPage";
 import AdminPage from "./pages/AdminPage";
 import Layout from "./components/Layout";
 
@@ -47,6 +49,8 @@ function App() {
                 <Route path="/predictions" element={<PredictionsPage username={username} />} />
                 <Route path="/rankings" element={<RankingsPage username={username} />} />
                 <Route path="/profile" element={<ProfilePage username={username} />} />
+                <Route path="/leagues" element={<LeaguesPage username={username} />} />
+                <Route path="/leagues/:leagueId" element={<LeagueDetailPage username={username} />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
