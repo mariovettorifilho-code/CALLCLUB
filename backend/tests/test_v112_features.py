@@ -89,14 +89,14 @@ class TestOsBoleirosLeague:
     
     def test_os_boleiros_has_predictions(self):
         """Verify Mario and Marcos have predictions for Serie A"""
-        # Check Mario's predictions
-        mario_res = requests.get(f"{BASE_URL}/api/predictions/Mario?championship_id=serie_a")
+        # Check Mario's predictions for round 1
+        mario_res = requests.get(f"{BASE_URL}/api/predictions/Mario?championship_id=serie_a&round_number=1")
         assert mario_res.status_code == 200
         mario_preds = mario_res.json()
         assert len(mario_preds) >= 5  # At least 5 predictions
         
-        # Check Marcos's predictions
-        marcos_res = requests.get(f"{BASE_URL}/api/predictions/Marcos?championship_id=serie_a")
+        # Check Marcos's predictions for round 1
+        marcos_res = requests.get(f"{BASE_URL}/api/predictions/Marcos?championship_id=serie_a&round_number=1")
         assert marcos_res.status_code == 200
         marcos_preds = marcos_res.json()
         assert len(marcos_preds) >= 5
