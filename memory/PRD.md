@@ -230,17 +230,17 @@
 
 ## 10. Roadmap
 
-### V1.1.2 ✅ (Atual - Concluída)
-- [x] Botão "Convidar" via WhatsApp
-- [x] Jogos Serie A seedados (25 jogos, 5 rodadas)
-- [x] Filtro de ligas no histórico de palpites
-- [x] Corrigido warning de React key
+### V1.2.0 ✅ (Atual - Concluída)
+- [x] Separação LIGAS ≠ CAMPEONATOS
+- [x] Tela de Palpites: apenas campeonatos oficiais
+- [x] Tela de Classificação: apenas campeonatos oficiais
+- [x] Ligas ficam APENAS em /leagues
+- [x] Campeonatos com ano (2026)
+- [x] Limpeza de dados residuais
 
-### V1.2 (Próximo)
+### V1.3 (Próximo)
 - [ ] Notificação quando novo membro entra na liga
-- [ ] Troféu da Rodada (destaque para quem fez mais pontos)
-- [ ] Campeonatos extras para Premium
-- [ ] Feed de atividades
+- [ ] Troféu da Rodada
 
 ### V2.0
 - [ ] Plano VIP
