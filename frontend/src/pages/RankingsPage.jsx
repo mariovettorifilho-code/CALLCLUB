@@ -119,11 +119,11 @@ export default function RankingsPage({ username }) {
           </p>
         </div>
 
-        {/* Championship Selector */}
+        {/* Championship Selector - APENAS campeonatos oficiais */}
         <div className="flex flex-wrap gap-2">
           {championships.map((champ) => (
             <button
-              key={champ.championship_id + (champ.league_name || '')}
+              key={champ.championship_id}
               onClick={() => setSelectedChampionship(champ.championship_id)}
               className={`px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2 ${
                 selectedChampionship === champ.championship_id
@@ -131,10 +131,8 @@ export default function RankingsPage({ username }) {
                   : "bg-white text-text-secondary border-2 border-paper hover:border-pitch-green"
               }`}
             >
-              {champ.access_type === "national" ? "🏠" : champ.access_type === "extra" ? "⭐" : "👥"}
-              <span className="hidden sm:inline">
-                {champ.name}{champ.league_name ? ` (${champ.league_name})` : ''}
-              </span>
+              {champ.access_type === "national" ? "🏠" : "⭐"}
+              <span className="hidden sm:inline">{champ.name}</span>
             </button>
           ))}
         </div>
