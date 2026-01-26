@@ -1,10 +1,11 @@
 # CallClub - Product Requirements Document
-## 🏷️ Versão 1.0 (V1) - FINAL
+## 🏷️ Versão 1.1 (V1.1) - Ligas Privadas
 
-**Status:** ✅ V1 CONSOLIDADA E FECHADA  
+**Status:** ✅ V1.1 CONSOLIDADA  
 **Data de Consolidação:** 26/01/2026  
 **Ambiente:** Produção Ready  
-**Escopo:** 🔒 LOCKED - Não adicionar features sem avançar para V1.1
+**Escopo V1:** 🔒 LOCKED  
+**Novidade V1.1:** UI de Ligas Privadas
 
 ---
 
@@ -145,9 +146,18 @@
 - [x] **Cálculo automático de pontos ao finalizar jogo**
 - [x] Ver campeonatos cadastrados
 
-### Ligas (estrutura pronta)
+### Ligas Privadas (V1.1) ✅
 - [x] Backend: criar, entrar, sair, ranking
-- [ ] Frontend: UI de gerenciamento (V1.1)
+- [x] **Frontend: UI completa de gerenciamento**
+- [x] Página /leagues com 3 tabs (Minhas Ligas, Criar Liga, Entrar)
+- [x] Criar liga (nome + campeonato)
+- [x] Entrar via código de convite (6 caracteres)
+- [x] Visualizar ligas criadas e participadas
+- [x] Copiar código de convite
+- [x] Página de detalhes da liga com ranking
+- [x] Sair de liga (não-donos)
+- [x] Limite de 2 ligas por PREMIUM
+- [x] Bloqueio para usuários FREE
 
 ---
 
