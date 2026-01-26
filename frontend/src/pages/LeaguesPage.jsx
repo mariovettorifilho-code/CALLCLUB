@@ -522,7 +522,7 @@ export default function LeaguesPage({ username }) {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-pitch-green font-bold">2.</span>
-                    Digite o código acima e clique em "Entrar"
+                    Digite o código acima e clique em &quot;Entrar&quot;
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-pitch-green font-bold">3.</span>
