@@ -120,7 +120,8 @@ export default function PredictionsPage({ username }) {
   const loadUserChampionships = async () => {
     try {
       const [champsRes, statusRes] = await Promise.all([
-        axios.get(`${API}/user/${username}/accessible-championships`),
+        // Usa endpoint que retorna APENAS campeonatos oficiais (sem ligas)
+        axios.get(`${API}/user/${username}/official-championships`),
         axios.get(`${API}/premium/status/${username}`)
       ]);
       
