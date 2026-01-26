@@ -381,9 +381,10 @@ export default function PredictionsPage({ username }) {
               data-testid="championship-filter"
               className="w-full px-4 py-3 border-2 border-paper rounded-lg bg-white text-text-primary font-semibold focus:outline-none focus:ring-2 focus:ring-pitch-green"
             >
-              {championships.map((champ, idx) => (
-                <option key={`${champ.championship_id}_${champ.access_type}_${champ.league_id || idx}`} value={champ.championship_id}>
-                  {champ.name}{champ.league_name ? ` (${champ.league_name})` : ''} {champ.access_type === "extra" ? "⭐" : champ.access_type === "league" ? "👥" : "🏠"}
+              {/* APENAS campeonatos oficiais - ligas NUNCA aparecem aqui */}
+              {championships.map((champ) => (
+                <option key={champ.championship_id} value={champ.championship_id}>
+                  {champ.name} {champ.access_type === "extra" ? "⭐" : "🏠"}
                 </option>
               ))}
             </select>
