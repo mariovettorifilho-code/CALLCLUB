@@ -292,11 +292,11 @@ export default function HomePage({ username }) {
               <h3 className="font-heading text-lg font-bold text-yellow-800">Minhas Ligas</h3>
             </div>
             <Link 
-              to="/leagues/create"
+              to="/leagues"
               className="flex items-center gap-1 text-sm font-semibold text-yellow-700 hover:text-yellow-800"
             >
               <Plus size={16} weight="bold" />
-              Criar Liga
+              Gerenciar
             </Link>
           </div>
           
