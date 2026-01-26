@@ -619,7 +619,6 @@ function LeagueCard({ league, isOwner, championshipName, onCopyCode, copiedCode 
           >
             <ArrowRight size={20} weight="bold" />
           </Link>
-          </Link>
         </div>
       </div>
     </div>
