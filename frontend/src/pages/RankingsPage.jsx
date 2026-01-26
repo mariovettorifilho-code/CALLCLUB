@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ChartBar, Trophy, Star, SoccerBall, Percent, GlobeHemisphereWest, Diamond, Target, ListNumbers } from "@phosphor-icons/react";
+import { ChartBar, Trophy, Star, SoccerBall, Percent, GlobeHemisphereWest, Diamond, Target, ListNumbers, Eye } from "@phosphor-icons/react";
+import UserPredictionsModal from "../components/UserPredictionsModal";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,6 +16,15 @@ export default function RankingsPage({ username }) {
   // Visão selecionada (geral ou rodada)
   const [viewMode, setViewMode] = useState("geral");
   const [selectedRound, setSelectedRound] = useState(1);
+  
+  // Modal de palpites do usuário
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const openUserModal = (targetUsername) => {
+    setSelectedUser(targetUsername);
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     loadChampionships();
