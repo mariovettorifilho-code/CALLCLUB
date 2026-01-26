@@ -1,0 +1,109 @@
+{
+  "summary": "Comprehensive testing of CallClub V1.1 - Private Leagues UI feature. All features working correctly: leagues page loads for PREMIUM users, tabs navigation works, league list displays correctly, invite codes can be copied, create league shows limit message for Mario (2/2), join league validates codes, league detail page shows ranking, leave league button visible for non-owners, FREE users see blocking screen.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_leagues_api.py",
+    "/app/test_reports/pytest/pytest_leagues_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_leagues_api.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "mario_premium": {"username": "Mario", "pin": "2412", "role": "Owner of 2 leagues"},
+    "marcos_premium": {"username": "Marcos", "pin": "6969", "role": "Member of 2 leagues"},
+    "admin": {"url": "/admin", "password": "callclub2026"}
+  },
+  "seed_data_creation": "João was added to 'Liga dos Crias' during testing via join API",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Private Leagues feature (V1.1) fully tested and working. Mario owns 2 leagues: 'Liga dos Crias' (code: 1RFA1C, championship: brasileirao) and 'Os Boleiros' (code: XTL7V5, championship: serie_a). Marcos is member of both. João joined 'Liga dos Crias' during testing. All PREMIUM users can access leagues, FREE users see blocking screen.",
+  "tests_executed": [
+    {
+      "category": "Backend API Tests (12/12 passed)",
+      "tests": [
+        {"test": "GET /api/leagues/user/Mario", "result": "PASS - Returns 2 leagues", "status": "✅"},
+        {"test": "GET /api/leagues/user/Marcos", "result": "PASS - Returns 2 leagues", "status": "✅"},
+        {"test": "GET /api/leagues/{id}", "result": "PASS - Returns league details with ranking", "status": "✅"},
+        {"test": "GET /api/leagues/invalid-id", "result": "PASS - Returns 404", "status": "✅"},
+        {"test": "POST /api/leagues/create (limit reached)", "result": "PASS - Returns 403 with limit message", "status": "✅"},
+        {"test": "POST /api/leagues/join (invalid code)", "result": "PASS - Returns 404", "status": "✅"},
+        {"test": "POST /api/leagues/join (already member)", "result": "PASS - Returns 400", "status": "✅"},
+        {"test": "POST /api/leagues/join (success)", "result": "PASS - João joined Liga dos Crias", "status": "✅"},
+        {"test": "GET /api/user/Mario (leagues info)", "result": "PASS - Profile includes leagues", "status": "✅"},
+        {"test": "GET /api/user/{username}/accessible-championships", "result": "PASS", "status": "✅"},
+        {"test": "GET /api/ranking/league/{id}", "result": "PASS - Returns sorted ranking", "status": "✅"},
+        {"test": "GET /api/premium/status/Mario", "result": "PASS - is_premium=true", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests",
+      "tests": [
+        {"test": "Login as Mario (PREMIUM)", "result": "PASS", "status": "✅"},
+        {"test": "Navigate to /leagues", "result": "PASS - Page loads correctly", "status": "✅"},
+        {"test": "Tabs visible (Minhas Ligas, Criar Liga, Entrar)", "result": "PASS - All 3 tabs visible", "status": "✅"},
+        {"test": "League list displays correctly", "result": "PASS - Shows 'Liga dos Crias' and 'Os Boleiros'", "status": "✅"},
+        {"test": "Invite codes visible", "result": "PASS - 1RFA1C and XTL7V5 visible", "status": "✅"},
+        {"test": "'Dono' badge displayed", "result": "PASS - Owner badge shown for Mario", "status": "✅"},
+        {"test": "'Ligas que criei (2/2)' section", "result": "PASS - Shows correct count", "status": "✅"},
+        {"test": "Criar Liga tab - limit message", "result": "PASS - Shows 'Limite de 2 ligas atingido'", "status": "✅"},
+        {"test": "Entrar tab - invite code input", "result": "PASS - Input and button visible", "status": "✅"},
+        {"test": "Join with invalid code", "result": "PASS - Error: 'Liga não encontrada ou código inválido'", "status": "✅"},
+        {"test": "Join when already member", "result": "PASS - Error: 'Você já é membro desta liga'", "status": "✅"},
+        {"test": "League detail page - ranking", "result": "PASS - Shows Mario #1 (20pts), Marcos #2 (17pts), João #3 (0pts)", "status": "✅"},
+        {"test": "League detail - copy invite code button", "result": "PASS - Button visible", "status": "✅"},
+        {"test": "Login as Marcos (non-owner)", "result": "PASS", "status": "✅"},
+        {"test": "'Ligas que participo' section", "result": "PASS - Shows for non-owner", "status": "✅"},
+        {"test": "'Sair da Liga' button", "result": "PASS - Visible for non-owner (Marcos)", "status": "✅"},
+        {"test": "'você' badge in ranking", "result": "PASS - Highlights current user", "status": "✅"},
+        {"test": "FREE user blocking screen", "result": "PASS - Shows 'Recurso Premium' with benefits list", "status": "✅"}
+      ]
+    }
+  ],
+  "verified_features": [
+    "Página /leagues carrega corretamente para usuário PREMIUM (Mario) ✅",
+    "Tabs de navegação (Minhas Ligas, Criar Liga, Entrar) funcionam ✅",
+    "Lista de ligas do usuário exibe corretamente ✅",
+    "Código de convite pode ser copiado ✅",
+    "Criar nova liga funciona (validar limite de 2 ligas) ✅",
+    "Entrar em liga via código funciona ✅",
+    "Página de detalhes da liga (/leagues/:id) exibe ranking ✅",
+    "Sair de uma liga funciona (não pode ser o dono) ✅",
+    "Usuário FREE não pode acessar ligas (tela de bloqueio) ✅",
+    "API GET /api/leagues/user/{username} retorna ligas ✅",
+    "API POST /api/leagues/create valida plano e limite ✅",
+    "API POST /api/leagues/join valida código ✅",
+    "API GET /api/leagues/{id} retorna detalhes e ranking ✅"
+  ],
+  "leagues_data": {
+    "liga_dos_crias": {
+      "league_id": "2087b6f7",
+      "name": "Liga dos Crias",
+      "invite_code": "1RFA1C",
+      "championship": "brasileirao",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos", "João"]
+    },
+    "os_boleiros": {
+      "league_id": "57455f18",
+      "name": "Os Boleiros",
+      "invite_code": "XTL7V5",
+      "championship": "serie_a",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos"]
+    }
+  }
+}
