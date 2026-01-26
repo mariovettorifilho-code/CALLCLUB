@@ -61,6 +61,7 @@ const getLevelProgress = (points) => {
 export default function ProfilePage({ username }) {
   const [userData, setUserData] = useState(null);
   const [allRounds, setAllRounds] = useState([]);
+  const [userLeagues, setUserLeagues] = useState([]);
   const [selectedRound, setSelectedRound] = useState("all");
   const [selectedChampionship, setSelectedChampionship] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -72,12 +73,14 @@ export default function ProfilePage({ username }) {
 
   const loadData = async () => {
     try {
-      const [profileRes, roundsRes] = await Promise.all([
+      const [profileRes, roundsRes, leaguesRes] = await Promise.all([
         axios.get(`${API}/user/${username}`),
-        axios.get(`${API}/rounds/all`)
+        axios.get(`${API}/rounds/all`),
+        axios.get(`${API}/leagues/user/${username}`)
       ]);
       setUserData(profileRes.data);
       setAllRounds(roundsRes.data || []);
+      setUserLeagues(leaguesRes.data || []);
       
       // Calcula conquistas baseado nos dados
       calculateAchievements(profileRes.data);
