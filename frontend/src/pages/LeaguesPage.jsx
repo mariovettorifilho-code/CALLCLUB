@@ -3,7 +3,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import { 
   Users, Plus, SignIn, Trophy, Crown, ArrowRight, 
-  Copy, Check, X, Shield, SoccerBall, Sparkle
+  Copy, Check, X, Shield, SoccerBall, Sparkle, WhatsappLogo, ShareNetwork
 } from "@phosphor-icons/react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
