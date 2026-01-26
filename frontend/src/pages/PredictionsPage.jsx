@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Trophy, Clock, Lock, Check, Fire, Users, Star, Key } from "@phosphor-icons/react";
+import { Trophy, Clock, Lock, Check, Fire, Users, Star, Key, LockOpen } from "@phosphor-icons/react";
 import confetti from "canvas-confetti";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,6 +18,7 @@ export default function PredictionsPage({ username }) {
   const [popularPredictions, setPopularPredictions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState({});
+  const [lockStatus, setLockStatus] = useState({}); // Status de bloqueio por jogo
   
   // Premium/Plan state
   const [userPlan, setUserPlan] = useState("free");
@@ -25,6 +26,36 @@ export default function PredictionsPage({ username }) {
   const [premiumKey, setPremiumKey] = useState("");
   const [premiumError, setPremiumError] = useState("");
   const [activatingPremium, setActivatingPremium] = useState(false);
+
+  // Verifica bloqueio de um jogo (1 min após início)
+  const isMatchLocked = useCallback((match) => {
+    if (match.is_finished) return true;
+    
+    try {
+      const matchDate = new Date(match.match_date);
+      const now = new Date();
+      const lockTime = new Date(matchDate.getTime() + 60000); // +1 minuto
+      return now >= lockTime;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Atualiza status de bloqueio periodicamente
+  useEffect(() => {
+    const updateLockStatus = () => {
+      const status = {};
+      matches.forEach(match => {
+        status[match.match_id] = isMatchLocked(match);
+      });
+      setLockStatus(status);
+    };
+
+    updateLockStatus();
+    const interval = setInterval(updateLockStatus, 30000); // Atualiza a cada 30 segundos
+    
+    return () => clearInterval(interval);
+  }, [matches, isMatchLocked]);
 
   // Carrega parâmetros da URL
   useEffect(() => {
