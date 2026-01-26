@@ -1,11 +1,10 @@
 # CallClub - Product Requirements Document
-## 🏷️ Versão 1.1.2 - Compartilhamento WhatsApp
+## 🏷️ Versão 1.2.0 - Separação Liga/Campeonato
 
-**Status:** ✅ V1.1.2 CONSOLIDADA  
+**Status:** ✅ V1.2.0 CONSOLIDADA  
 **Data de Consolidação:** 26/01/2026  
 **Ambiente:** Produção Ready  
-**Escopo V1:** 🔒 LOCKED  
-**Novidade V1.1.2:** Botão "Convidar" via WhatsApp + Serie A seedada
+**Regra de Domínio:** LIGAS ≠ CAMPEONATOS (IMPLEMENTADO)
 
 ---
 

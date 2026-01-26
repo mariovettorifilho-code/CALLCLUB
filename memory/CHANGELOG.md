@@ -1,5 +1,62 @@
 # CallClub - Changelog
 
+## [1.2.0] - 2026-01-26
+
+### 🏷️ V1.2.0 - Separação LIGAS ≠ CAMPEONATOS
+
+**Status:** ✅ IMPLEMENTADO E TESTADO (100% backend, 100% frontend)  
+**Escopo:** Regras de domínio - Ligas são filtros, Campeonatos são fonte de dados
+
+---
+
+### ✨ Mudanças de Arquitetura
+
+#### Separação Clara de Conceitos
+- **Campeonatos Oficiais:** Fonte de jogos, rodadas e palpites
+- **Ligas Privadas:** Apenas agrupam usuários e filtram rankings
+
+#### Novos Endpoints
+- `GET /api/user/{username}/official-championships` - APENAS campeonatos oficiais (para Palpites)
+- `GET /api/user/{username}/accessible-championships` - Campeonatos + Ligas (para Classificação)
+
+#### Tela de Palpites
+- Mostra APENAS campeonatos oficiais
+- Ligas NUNCA aparecem como opção
+- Dropdown limpo sem duplicações
+
+#### Tela de Classificação
+- Mostra campeonatos oficiais + ligas
+- Ligas identificadas com ícone 👥 e nome
+- Ex: "Campeonato Brasileiro – Série A (2026) (Liga dos Crias) 👥"
+
+#### Tela Criar Liga
+- Dropdown mostra APENAS campeonatos oficiais
+- Tab renomeada: "Entrar" → "Entrar em uma liga"
+
+#### Campeonatos Oficiais (Lista Fixa)
+```
+- Campeonato Brasileiro – Série A (2026)
+- Copa Libertadores da América (2026)
+- Copa do Brasil (2026)
+- Copa do Mundo (2026)
+```
+
+---
+
+### 📊 Checklist de Regras de Domínio ✅
+
+- [x] Tela de Palpites mostra apenas campeonatos oficiais
+- [x] Usuário vê somente campeonatos que participa
+- [x] Ligas não aparecem em nenhum select de palpites
+- [x] Palpites funcionam com múltiplas ligas
+- [x] Ranking da liga reflete palpites do campeonato
+- [x] Dropdown Criar Liga mostra apenas oficiais
+- [x] Campeonatos têm ano no nome (2026)
+- [x] Classificação oficial lista todos os usuários
+- [x] Classificação de liga lista apenas membros
+
+---
+
 ## [1.1.2] - 2026-01-26
 
 ### 🏷️ V1.1.2 - Compartilhamento WhatsApp + Serie A
