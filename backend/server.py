@@ -660,11 +660,62 @@ async def get_all_rounds(championship_id: str = "brasileirao"):
 
 
 # ==================== PALPITES ====================
+
+def is_prediction_locked(match_date_str: str) -> bool:
+    """Verifica se o palpite está bloqueado (1 minuto após início do jogo)"""
+    try:
+        # Parse da data do jogo (já está em horário de Brasília)
+        match_dt = datetime.fromisoformat(match_date_str.replace('Z', ''))
+        
+        # Horário atual em Brasília (UTC-3)
+        now_utc = datetime.now(timezone.utc)
+        now_brasilia = now_utc - timedelta(hours=3)
+        now_brasilia = now_brasilia.replace(tzinfo=None)
+        
+        # Bloqueio: 1 minuto após o início
+        lock_time = match_dt + timedelta(minutes=1)
+        
+        return now_brasilia >= lock_time
+    except Exception as e:
+        logger.error(f"Erro ao verificar bloqueio: {e}")
+        return False
+
+
+@api_router.get("/matches/{match_id}/lock-status")
+async def get_match_lock_status(match_id: str):
+    """Verifica se um jogo específico está bloqueado para palpites"""
+    match = await db.matches.find_one({"match_id": match_id}, {"_id": 0})
+    if not match:
+        raise HTTPException(status_code=404, detail="Partida não encontrada")
+    
+    is_locked = is_prediction_locked(match.get("match_date", ""))
+    is_finished = match.get("is_finished", False)
+    
+    return {
+        "match_id": match_id,
+        "is_locked": is_locked or is_finished,
+        "is_finished": is_finished,
+        "match_date": match.get("match_date")
+    }
+
+
 @api_router.post("/predictions")
 async def create_prediction(pred: PredictionCreate):
-    """Salva um palpite"""
+    """Salva um palpite (com verificação de bloqueio por jogo)"""
     if pred.username not in AUTHORIZED_USERS:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
+    
+    # Busca a partida para verificar bloqueio
+    match = await db.matches.find_one({"match_id": pred.match_id})
+    if not match:
+        raise HTTPException(status_code=404, detail="Partida não encontrada")
+    
+    # Verifica se o jogo já está bloqueado
+    if match.get("is_finished"):
+        raise HTTPException(status_code=403, detail="Jogo já finalizado. Palpites bloqueados.")
+    
+    if is_prediction_locked(match.get("match_date", "")):
+        raise HTTPException(status_code=403, detail="Palpites bloqueados. O jogo já começou.")
     
     # Verifica se já existe
     existing = await db.predictions.find_one({
@@ -707,6 +758,71 @@ async def get_user_predictions(username: str, round_number: int, championship_id
         "championship_id": championship_id
     }, {"_id": 0}).to_list(100)
     return predictions
+
+
+@api_router.get("/predictions/{username}/public")
+async def get_user_public_predictions(username: str, championship_id: str = "brasileirao"):
+    """
+    Retorna palpites públicos de um usuário (apenas jogos finalizados).
+    Jogos não finalizados aparecem como ocultos.
+    """
+    # Busca todos os palpites do usuário nesse campeonato
+    predictions = await db.predictions.find({
+        "username": username,
+        "championship_id": championship_id
+    }, {"_id": 0}).to_list(1000)
+    
+    # Busca todas as partidas relevantes
+    match_ids = [p["match_id"] for p in predictions]
+    matches = await db.matches.find(
+        {"match_id": {"$in": match_ids}},
+        {"_id": 0}
+    ).to_list(1000)
+    matches_dict = {m["match_id"]: m for m in matches}
+    
+    # Monta resposta com visibilidade controlada
+    result = []
+    for pred in predictions:
+        match = matches_dict.get(pred["match_id"], {})
+        is_finished = match.get("is_finished", False)
+        
+        prediction_data = {
+            "match_id": pred["match_id"],
+            "round_number": pred.get("round_number"),
+            "home_team": match.get("home_team", "?"),
+            "away_team": match.get("away_team", "?"),
+            "home_badge": match.get("home_badge"),
+            "away_badge": match.get("away_badge"),
+            "match_date": match.get("match_date"),
+            "is_finished": is_finished,
+            "is_visible": is_finished,  # Só visível se jogo finalizou
+        }
+        
+        if is_finished:
+            # Jogo finalizado: mostra tudo
+            prediction_data.update({
+                "home_score": match.get("home_score"),
+                "away_score": match.get("away_score"),
+                "home_prediction": pred.get("home_prediction"),
+                "away_prediction": pred.get("away_prediction"),
+                "points": pred.get("points", 0)
+            })
+        else:
+            # Jogo não finalizado: oculta palpite
+            prediction_data.update({
+                "home_score": None,
+                "away_score": None,
+                "home_prediction": None,
+                "away_prediction": None,
+                "points": None
+            })
+        
+        result.append(prediction_data)
+    
+    # Ordena por rodada e data
+    result.sort(key=lambda x: (x.get("round_number", 0), x.get("match_date", "")))
+    
+    return result
 
 
 # ==================== RANKINGS ====================
