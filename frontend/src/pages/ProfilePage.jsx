@@ -12,9 +12,9 @@ const API = `${BACKEND_URL}/api`;
 
 // Sistema de Níveis
 const LEVELS = [
-  { name: "Amador", minPoints: 0, maxPoints: 50, icon: "🥉", color: "text-amber-600" },
-  { name: "Profissional", minPoints: 51, maxPoints: 150, icon: "🥈", color: "text-gray-400" },
-  { name: "Craque", minPoints: 151, maxPoints: 300, icon: "🥇", color: "text-yellow-500" },
+  { name: "Amador", minPoints: 0, maxPoints: 50, icon: "⚽", color: "text-amber-600" },
+  { name: "Profissional", minPoints: 51, maxPoints: 150, icon: "🎯", color: "text-blue-500" },
+  { name: "Craque", minPoints: 151, maxPoints: 300, icon: "⭐", color: "text-yellow-500" },
   { name: "Lendário", minPoints: 301, maxPoints: Infinity, icon: "👑", color: "text-purple-500" }
 ];
 
