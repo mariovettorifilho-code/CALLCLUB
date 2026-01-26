@@ -1,5 +1,53 @@
 # CallClub - Changelog
 
+## [1.1.1] - 2026-01-26
+
+### 🏷️ V1.1.1 - Ajustes de UX nas Ligas Privadas
+
+**Status:** ✅ IMPLEMENTADO E TESTADO (100% backend, 100% frontend)  
+**Escopo:** Ligas privadas com MESMA estrutura do campeonato FREE
+
+---
+
+### ✨ Melhorias Implementadas
+
+#### LeagueDetailPage - Paridade com FREE
+- **Tabs Geral/Por Rodada** idênticas ao RankingsPage
+- **Mesmas 9 colunas:** Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, %
+- **Modal de transparência:** Clicar no nome do usuário abre palpites
+- **Seletor de rodada** na tab "Por Rodada"
+- **Legenda das colunas** no final da tabela
+
+#### Seletores de Campeonato
+- Mostram nome da liga: "Campeonato Brasileiro (Liga dos Crias)"
+- Ícone 👥 para campeonatos via liga
+- Suporte a múltiplas ligas do mesmo campeonato
+
+#### LeaguesPage
+- Seção "Ligas que criei" com contador (X/2)
+- Seção "Ligas que participo" separada
+- Marcos agora vê corretamente as ligas onde é membro
+
+#### Backend
+- `get_league_ranking()` agora retorna estatísticas completas:
+  - `correct_results`, `correct_home_goals`, `correct_away_goals`
+  - `efficiency` (aproveitamento em %)
+- Endpoint `accessible-championships` inclui `league_name` e `league_id`
+
+---
+
+### 📊 Checklist de QA (V1.1.1) ✅
+
+- [x] Tabs de classificação funcionando (Geral / Por Rodada)
+- [x] Mesmas colunas do Free no ranking
+- [x] Modal de palpites funciona após partidas
+- [x] Ligas que participo aparecem corretamente
+- [x] Seleção de campeonato mostra nome da liga
+- [x] Micro-interações consistentes com Free
+- [x] Regras de negócio e limites PREMIUM mantidos
+
+---
+
 ## [1.1.0] - 2026-01-26
 
 ### 🏷️ V1.1 - Ligas Privadas (UI Completa)
