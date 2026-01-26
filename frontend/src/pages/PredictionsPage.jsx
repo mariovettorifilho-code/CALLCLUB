@@ -220,6 +220,12 @@ export default function PredictionsPage({ username }) {
   const savePrediction = async (match) => {
     const pred = predictions[match.match_id];
     if (pred?.home === undefined || pred?.away === undefined) return;
+    
+    // Verifica se está bloqueado antes de salvar
+    if (lockStatus[match.match_id]) {
+      alert("Este jogo já começou. Palpites bloqueados.");
+      return;
+    }
 
     setSaving(prev => ({ ...prev, [match.match_id]: true }));
 
@@ -233,18 +239,29 @@ export default function PredictionsPage({ username }) {
         away_prediction: pred.away
       });
       
+      // Confetti para palpite salvo!
+      confetti({
+        particleCount: 30,
+        spread: 50,
+        origin: { y: 0.7 },
+        colors: ['#22c55e', '#10b981']
+      });
+      
       setTimeout(() => loadMatches(), 500);
     } catch (error) {
       console.error("Erro ao salvar palpite:", error);
+      if (error.response?.data?.detail) {
+        alert(error.response.data.detail);
+      }
     } finally {
       setSaving(prev => ({ ...prev, [match.match_id]: false }));
     }
   };
 
-  const isMatchLocked = (match) => {
-    const now = new Date();
-    const matchDate = new Date(match.match_date);
-    return now >= matchDate || match.is_finished;
+  const getMatchStatus = (match) => {
+    if (match.is_finished) return { status: "finished", label: "Finalizado", color: "text-gray-500" };
+    if (lockStatus[match.match_id]) return { status: "locked", label: "Em andamento", color: "text-orange-500" };
+    return { status: "open", label: "Aberto", color: "text-green-500" };
   };
 
   const formatMatchDate = (dateString) => {
