@@ -404,7 +404,7 @@ async def get_user_accessible_championships(username: str):
                 champ["access_type"] = "extra"
                 accessible.append(champ)
         
-        # Campeonatos das ligas
+        # Campeonatos das ligas (sempre adiciona, pois cada liga tem ranking separado)
         for league_id in user.get("joined_leagues", []):
             league = await db.leagues.find_one({"league_id": league_id}, {"_id": 0})
             if league:
@@ -412,10 +412,13 @@ async def get_user_accessible_championships(username: str):
                     {"championship_id": league.get("championship_id")}, 
                     {"_id": 0}
                 )
-                if champ and champ not in accessible:
-                    champ["access_type"] = "league"
-                    champ["league_name"] = league.get("name")
-                    accessible.append(champ)
+                if champ:
+                    # Cria uma cópia para não modificar o original
+                    league_champ = dict(champ)
+                    league_champ["access_type"] = "league"
+                    league_champ["league_name"] = league.get("name")
+                    league_champ["league_id"] = league.get("league_id")
+                    accessible.append(league_champ)
     
     return accessible
 
