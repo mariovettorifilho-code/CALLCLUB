@@ -321,7 +321,7 @@ export default function HomePage({ username }) {
           ) : (
             <p className="text-yellow-700 text-center py-4">
               Você ainda não participa de nenhuma liga. 
-              <Link to="/leagues/join" className="font-bold underline ml-1">Entre com código</Link> ou crie a sua!
+              <Link to="/leagues" className="font-bold underline ml-1">Criar ou entrar</Link> em uma!
             </p>
           )}
         </div>
