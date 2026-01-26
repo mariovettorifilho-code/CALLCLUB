@@ -540,6 +540,17 @@ export default function LeaguesPage({ username }) {
 
 // Componente de Card de Liga
 function LeagueCard({ league, isOwner, championshipName, onCopyCode, copiedCode }) {
+  
+  // Função para compartilhar via WhatsApp
+  const shareViaWhatsApp = () => {
+    const baseUrl = window.location.origin;
+    const mensagem = encodeURIComponent(
+      `⚽ Entra na minha liga no CallClub!\n\n🏆 Liga: ${league.name}\n📋 Código: ${league.invite_code}\n\n👉 Acesse: ${baseUrl}/leagues\n\nBora palpitar juntos! 🔥`
+    );
+    const whatsappURL = `https://api.whatsapp.com/send?text=${mensagem}`;
+    window.open(whatsappURL, "_blank");
+  };
+
   return (
     <div className="bg-paper rounded-xl p-4 hover:bg-gray-100 transition-all border border-gray-200">
       <div className="flex items-center justify-between">
@@ -570,26 +581,36 @@ function LeagueCard({ league, isOwner, championshipName, onCopyCode, copiedCode 
         </div>
         
         <div className="flex items-center gap-2">
-          {isOwner && (
-            <button
-              onClick={() => onCopyCode(league.invite_code)}
-              data-testid={`copy-code-${league.league_id}`}
-              className="flex items-center gap-1 text-xs bg-white border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all"
-              title="Copiar código de convite"
-            >
-              {copiedCode === league.invite_code ? (
-                <>
-                  <Check size={14} className="text-green-500" weight="bold" />
-                  <span className="text-green-600 font-semibold">Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Copy size={14} className="text-text-secondary" />
-                  <span className="font-mono font-semibold text-text-primary">{league.invite_code}</span>
-                </>
-              )}
-            </button>
-          )}
+          {/* Botão Compartilhar WhatsApp */}
+          <button
+            onClick={shareViaWhatsApp}
+            data-testid={`share-whatsapp-${league.league_id}`}
+            className="flex items-center gap-1 text-xs bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-all"
+            title="Compartilhar no WhatsApp"
+          >
+            <WhatsappLogo size={16} weight="fill" />
+            <span className="hidden sm:inline font-semibold">Convidar</span>
+          </button>
+          
+          {/* Botão Copiar Código */}
+          <button
+            onClick={() => onCopyCode(league.invite_code)}
+            data-testid={`copy-code-${league.league_id}`}
+            className="flex items-center gap-1 text-xs bg-white border border-gray-300 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all"
+            title="Copiar código de convite"
+          >
+            {copiedCode === league.invite_code ? (
+              <>
+                <Check size={14} className="text-green-500" weight="bold" />
+                <span className="text-green-600 font-semibold">Copiado!</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} className="text-text-secondary" />
+                <span className="font-mono font-semibold text-text-primary">{league.invite_code}</span>
+              </>
+            )}
+          </button>
           
           <Link
             to={`/leagues/${league.league_id}`}
@@ -597,6 +618,7 @@ function LeagueCard({ league, isOwner, championshipName, onCopyCode, copiedCode 
             className="bg-pitch-green text-white p-2 rounded-lg hover:bg-pitch-green/90 transition-all"
           >
             <ArrowRight size={20} weight="bold" />
+          </Link>
           </Link>
         </div>
       </div>
