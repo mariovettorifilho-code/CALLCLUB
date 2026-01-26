@@ -158,7 +158,7 @@ async def get_league_ranking(
     league_id: str,
     championship_id: str
 ) -> list:
-    """Calcula ranking de uma liga específica"""
+    """Calcula ranking de uma liga específica com estatísticas detalhadas"""
     league = await db.leagues.find_one({"league_id": league_id})
     
     if not league:
@@ -166,48 +166,91 @@ async def get_league_ranking(
     
     members = league.get("members", [])
     
-    # Busca palpites dos membros para esse campeonato
-    pipeline = [
-        {
-            "$match": {
-                "username": {"$in": members},
-                "championship_id": championship_id,
-                "points": {"$ne": None}
-            }
-        },
-        {
-            "$group": {
-                "_id": "$username",
-                "total_points": {"$sum": "$points"},
-                "exact_scores": {"$sum": {"$cond": [{"$eq": ["$points", 5]}, 1, 0]}},
-                "total_predictions": {"$sum": 1}
-            }
-        },
-        {"$sort": {"total_points": -1, "exact_scores": -1}}
-    ]
+    # Busca todas as partidas finalizadas do campeonato
+    matches = await db.matches.find(
+        {"championship_id": championship_id, "is_finished": True},
+        {"_id": 0}
+    ).to_list(1000)
+    matches_dict = {m['match_id']: m for m in matches}
     
-    results = await db.predictions.aggregate(pipeline).to_list(1000)
+    # Busca todos os palpites dos membros
+    predictions = await db.predictions.find(
+        {
+            "username": {"$in": members},
+            "championship_id": championship_id
+        },
+        {"_id": 0}
+    ).to_list(10000)
     
-    # Adiciona membros sem palpites
-    members_with_points = {r["_id"] for r in results}
-    for member in members:
-        if member not in members_with_points:
-            results.append({
-                "_id": member,
+    # Calcula estatísticas por usuário
+    user_stats = {}
+    for pred in predictions:
+        username = pred['username']
+        match = matches_dict.get(pred['match_id'], {})
+        
+        if username not in user_stats:
+            user_stats[username] = {
+                "username": username,
                 "total_points": 0,
+                "correct_results": 0,
+                "correct_home_goals": 0,
+                "correct_away_goals": 0,
                 "exact_scores": 0,
                 "total_predictions": 0
-            })
+            }
+        
+        if match.get('is_finished') and pred.get('points') is not None:
+            user_stats[username]['total_predictions'] += 1
+            points = pred.get('points', 0)
+            user_stats[username]['total_points'] += points
+            
+            home_pred = pred.get('home_prediction')
+            away_pred = pred.get('away_prediction')
+            home_score = match.get('home_score')
+            away_score = match.get('away_score')
+            
+            if home_score is not None and away_score is not None:
+                pred_result = 'home' if home_pred > away_pred else ('away' if away_pred > home_pred else 'draw')
+                actual_result = 'home' if home_score > away_score else ('away' if away_score > home_score else 'draw')
+                
+                if pred_result == actual_result:
+                    user_stats[username]['correct_results'] += 1
+                if home_pred == home_score:
+                    user_stats[username]['correct_home_goals'] += 1
+                if away_pred == away_score:
+                    user_stats[username]['correct_away_goals'] += 1
+                if home_pred == home_score and away_pred == away_score:
+                    user_stats[username]['exact_scores'] += 1
     
-    # Formata resultado
-    ranking = []
-    for i, r in enumerate(sorted(results, key=lambda x: (-x["total_points"], -x["exact_scores"]))):
-        ranking.append({
-            "position": i + 1,
-            "username": r["_id"],
-            "total_points": r["total_points"],
-            "exact_scores": r["exact_scores"],
-            "total_predictions": r["total_predictions"]
-        })
+    # Adiciona membros sem palpites
+    for member in members:
+        if member not in user_stats:
+            user_stats[member] = {
+                "username": member,
+                "total_points": 0,
+                "correct_results": 0,
+                "correct_home_goals": 0,
+                "correct_away_goals": 0,
+                "exact_scores": 0,
+                "total_predictions": 0
+            }
+    
+    # Calcula aproveitamento
+    for stats in user_stats.values():
+        if stats['total_predictions'] > 0:
+            max_possible = stats['total_predictions'] * 5
+            stats['efficiency'] = round((stats['total_points'] / max_possible) * 100, 1)
+        else:
+            stats['efficiency'] = 0
+    
+    # Ordena ranking
+    ranking = sorted(
+        user_stats.values(),
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']),
+        reverse=True
+    )
+    
+    for i, user in enumerate(ranking):
+        user['position'] = i + 1
     
     return ranking
