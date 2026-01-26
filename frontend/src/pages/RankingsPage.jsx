@@ -44,7 +44,8 @@ export default function RankingsPage({ username }) {
 
   const loadChampionships = async () => {
     try {
-      const res = await axios.get(`${API}/user/${username}/accessible-championships`);
+      // Usa endpoint de campeonatos OFICIAIS apenas (sem ligas)
+      const res = await axios.get(`${API}/user/${username}/official-championships`);
       setChampionships(res.data || []);
       
       if (res.data?.length > 0) {
