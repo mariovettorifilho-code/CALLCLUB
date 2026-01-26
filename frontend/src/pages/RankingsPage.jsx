@@ -249,12 +249,17 @@ export default function RankingsPage({ username }) {
                         </span>
                       </td>
                       
-                      {/* Nome do usuário */}
+                      {/* Nome do usuário - clicável para ver palpites */}
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-2">
-                          <span className={`font-semibold ${isCurrentUser ? "text-pitch-green" : "text-text-primary"}`}>
+                          <button
+                            onClick={() => openUserModal(player.username)}
+                            className={`font-semibold hover:underline flex items-center gap-1 ${isCurrentUser ? "text-pitch-green" : "text-text-primary"}`}
+                            title="Ver palpites"
+                          >
                             {player.username}
-                          </span>
+                            <Eye size={14} className="opacity-50" />
+                          </button>
                           {/* Badge Premium - Diamante com tooltip */}
                           {isPremium && (
                             <span title="Usuário Premium" className="cursor-help">
