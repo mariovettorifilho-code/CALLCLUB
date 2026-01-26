@@ -1,215 +1,207 @@
 # CallClub - Product Requirements Document
+## 🏷️ Versão 1.0 (V1) - FINAL
+
+**Status:** ✅ V1 CONSOLIDADA  
+**Data:** 26/01/2026  
+**Ambiente:** Produção Ready
+
+---
 
 ## 1. Visão Geral
 
-**CallClub** é uma plataforma global de palpites esportivos que permite usuários fazerem previsões em partidas de futebol, competirem em rankings e criarem suas próprias ligas com amigos.
+**CallClub** é uma plataforma global de palpites esportivos que permite usuários fazerem previsões em partidas de futebol, competirem em classificações e criarem suas próprias ligas com amigos.
 
-## 2. Mudança Estratégica (Janeiro 2026)
+### Público-Alvo
+- Fase atual: Beta testers (amigos próximos)
+- Visão futura: Escala global, multi-idioma, multi-esporte
 
-### Antes (Modelo Local)
-- Campeonato Carioca (FREE)
-- Campeonato Brasileiro (PREMIUM com chave)
-- Foco em amigos brasileiros
+---
 
-### Agora (Modelo Global)
-- Plataforma multi-país
-- Sistema de planos escalável (FREE/PREMIUM/VIP)
-- Campeonato nacional automático por país
-- Ligas customizáveis
-- Visão de escala global
+## 2. Sistema de Planos (V1)
 
-## 3. Sistema de Planos
+| Plano | Preço | Benefícios |
+|-------|-------|------------|
+| **FREE** | Grátis | Campeonato nacional do país do usuário |
+| **PREMIUM** | - | +2 campeonatos extras, +2 ligas próprias |
+| **VIP** | Futuro | Ilimitado (não implementado na V1) |
 
-### 🆓 FREE
-- Acesso ao campeonato nacional principal do país do usuário
-- Detecção automática por IP + escolha manual
-- Sem limite de palpites
-- Participação em rankings
+### Regras de Acesso
+- País detectado automaticamente por IP
+- Usuário pode trocar país manualmente (futuro)
+- Beta testers = PREMIUM automático
 
-### ⭐ PREMIUM
-- Tudo do FREE +
-- Criar até **2 ligas próprias** (grupos privados)
-- Acessar até **2 campeonatos extras** (ex: Libertadores, Champions)
-- Código de convite para ligas
+---
 
-### 👑 VIP (Futuro)
-- Ligas ilimitadas
-- Campeonatos ilimitados
-- Outros esportes (F1, NBA, UFC, etc.)
+## 3. Sistema de Pontuação (V1) 🔒
 
-## 4. Países e Campeonatos Suportados
+| Acerto | Pontos |
+|--------|--------|
+| Resultado (V/E/D) | 3 pts |
+| Gols do mandante | +1 pt |
+| Gols do visitante | +1 pt |
+| **Placar exato** | **5 pts** |
 
-| País | Código | Campeonato Nacional |
-|------|--------|---------------------|
-| Brasil | BR | Campeonato Brasileiro |
-| Itália | IT | Serie A |
-| Espanha | ES | La Liga |
-| Inglaterra | EN | Premier League |
-| Alemanha | DE | Bundesliga |
-| França | FR | Ligue 1 |
-| Portugal | PT | Primeira Liga |
-| Argentina | AR | Liga Argentina |
-| Holanda | NL | Eredivisie |
-| EUA | US | MLS |
+### Critérios de Desempate
+1. Total de placares exatos
+2. Acertos de resultado (V/E/D)
 
-**Campeonatos Extras (Premium):**
+> ⚠️ **LOCKED:** Sistema de pontuação não deve ser alterado sem validação do PO.
+
+---
+
+## 4. Campeonatos Suportados (V1)
+
+### Nacionais (FREE)
+| País | Campeonato | API ID |
+|------|------------|--------|
+| 🇧🇷 Brasil | Campeonato Brasileiro | 4351 |
+| 🇮🇹 Itália | Serie A | 4332 |
+| 🇪🇸 Espanha | La Liga | 4335 |
+| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra | Premier League | 4328 |
+| 🇩🇪 Alemanha | Bundesliga | 4331 |
+| 🇫🇷 França | Ligue 1 | 4334 |
+
+### Extras (PREMIUM)
 - Copa Libertadores
 - UEFA Champions League
-- (Outros podem ser adicionados via Admin)
 
-## 5. Arquitetura Técnica
+> ❌ **REMOVIDO na V1:** Campeonato Carioca
 
-### Frontend
-- React + Tailwind CSS
-- Componentes Shadcn/UI
-- Phosphor Icons
+---
 
-### Backend
-- FastAPI (Python)
-- Motor (MongoDB async driver)
-- Pydantic para validação
+## 5. Arquitetura Técnica (V1)
 
-### Database (MongoDB)
-**Collections:**
+### Stack
+- **Frontend:** React 18 + Tailwind CSS + Shadcn/UI
+- **Backend:** FastAPI (Python 3.11) + Motor
+- **Database:** MongoDB (Atlas em produção)
+- **API Externa:** TheSportsDB (dados de partidas)
+
+### Estrutura de Arquivos
+```
+/app/
+├── backend/
+│   ├── server.py           # API principal (~1100 linhas)
+│   ├── models/schemas.py   # Pydantic models
+│   ├── services/           # Serviços auxiliares
+│   └── requirements.txt
+├── frontend/
+│   └── src/
+│       ├── pages/          # HomePage, PredictionsPage, etc.
+│       └── components/     # Layout, UI components
+└── memory/
+    └── PRD.md              # Este arquivo
+```
+
+### Collections MongoDB
 - `users` - Usuários e planos
 - `championships` - Campeonatos cadastrados
 - `matches` - Partidas
 - `predictions` - Palpites
 - `leagues` - Ligas customizadas
+- `security_logs` - Logs de auditoria
 
-### APIs Externas
-- TheSportsDB - Dados de partidas e escudos
+---
 
-## 6. Schemas do Banco
-
-### users
-```json
-{
-  "username": "Mario",
-  "plan": "premium",
-  "country": "BR",
-  "total_points": 0,
-  "owned_leagues": [],
-  "joined_leagues": [],
-  "extra_championships": [],
-  "achievements": ["pioneer", "beta_tester"],
-  "pioneer_number": 1,
-  "is_banned": false,
-  "created_at": "2026-01-25T00:00:00Z"
-}
-```
-
-### championships
-```json
-{
-  "championship_id": "brasileirao",
-  "name": "Campeonato Brasileiro",
-  "country": "BR",
-  "api_id": "4351",
-  "is_national": true,
-  "season": "2026",
-  "total_rounds": 38,
-  "is_active": true
-}
-```
-
-### leagues
-```json
-{
-  "league_id": "abc123",
-  "name": "Liga dos Crias",
-  "owner_username": "Mario",
-  "invite_code": "XYZ789",
-  "championship_id": "brasileirao",
-  "members": ["Mario", "Marcos"],
-  "max_members": 100,
-  "is_active": true
-}
-```
-
-## 7. Endpoints Principais
+## 6. Funcionalidades V1 ✅
 
 ### Autenticação
-- `POST /api/auth/check-name` - Login com nome + PIN
-- `POST /api/auth/update-country` - Atualiza país do usuário
-
-### Campeonatos
-- `GET /api/championships` - Lista todos
-- `GET /api/user/{username}/accessible-championships` - Campeonatos acessíveis
-
-### Ligas
-- `POST /api/leagues/create` - Criar liga (Premium)
-- `POST /api/leagues/join` - Entrar por código
-- `GET /api/leagues/{league_id}` - Detalhes + ranking
+- [x] Login por nome + PIN (4 dígitos)
+- [x] Lista de usuários autorizados (backend)
+- [x] Detecção de país por IP
 
 ### Palpites
-- `POST /api/predictions` - Salvar palpite
-- `GET /api/predictions/{username}` - Buscar palpites
+- [x] Fazer palpites antes do jogo começar
+- [x] Editar palpites (antes do jogo)
+- [x] Ver palpites populares
+- [x] Histórico de palpites no perfil
 
-### Rankings
-- `GET /api/ranking/detailed/{championship_id}` - Ranking completo
-- `GET /api/ranking/league/{league_id}` - Ranking da liga
+### Classificação
+- [x] Classificação Geral (soma do campeonato)
+- [x] Classificação Por Rodada
+- [x] Mesmas colunas em ambas visões
+- [x] Badge Premium discreto (💎)
 
-### Admin
-- `GET /api/admin/stats` - Estatísticas gerais
-- `POST /api/admin/update-plan` - Atualizar plano de usuário
-- `GET /api/admin/force-populate` - Sincronizar partidas
+### Perfil
+- [x] Estatísticas do usuário
+- [x] Sistema de níveis (Amador → Lendário)
+- [x] Conquistas (8 tipos)
+- [x] Jornada do Palpiteiro (timeline)
 
-## 8. O que foi implementado (25/01/2026)
+### Admin Panel (/admin)
+- [x] Dashboard com estatísticas
+- [x] Gerenciar usuários e planos
+- [x] Sincronizar partidas da API
+- [x] Definir resultados manualmente
+- [x] Recalcular pontuações
+- [x] Ver campeonatos cadastrados
 
-### ✅ Backend
-- [x] Novo sistema de schemas (plans, championships, leagues)
-- [x] Detecção de país por IP
-- [x] Serviço de ligas (create, join, leave, ranking)
-- [x] Endpoints de gerenciamento de planos
-- [x] Migração de dados (Carioca removido, usuarios para PREMIUM)
-- [x] 8 campeonatos iniciais cadastrados
-- [x] Endpoint `/api/admin/update-match` para definir resultados
-- [x] Liga de teste "Liga dos Crias" criada com Mario e Marcos
-- [x] Seed de dados: 5 partidas com resultados e palpites
+### Ligas (estrutura pronta)
+- [x] Backend: criar, entrar, sair, ranking
+- [ ] Frontend: UI de gerenciamento (V1.1)
 
-### ✅ Frontend
-- [x] HomePage adaptada para planos
-- [x] **Seção "Como Funciona"** com regras de pontuação e desempate
-- [x] Seletor de campeonatos dinâmico
-- [x] PredictionsPage com nova API
-- [x] **RankingsPage renomeada para "Classificação"**
-- [x] AdminPage atualizado
-- [x] ProfilePage - Bug fix: ranking.position undefined
-- [x] Menu de navegação: "Rankings" → "Classificação"
+---
 
-### ⏳ Pendente
-- [ ] Página de criar/gerenciar ligas
-- [ ] Página de entrar em liga por código
-- [ ] Seleção manual de país nas configurações
-- [ ] Página de adicionar campeonatos extras (Premium)
+## 7. Dados de Teste (V1)
 
-## 9. Credenciais de Teste
+### Usuários Beta
+| Usuário | PIN | Plano | Pontos |
+|---------|-----|-------|--------|
+| Mario | 2412 | PREMIUM | 20 |
+| Marcos | 6969 | PREMIUM | 17 |
 
-| Usuário | PIN | Plano |
-|---------|-----|-------|
-| Mario | 2412 | PREMIUM |
-| Marcos | 6969 | PREMIUM |
+### Liga de Teste
+- **Nome:** Liga dos Crias
+- **Código:** 1RFA1C
+- **Membros:** Mario, Marcos
+- **Campeonato:** Brasileirão
 
-**Admin:** `/admin` - Senha: `callclub2026`
+### Partidas Seed (Rodada 1)
+- 5 partidas com resultados definidos
+- Pontuações calculadas e validadas
 
-## 10. Próximos Passos
+---
 
-### P0 (Crítico)
-- Testar fluxo completo de login → palpite → ranking
-- Validar API de ligas
+## 8. Credenciais
 
-### P1 (Importante)
-- UI para criar ligas
-- UI para entrar em ligas
-- Configurações de país
+| Recurso | Acesso |
+|---------|--------|
+| Admin Panel | `/admin` - Senha: `callclub2026` |
+| Usuário teste 1 | Mario / 2412 |
+| Usuário teste 2 | Marcos / 6969 |
 
-### P2 (Melhoria)
-- Feed de atividades
-- Notificações
-- Sistema de reações
+---
 
-### P3 (Futuro)
-- Plano VIP
-- Outros esportes
-- Monetização
+## 9. Bugs Corrigidos na V1
+
+- [x] ProfilePage: erro "position undefined"
+- [x] Timezone: conversão UTC → Brasília
+- [x] Campo championship → championship_id
+- [x] Próximo jogo: lógica de rodada atual
+- [x] Classificação Por Rodada: mesmas colunas da Geral
+
+---
+
+## 10. Roadmap Pós-V1
+
+### V1.1 (Próximo)
+- [ ] UI de Ligas (criar, entrar por código)
+- [ ] Configurações de país manual
+- [ ] Ajustes finais de UX
+
+### V1.2
+- [ ] Campeonatos extras para Premium
+- [ ] Feed de atividades
+
+### V2.0
+- [ ] Plano VIP
+- [ ] Outros esportes (F1, NBA)
+- [ ] Monetização
+
+---
+
+## 11. Contato
+
+**Projeto:** CallClub  
+**Versão:** 1.0  
+**Status:** ✅ Consolidado
