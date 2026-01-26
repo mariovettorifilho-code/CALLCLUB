@@ -3,8 +3,9 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { 
   Users, Trophy, Crown, ArrowLeft, Copy, Check, SignOut,
-  SoccerBall, Target, Star, Fire, Eye, X
+  SoccerBall, Target, ChartBar, Diamond, Eye, X
 } from "@phosphor-icons/react";
+import UserPredictionsModal from "../components/UserPredictionsModal";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,31 +16,76 @@ export default function LeagueDetailPage({ username }) {
   
   const [league, setLeague] = useState(null);
   const [ranking, setRanking] = useState([]);
+  const [roundRanking, setRoundRanking] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaving, setLeaving] = useState(false);
   
+  // Tabs Geral/Por Rodada (igual ao FREE)
+  const [viewMode, setViewMode] = useState("geral");
+  const [selectedRound, setSelectedRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(38);
+  const [currentRound, setCurrentRound] = useState(1);
+  
   // Modal de palpites
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [userPredictions, setUserPredictions] = useState([]);
-  const [loadingPredictions, setLoadingPredictions] = useState(false);
 
   useEffect(() => {
     loadLeagueData();
   }, [leagueId]);
+
+  useEffect(() => {
+    if (viewMode === "rodada" && league) {
+      loadRoundRanking();
+    }
+  }, [viewMode, selectedRound, league]);
 
   const loadLeagueData = async () => {
     try {
       const res = await axios.get(`${API}/leagues/${leagueId}`);
       setLeague(res.data.league);
       setRanking(res.data.ranking || []);
+      
+      // Busca info do campeonato para total de rodadas
+      if (res.data.league?.championship_id) {
+        try {
+          const champRes = await axios.get(`${API}/championships/${res.data.league.championship_id}`);
+          setTotalRounds(champRes.data?.total_rounds || 38);
+          
+          const roundRes = await axios.get(`${API}/rounds/current?championship_id=${res.data.league.championship_id}`);
+          setCurrentRound(roundRes.data?.round_number || 1);
+          setSelectedRound(roundRes.data?.round_number || 1);
+        } catch (e) {
+          console.error("Erro ao buscar info do campeonato:", e);
+        }
+      }
     } catch (err) {
       console.error("Erro ao carregar liga:", err);
       setError("Liga não encontrada");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRoundRanking = async () => {
+    if (!league?.championship_id) return;
+    
+    try {
+      // Busca ranking da rodada filtrado pelos membros da liga
+      const res = await axios.get(`${API}/ranking/round/${selectedRound}?championship_id=${league.championship_id}`);
+      
+      // Filtra apenas membros da liga
+      const members = league.members || [];
+      const filtered = (res.data || [])
+        .filter(player => members.includes(player.username))
+        .map((player, index) => ({ ...player, position: index + 1 }));
+      
+      setRoundRanking(filtered);
+    } catch (error) {
+      console.error("Erro ao carregar ranking da rodada:", error);
     }
   };
 
@@ -65,25 +111,27 @@ export default function LeagueDetailPage({ username }) {
     }
   };
 
-  const openUserPredictions = async (targetUsername) => {
+  const openUserModal = (targetUsername) => {
     setSelectedUser(targetUsername);
-    setLoadingPredictions(true);
-    
-    try {
-      const res = await axios.get(`${API}/user-predictions/${targetUsername}?championship_id=${league.championship_id}`);
-      setUserPredictions(res.data.predictions || []);
-    } catch (err) {
-      console.error("Erro ao carregar palpites:", err);
-      setUserPredictions([]);
-    } finally {
-      setLoadingPredictions(false);
-    }
+    setModalOpen(true);
   };
 
-  const closeUserPredictions = () => {
-    setSelectedUser(null);
-    setUserPredictions([]);
+  const getRowStyle = (position, isCurrentUser) => {
+    if (isCurrentUser) return "bg-pitch-green/10 border-l-4 border-l-pitch-green";
+    if (position === 1) return "bg-gradient-to-r from-yellow-50 to-amber-50";
+    if (position === 2) return "bg-gradient-to-r from-gray-50 to-slate-50";
+    if (position === 3) return "bg-gradient-to-r from-orange-50 to-amber-50";
+    return "bg-white hover:bg-gray-50";
   };
+
+  // Gera lista de rodadas
+  const roundOptions = [];
+  for (let i = 1; i <= totalRounds; i++) {
+    roundOptions.push(i);
+  }
+
+  // Dados a exibir
+  const displayData = viewMode === "geral" ? ranking : roundRanking;
 
   if (loading) {
     return (
@@ -132,7 +180,7 @@ export default function LeagueDetailPage({ username }) {
           Voltar para Ligas
         </Link>
         
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="font-heading text-2xl md:text-3xl font-bold">{league.name}</h1>
@@ -182,141 +230,233 @@ export default function LeagueDetailPage({ username }) {
           </div>
           <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
             <SoccerBall size={24} className="mx-auto mb-2 text-white/80" />
-            <p className="text-sm font-semibold truncate">{league.championship_id}</p>
-            <p className="text-xs text-white/70">Campeonato</p>
+            <p className="text-sm font-semibold">Rodada {currentRound}</p>
+            <p className="text-xs text-white/70">Atual</p>
           </div>
         </div>
       </div>
 
-      {/* Classificação da Liga */}
-      <div className="bg-white rounded-2xl shadow-xl border-2 border-paper overflow-hidden">
-        <div className="bg-gradient-to-r from-yellow-500 to-amber-500 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <Trophy size={24} weight="fill" />
-            <h2 className="font-heading text-lg font-bold">Classificação da Liga</h2>
-          </div>
-          <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-semibold">
-            Atualização em tempo real
-          </span>
+      {/* Classificação da Liga - MESMO PADRÃO DO FREE */}
+      <div className="bg-white rounded-2xl shadow-lg border-2 border-paper overflow-hidden">
+        {/* Tabs: Geral vs Por Rodada */}
+        <div className="flex border-b-2 border-paper">
+          <button
+            onClick={() => setViewMode("geral")}
+            data-testid="tab-geral-liga"
+            className={`flex-1 px-6 py-4 font-semibold text-center transition-all flex items-center justify-center gap-2 ${
+              viewMode === "geral"
+                ? "bg-pitch-green text-white"
+                : "bg-white text-text-secondary hover:bg-gray-50"
+            }`}
+          >
+            <ChartBar size={20} weight={viewMode === "geral" ? "fill" : "regular"} />
+            <span className="hidden sm:inline">Classificação</span> Geral
+          </button>
+          <button
+            onClick={() => setViewMode("rodada")}
+            data-testid="tab-rodada-liga"
+            className={`flex-1 px-6 py-4 font-semibold text-center transition-all flex items-center justify-center gap-2 ${
+              viewMode === "rodada"
+                ? "bg-pitch-green text-white"
+                : "bg-white text-text-secondary hover:bg-gray-50"
+            }`}
+          >
+            <Target size={20} weight={viewMode === "rodada" ? "fill" : "regular"} />
+            Por Rodada
+          </button>
         </div>
-        
-        {ranking.length === 0 ? (
-          <div className="text-center py-12">
-            <SoccerBall size={48} className="text-text-secondary mx-auto mb-4" />
-            <p className="text-text-secondary">
-              Nenhum palpite ainda. Comece a palpitar!
-            </p>
-            <Link
-              to="/predictions"
-              className="inline-flex items-center gap-2 text-pitch-green font-semibold mt-4 hover:underline"
-            >
-              Fazer Palpites
-            </Link>
+
+        {/* Info Bar */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-green-200">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="text-center">
+              <p className="text-xs text-text-secondary">Rodada</p>
+              <p className="text-xl sm:text-2xl font-bold text-text-primary">{currentRound}</p>
+            </div>
+            <div className="text-center hidden sm:block">
+              <p className="text-xs text-text-secondary">Total</p>
+              <p className="text-2xl font-bold text-text-primary">{totalRounds}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-text-secondary">Participantes</p>
+              <p className="text-xl sm:text-2xl font-bold text-text-primary">{league.members?.length || 0}</p>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-paper">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    #
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    Jogador
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    Pts
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    Exatos
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    Jogos
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-paper">
-                {ranking.map((player, index) => {
+          
+          {/* Seletor de Rodada */}
+          {viewMode === "rodada" && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-text-secondary">Rodada:</label>
+              <select
+                value={selectedRound}
+                onChange={(e) => setSelectedRound(parseInt(e.target.value))}
+                data-testid="round-selector-liga"
+                className="px-3 py-2 rounded-lg border-2 border-green-300 bg-white font-semibold text-pitch-green focus:outline-none focus:ring-2 focus:ring-pitch-green"
+              >
+                {roundOptions.map(r => (
+                  <option key={r} value={r}>
+                    {r}{r === currentRound ? " (Atual)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Tabela de Classificação - MESMAS COLUNAS DO FREE */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-pitch-green text-white text-sm">
+                <th className="px-3 py-3 text-left">Pos.</th>
+                <th className="px-3 py-3 text-left">Palpiteiro</th>
+                <th className="px-3 py-3 text-center">
+                  <span className="flex items-center justify-center gap-1">
+                    <Trophy size={14} weight="fill" /> Pts
+                  </span>
+                </th>
+                <th className="px-3 py-3 text-center hidden sm:table-cell">Res.</th>
+                <th className="px-3 py-3 text-center hidden md:table-cell">Casa</th>
+                <th className="px-3 py-3 text-center hidden md:table-cell">Vis.</th>
+                <th className="px-3 py-3 text-center">Exato</th>
+                <th className="px-3 py-3 text-center hidden sm:table-cell">Palp.</th>
+                <th className="px-3 py-3 text-center hidden lg:table-cell">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayData && displayData.length > 0 ? (
+                displayData.map((player) => {
                   const isCurrentUser = player.username === username;
-                  const isLeader = index === 0;
+                  const isLeagueOwner = player.username === league.owner_username;
+                  const position = player.position;
                   
                   return (
-                    <tr 
+                    <tr
                       key={player.username}
-                      className={`transition-all ${
-                        isCurrentUser 
-                          ? "bg-pitch-green/10 border-l-4 border-pitch-green" 
-                          : "hover:bg-paper"
-                      }`}
+                      className={`${getRowStyle(position, isCurrentUser)} border-b border-paper transition-colors`}
                     >
-                      <td className="px-4 py-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                          index === 0 ? "bg-yellow-400 text-yellow-900" :
-                          index === 1 ? "bg-gray-300 text-gray-700" :
-                          index === 2 ? "bg-amber-600 text-white" :
-                          "bg-paper text-text-secondary"
+                      {/* Posição */}
+                      <td className="px-3 py-4">
+                        <span className={`text-lg font-bold ${
+                          position === 1 ? "text-yellow-600" :
+                          position === 2 ? "text-gray-500" :
+                          position === 3 ? "text-amber-700" :
+                          "text-text-secondary"
                         }`}>
-                          {player.position}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold ${
-                            isCurrentUser ? "text-pitch-green" : "text-text-primary"
-                          }`}>
-                            {player.username}
-                          </span>
-                          {isCurrentUser && (
-                            <span className="text-xs bg-pitch-green/20 text-pitch-green px-2 py-0.5 rounded-full">
-                              você
-                            </span>
-                          )}
-                          {isLeader && (
-                            <Crown size={16} weight="fill" className="text-yellow-500" />
-                          )}
-                          {player.username === league.owner_username && (
-                            <span className="text-xs text-yellow-600" title="Dono da liga">👑</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <span className="font-bold text-text-primary text-lg">
-                          {player.total_points}
+                          {position}º
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Target size={14} className="text-orange-500" />
-                          <span className="text-text-secondary">{player.exact_scores}</span>
+                      
+                      {/* Nome do usuário - clicável para ver palpites */}
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openUserModal(player.username)}
+                            className={`font-semibold hover:underline flex items-center gap-1 ${isCurrentUser ? "text-pitch-green" : "text-text-primary"}`}
+                            title="Ver palpites"
+                          >
+                            {player.username}
+                            <Eye size={14} className="opacity-50" />
+                          </button>
+                          {isLeagueOwner && (
+                            <span title="Dono da Liga" className="cursor-help">
+                              <Crown size={14} weight="fill" className="text-yellow-500" />
+                            </span>
+                          )}
+                          {isCurrentUser && (
+                            <span className="text-xs bg-pitch-green/20 text-pitch-green px-2 py-0.5 rounded-full font-medium">
+                              Você
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-center text-text-secondary">
-                        {player.total_predictions}
+                      
+                      {/* Pontos */}
+                      <td className="px-3 py-4 text-center">
+                        <span className="text-lg font-bold text-pitch-green">
+                          {player.total_points || player.points || 0}
+                        </span>
                       </td>
-                      <td className="px-4 py-4 text-center">
-                        <button
-                          onClick={() => openUserPredictions(player.username)}
-                          data-testid={`view-predictions-${player.username}`}
-                          className="inline-flex items-center gap-1 text-xs bg-paper hover:bg-gray-200 text-text-secondary px-3 py-1.5 rounded-lg transition-all"
-                          title="Ver palpites"
-                        >
-                          <Eye size={14} />
-                          Ver
-                        </button>
+                      
+                      {/* Resultados */}
+                      <td className="px-3 py-4 text-center text-text-primary hidden sm:table-cell">
+                        {player.correct_results || 0}
+                      </td>
+                      
+                      {/* Gols Casa */}
+                      <td className="px-3 py-4 text-center text-text-primary hidden md:table-cell">
+                        {player.correct_home_goals || 0}
+                      </td>
+                      
+                      {/* Gols Visitante */}
+                      <td className="px-3 py-4 text-center text-text-primary hidden md:table-cell">
+                        {player.correct_away_goals || 0}
+                      </td>
+                      
+                      {/* Placares Exatos */}
+                      <td className="px-3 py-4 text-center">
+                        <span className="font-semibold text-orange-500">
+                          {player.exact_scores || 0}
+                        </span>
+                      </td>
+                      
+                      {/* Total Palpites */}
+                      <td className="px-3 py-4 text-center text-text-primary hidden sm:table-cell">
+                        {player.total_predictions || 0}
+                      </td>
+                      
+                      {/* Aproveitamento */}
+                      <td className="px-3 py-4 text-center hidden lg:table-cell">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`font-semibold text-sm ${
+                            (player.efficiency || 0) >= 70 ? "text-green-600" :
+                            (player.efficiency || 0) >= 50 ? "text-yellow-600" : "text-red-500"
+                          }`}>
+                            {player.efficiency || 0}%
+                          </span>
+                          <div className="w-12 h-2 bg-gray-200 rounded-full overflow-hidden hidden xl:block">
+                            <div 
+                              className={`h-full rounded-full ${
+                                (player.efficiency || 0) >= 70 ? "bg-green-500" :
+                                (player.efficiency || 0) >= 50 ? "bg-yellow-500" : "bg-red-500"
+                              }`}
+                              style={{ width: `${player.efficiency || 0}%` }}
+                            />
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              ) : (
+                <tr>
+                  <td colSpan="9" className="px-4 py-8 text-center text-text-secondary">
+                    {viewMode === "rodada" 
+                      ? "Nenhum palpite registrado nesta rodada ainda."
+                      : "Nenhum participante com palpites ainda."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Botão Sair da Liga (se não for dono) */}
+      {/* Legenda das Colunas */}
+      <div className="bg-white rounded-xl p-4 shadow-lg border-2 border-paper">
+        <div className="flex items-center gap-2 mb-2 text-text-secondary">
+          <span className="text-sm font-semibold">📊 Legenda das Colunas</span>
+        </div>
+        <p className="text-xs text-text-secondary">
+          <strong>Res.</strong> = V/E/D &nbsp;
+          <strong>Casa</strong> = Gols mandante &nbsp;
+          <strong>Vis.</strong> = Gols visitante &nbsp;
+          <span className="text-orange-500"><strong>Exato</strong></span> = Placares exatos &nbsp;
+          <strong>%</strong> = Aproveitamento
+        </p>
+      </div>
+
+      {/* Botão Sair da Liga */}
       {isMember && !isOwner && (
         <div className="flex justify-center">
           <button
@@ -374,113 +514,13 @@ export default function LeagueDetailPage({ username }) {
         </div>
       )}
 
-      {/* Modal de Palpites do Usuário */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-pitch-green to-emerald-600 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-white">
-                <Eye size={24} />
-                <div>
-                  <h3 className="font-heading font-bold">Palpites de {selectedUser}</h3>
-                  <p className="text-white/80 text-sm">Apenas jogos finalizados são exibidos</p>
-                </div>
-              </div>
-              <button
-                onClick={closeUserPredictions}
-                className="text-white/80 hover:text-white transition-all"
-              >
-                <X size={24} weight="bold" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {loadingPredictions ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-8 h-8 border-4 border-pitch-green border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-text-secondary">Carregando palpites...</p>
-                </div>
-              ) : userPredictions.length === 0 ? (
-                <div className="text-center py-8">
-                  <SoccerBall size={48} className="text-text-secondary mx-auto mb-4" />
-                  <p className="text-text-secondary">Nenhum palpite disponível para exibição</p>
-                  <p className="text-xs text-text-secondary mt-2">
-                    Palpites só aparecem após o jogo terminar
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {userPredictions.map((pred, index) => (
-                    <div 
-                      key={index}
-                      className={`p-4 rounded-xl border-2 ${
-                        pred.is_finished 
-                          ? pred.points === 5 
-                            ? "bg-green-50 border-green-200" 
-                            : pred.points >= 3 
-                              ? "bg-yellow-50 border-yellow-200"
-                              : pred.points > 0
-                                ? "bg-blue-50 border-blue-200"
-                                : "bg-gray-50 border-gray-200"
-                          : "bg-paper border-paper"
-                      }`}
-                    >
-                      {pred.is_finished ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 text-sm text-text-secondary mb-1">
-                              <span>Rodada {pred.round_number}</span>
-                              {pred.points === 5 && (
-                                <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                                  <Star size={10} weight="fill" />
-                                  EXATO
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-semibold text-text-primary">
-                                {pred.home_team}
-                              </span>
-                              <span className="font-bold text-pitch-green">
-                                {pred.home_prediction} x {pred.away_prediction}
-                              </span>
-                              <span className="font-semibold text-text-primary">
-                                {pred.away_team}
-                              </span>
-                            </div>
-                            <div className="text-xs text-text-secondary mt-1">
-                              Resultado: {pred.home_score} x {pred.away_score}
-                            </div>
-                          </div>
-                          <div className={`text-2xl font-bold ${
-                            pred.points === 5 ? "text-green-600" :
-                            pred.points >= 3 ? "text-yellow-600" :
-                            pred.points > 0 ? "text-blue-600" : "text-gray-400"
-                          }`}>
-                            +{pred.points || 0}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-text-secondary text-sm">Rodada {pred.round_number}</p>
-                            <p className="font-semibold text-text-primary">
-                              {pred.home_team} x {pred.away_team}
-                            </p>
-                          </div>
-                          <span className="bg-paper text-text-secondary px-3 py-1 rounded-full text-sm font-semibold">
-                            Oculto
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de Palpites do Usuário - Reutilizando componente do FREE */}
+      <UserPredictionsModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        targetUsername={selectedUser}
+        championshipId={league?.championship_id}
+      />
     </div>
   );
 }
