@@ -253,7 +253,7 @@ export default function LeaguesPage({ username }) {
           }`}
         >
           <SignIn size={20} weight={activeTab === "entrar" ? "fill" : "regular"} />
-          Entrar
+          Entrar em uma liga
         </button>
       </div>
 
