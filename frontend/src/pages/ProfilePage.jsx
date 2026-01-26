@@ -647,6 +647,16 @@ export default function ProfilePage({ username }) {
               <option value="premier_league">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
               <option value="libertadores">🏆 Libertadores</option>
               <option value="champions_league">⭐ Champions League</option>
+              {/* Ligas do usuário */}
+              {userLeagues.length > 0 && (
+                <optgroup label="👥 Minhas Ligas">
+                  {userLeagues.map(league => (
+                    <option key={league.league_id} value={`league_${league.league_id}`}>
+                      👥 {league.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
 
             {/* Filtro de Rodada */}
