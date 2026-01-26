@@ -384,6 +384,15 @@ export default function RankingsPage({ username }) {
           <strong>Desempate:</strong> 1º Placares exatos → 2º Acertos de resultado
         </p>
       </div>
+      
+      {/* Modal de Palpites do Usuário */}
+      <UserPredictionsModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        targetUsername={selectedUser}
+        championshipId={selectedChampionship}
+        currentUsername={username}
+      />
     </div>
   );
 }
