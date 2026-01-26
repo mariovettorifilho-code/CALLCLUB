@@ -177,10 +177,23 @@ export default function ProfilePage({ username }) {
   const levelProgress = getLevelProgress(user.total_points || 0);
   const isPremium = user.plan === "premium" || user.plan === "vip" || user.is_premium;
 
-  // Filtra palpites por campeonato primeiro
+  // Filtra palpites por campeonato ou liga
   const filteredByChampionship = selectedChampionship === "all"
     ? predictions
-    : predictions.filter(p => p.championship === selectedChampionship);
+    : selectedChampionship.startsWith("league_")
+      // Filtro por liga - busca palpites do campeonato da liga
+      ? (() => {
+          const leagueId = selectedChampionship.replace("league_", "");
+          const league = userLeagues.find(l => l.league_id === leagueId);
+          if (!league) return [];
+          return predictions.filter(p => 
+            (p.championship_id || p.championship) === league.championship_id
+          );
+        })()
+      // Filtro por campeonato direto
+      : predictions.filter(p => 
+          (p.championship_id || p.championship) === selectedChampionship
+        );
 
   // Depois filtra por rodada
   const filteredPredictions = selectedRound === "all" 
