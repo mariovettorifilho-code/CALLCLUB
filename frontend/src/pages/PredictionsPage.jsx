@@ -420,7 +420,8 @@ export default function PredictionsPage({ username }) {
           </div>
         ) : (
           matches.map((match) => {
-            const locked = isMatchLocked(match);
+            const matchStatus = getMatchStatus(match);
+            const locked = matchStatus.status !== "open";
             const pred = predictions[match.match_id] || {};
             const hasPrediction = pred.home !== undefined && pred.away !== undefined;
             const timeRemaining = getTimeRemaining(match.match_date);
@@ -431,7 +432,9 @@ export default function PredictionsPage({ username }) {
                 key={match.match_id}
                 data-testid={`match-${match.match_id}`}
                 className={`bg-white rounded-xl p-6 shadow-lg border-2 transition-all ${
-                  locked ? "border-gray-200 bg-gray-50" : "border-paper hover:border-pitch-green"
+                  match.is_finished ? "border-gray-200 bg-gray-50" :
+                  locked ? "border-orange-200 bg-orange-50/30" : 
+                  "border-paper hover:border-pitch-green"
                 }`}
               >
                 {/* Header do Jogo */}
@@ -441,15 +444,25 @@ export default function PredictionsPage({ username }) {
                     <span>{formatMatchDate(match.match_date)}</span>
                   </div>
                   
-                  {locked ? (
-                    <div className="flex items-center gap-1 text-error text-sm font-medium">
-                      <Lock size={16} weight="bold" />
-                      <span>Palpites fechados</span>
+                  {match.is_finished ? (
+                    <div className="flex items-center gap-1 text-gray-500 text-sm font-medium">
+                      <Check size={16} weight="bold" />
+                      <span>Finalizado</span>
                     </div>
-                  ) : timeRemaining && (
+                  ) : locked ? (
+                    <div className="flex items-center gap-1 text-orange-500 text-sm font-medium">
+                      <Lock size={16} weight="bold" />
+                      <span>Em andamento</span>
+                    </div>
+                  ) : timeRemaining ? (
                     <div className="flex items-center gap-1 text-warning text-sm font-medium">
                       <Fire size={16} weight="fill" />
                       <span>Fecha em {timeRemaining}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 text-green-500 text-sm font-medium">
+                      <LockOpen size={16} weight="bold" />
+                      <span>Aberto</span>
                     </div>
                   )}
                 </div>
