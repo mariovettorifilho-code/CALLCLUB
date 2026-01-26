@@ -1,0 +1,131 @@
+{
+  "summary": "CallClub V1.1.2 - All 7 features tested and working correctly. WhatsApp 'Convidar' button appears on all league cards with correct green styling, Serie A games load properly (25 games, 5 rounds), Os Boleiros ranking shows Mario and Marcos with points, championship selector shows league names (e.g., 'Serie A (Os Boleiros) 👥'), and Profile page has league filter in history section.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Console",
+        "issues": ["React key warning: 'Encountered two children with the same key brasileirao' - Minor issue due to duplicate championship entries (national + league). Does not affect functionality."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_v112_features.py",
+    "/app/backend/tests/test_leagues_api.py",
+    "/app/test_reports/pytest/pytest_v112_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: React key warning in PredictionsPage.jsx due to duplicate 'brasileirao' entries (national + league access). Consider using a unique key like `${champ.championship_id}_${champ.access_type}_${champ.league_id || 'national'}` to avoid the warning."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_leagues_api.py",
+    "/app/backend/tests/test_v112_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 tests passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "mario_premium": {"username": "Mario", "pin": "2412", "role": "Owner of 2 leagues"},
+    "marcos_premium": {"username": "Marcos", "pin": "6969", "role": "Member of 2 leagues (not owner)"}
+  },
+  "seed_data_creation": "Serie A games (25 matches, 5 rounds) and predictions for Mario/Marcos already seeded by main agent",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "V1.1.2 features fully tested. All features working: 1) WhatsApp 'Convidar' button on league cards with green bg-green-500 styling, 2) Serie A games load correctly (5 matches per round, 5 rounds), 3) Os Boleiros ranking shows Marcos (15 pts, 1st) and Mario (14 pts, 2nd), 4) Championship selector shows league names (e.g., 'Serie A (Os Boleiros) 👥'), 5) Profile page has 'Minhas Ligas' optgroup with Liga dos Crias and Os Boleiros, 6) WhatsApp URL format: https://api.whatsapp.com/send?text=... with emoji ⚽, league name, code, and site link.",
+  "tests_executed": [
+    {
+      "category": "Backend API Tests - V1.1.2 Features",
+      "tests": [
+        {"test": "GET /api/matches/1?championship_id=serie_a", "result": "PASS - Returns 5 Serie A matches", "status": "✅"},
+        {"test": "GET /api/matches/2?championship_id=serie_a", "result": "PASS - Returns 5 Serie A matches", "status": "✅"},
+        {"test": "GET /api/rounds/all?championship_id=serie_a", "result": "PASS - Returns 5+ rounds", "status": "✅"},
+        {"test": "GET /api/leagues/57455f18 (Os Boleiros)", "result": "PASS - Returns ranking with Mario and Marcos", "status": "✅"},
+        {"test": "GET /api/predictions/Mario?championship_id=serie_a&round_number=1", "result": "PASS - Returns 5 predictions", "status": "✅"},
+        {"test": "GET /api/predictions/Marcos?championship_id=serie_a&round_number=1", "result": "PASS - Returns 5 predictions", "status": "✅"},
+        {"test": "GET /api/user/Mario/accessible-championships", "result": "PASS - Returns Serie A with league_name='Os Boleiros'", "status": "✅"},
+        {"test": "GET /api/user/Marcos/accessible-championships", "result": "PASS - Returns 3+ championships with league names", "status": "✅"},
+        {"test": "League invite codes format", "result": "PASS - 6 uppercase characters", "status": "✅"},
+        {"test": "Liga dos Crias invite code", "result": "PASS - Code is '1RFA1C'", "status": "✅"},
+        {"test": "Os Boleiros invite code", "result": "PASS - Code is 'XTL7V5'", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - WhatsApp Button",
+      "tests": [
+        {"test": "WhatsApp 'Convidar' button on Liga dos Crias", "result": "PASS - Button visible with green styling", "status": "✅"},
+        {"test": "WhatsApp 'Convidar' button on Os Boleiros", "result": "PASS - Button visible with green styling", "status": "✅"},
+        {"test": "WhatsApp button text", "result": "PASS - Shows 'Convidar'", "status": "✅"},
+        {"test": "WhatsApp button color", "result": "PASS - Has bg-green-500 class", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Serie A Games",
+      "tests": [
+        {"test": "Serie A matches load in PredictionsPage", "result": "PASS - 5 matches visible", "status": "✅"},
+        {"test": "Championship selector shows 'Serie A (Os Boleiros) 👥'", "result": "PASS - League name visible", "status": "✅"},
+        {"test": "Serie A teams visible", "result": "PASS - Lazio, Fiorentina, Napoli, Bologna, Roma, Atalanta", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Os Boleiros Ranking",
+      "tests": [
+        {"test": "Os Boleiros league detail page loads", "result": "PASS - Shows 2 members, Rodada 2 Atual", "status": "✅"},
+        {"test": "Ranking shows Marcos (1st, 15 pts)", "result": "PASS - All columns visible", "status": "✅"},
+        {"test": "Ranking shows Mario (2nd, 14 pts)", "result": "PASS - All columns visible", "status": "✅"},
+        {"test": "Ranking columns: Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, %", "result": "PASS - All 9 columns present", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Profile League Filter",
+      "tests": [
+        {"test": "Profile page championship filter exists", "result": "PASS - Filter found", "status": "✅"},
+        {"test": "'Minhas Ligas' optgroup in filter", "result": "PASS - Optgroup visible", "status": "✅"},
+        {"test": "'Liga dos Crias' in filter options", "result": "PASS - Option visible", "status": "✅"},
+        {"test": "'Os Boleiros' in filter options", "result": "PASS - Option visible", "status": "✅"}
+      ]
+    }
+  ],
+  "verified_features": [
+    "1. Botão 'Convidar' (WhatsApp) aparece em todos os cards de liga ✅",
+    "2. Botão WhatsApp abre link correto com mensagem formatada (https://api.whatsapp.com/send?text=...) ✅",
+    "3. Jogos da Serie A carregam na página de palpites quando selecionado ✅",
+    "4. Ranking Liga Os Boleiros (Serie A) tem dados (Marcos 15pts, Mario 14pts) ✅",
+    "5. Seletor de campeonato mostra nome da liga (ex: Serie A (Os Boleiros)) ✅",
+    "6. ProfilePage tem filtro de ligas no select de histórico ✅",
+    "7. API /api/matches/1?championship_id=serie_a retorna jogos ✅"
+  ],
+  "whatsapp_url_format": {
+    "base_url": "https://api.whatsapp.com/send?text=",
+    "message_format": "⚽ Entra na minha liga no CallClub!\n\n🏆 Liga: {league_name}\n📋 Código: {invite_code}\n\n👉 Acesse: {site_url}/leagues\n\nBora palpitar juntos! 🔥",
+    "example": "https://api.whatsapp.com/send?text=%E2%9A%BD%20Entra%20na%20minha%20liga%20no%20CallClub!%0A%0A%F0%9F%8F%86%20Liga%3A%20Os%20Boleiros%0A%F0%9F%93%8B%20C%C3%B3digo%3A%20XTL7V5%0A%0A%F0%9F%91%89%20Acesse%3A%20https%3A%2F%2Fpredictchamp-4.preview.emergentagent.com%2Fleagues%0A%0ABora%20palpitar%20juntos!%20%F0%9F%94%A5"
+  },
+  "leagues_data": {
+    "liga_dos_crias": {
+      "league_id": "2087b6f7",
+      "name": "Liga dos Crias",
+      "invite_code": "1RFA1C",
+      "championship": "brasileirao",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos", "João", "Carlos"]
+    },
+    "os_boleiros": {
+      "league_id": "57455f18",
+      "name": "Os Boleiros",
+      "invite_code": "XTL7V5",
+      "championship": "serie_a",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos"],
+      "ranking": [
+        {"position": 1, "username": "Marcos", "total_points": 15, "exact_scores": 2, "efficiency": "60%"},
+        {"position": 2, "username": "Mario", "total_points": 14, "exact_scores": 1, "efficiency": "56%"}
+      ]
+    }
+  }
+}
