@@ -1,0 +1,105 @@
+{
+  "summary": "CallClub V1.1.1 - UX Adjustments for Private Leagues. All 8 features tested and working correctly. League detail page has tabs Geral/Por Rodada identical to FREE championship, ranking shows all required columns (Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, %), modal de palpites works, championship selectors show league names, LeaguesPage shows 'Ligas que participo' for non-owners.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_leagues_api.py",
+    "/app/test_reports/pytest/pytest_leagues_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "mario_premium": {"username": "Mario", "pin": "2412", "role": "Owner of 2 leagues"},
+    "marcos_premium": {"username": "Marcos", "pin": "6969", "role": "Member of 2 leagues (not owner)"},
+    "joao_premium": {"username": "João", "pin": "1234", "role": "Member of Liga dos Crias only"}
+  },
+  "seed_data_creation": "No new seed data created",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "V1.1.1 UX improvements fully tested. All features working: 1) Championship selectors show league names (e.g., 'Campeonato Brasileiro (Liga dos Crias)'), 2) LeagueDetailPage has tabs Geral/Por Rodada with same columns as FREE, 3) Modal de palpites works when clicking on users in league ranking, 4) Round selector works in Por Rodada tab, 5) LeaguesPage shows 'Ligas que participo' for non-owners like Marcos, 6) API returns league_name and league_id in accessible-championships, 7) League ranking includes detailed stats (correct_results, correct_home_goals, correct_away_goals, efficiency).",
+  "tests_executed": [
+    {
+      "category": "Backend API Tests",
+      "tests": [
+        {"test": "GET /api/user/Mario/accessible-championships", "result": "PASS - Returns championships with league_name and league_id for league-based access", "status": "✅"},
+        {"test": "GET /api/user/Marcos/accessible-championships", "result": "PASS - Returns 3 items: national + 2 leagues", "status": "✅"},
+        {"test": "GET /api/user/João/accessible-championships", "result": "PASS - Returns 2 items: national + Liga dos Crias", "status": "✅"},
+        {"test": "GET /api/leagues/2087b6f7 (Liga dos Crias)", "result": "PASS - Returns ranking with correct_results, correct_home_goals, correct_away_goals, efficiency", "status": "✅"},
+        {"test": "GET /api/leagues/57455f18 (Os Boleiros)", "result": "PASS - Returns ranking for Serie A league", "status": "✅"},
+        {"test": "GET /api/leagues/user/Marcos", "result": "PASS - Returns 2 leagues (member but not owner)", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - Championship Selectors",
+      "tests": [
+        {"test": "PredictionsPage championship selector shows league names", "result": "PASS - Shows 'Liga dos Crias' and 'Os Boleiros' in dropdown", "status": "✅"},
+        {"test": "RankingsPage championship selector shows league names", "result": "PASS - Shows 'Campeonato Brasileiro (Liga dos Crias)' and 'Serie A (Os Boleiros)' as buttons", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - LeagueDetailPage",
+      "tests": [
+        {"test": "Tabs Geral and Por Rodada present", "result": "PASS - Both tabs visible with data-testid", "status": "✅"},
+        {"test": "Ranking columns: Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, %", "result": "PASS - All 9 columns present", "status": "✅"},
+        {"test": "Round selector in Por Rodada tab", "result": "PASS - Selector with data-testid='round-selector-liga' found", "status": "✅"},
+        {"test": "Modal de palpites on user click", "result": "PASS - Clicking on Marcos opens modal showing his predictions", "status": "✅"},
+        {"test": "Sair da Liga button for non-owner", "result": "PASS - Button visible for Marcos (non-owner)", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - LeaguesPage",
+      "tests": [
+        {"test": "Marcos sees 'Ligas que participo' section", "result": "PASS - Section visible with both leagues", "status": "✅"},
+        {"test": "Marcos does NOT see 'Ligas que criei' section", "result": "PASS - Section not shown (correct - he's not an owner)", "status": "✅"},
+        {"test": "Both leagues visible for Marcos", "result": "PASS - Liga dos Crias and Os Boleiros shown", "status": "✅"}
+      ]
+    },
+    {
+      "category": "Frontend UI Tests - RankingsPage",
+      "tests": [
+        {"test": "Tabs Geral and Por Rodada present", "result": "PASS - Both tabs visible", "status": "✅"},
+        {"test": "Round selector in Por Rodada tab", "result": "PASS - Selector found", "status": "✅"}
+      ]
+    }
+  ],
+  "verified_features": [
+    "1. Seletores de campeonato mostram nome da liga (ex: 'Campeonato Brasileiro (Liga dos Crias)') ✅",
+    "2. Página de detalhes da liga (/leagues/:id) tem tabs Geral e Por Rodada ✅",
+    "3. Ranking da liga tem mesmas colunas: Pos, Palpiteiro, Pts, Res, Casa, Vis, Exato, Palp, % ✅",
+    "4. Modal de palpites funciona na classificação da liga (clicar em outro usuário) ✅",
+    "5. Seletor de rodada funciona na tab Por Rodada ✅",
+    "6. LeaguesPage mostra 'Ligas que criei' E 'Ligas que participo' separadamente ✅",
+    "7. API GET /api/leagues/{id} retorna ranking com estatísticas detalhadas ✅",
+    "8. API GET /api/user/{username}/accessible-championships inclui league_name e league_id ✅"
+  ],
+  "leagues_data": {
+    "liga_dos_crias": {
+      "league_id": "2087b6f7",
+      "name": "Liga dos Crias",
+      "invite_code": "1RFA1C",
+      "championship": "brasileirao",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos", "João", "Carlos"]
+    },
+    "os_boleiros": {
+      "league_id": "57455f18",
+      "name": "Os Boleiros",
+      "invite_code": "XTL7V5",
+      "championship": "serie_a",
+      "owner": "Mario",
+      "members": ["Mario", "Marcos"]
+    }
+  }
+}
