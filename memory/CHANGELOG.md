@@ -1,5 +1,49 @@
 # CallClub - Changelog
 
+## [1.1.0] - 2026-01-26
+
+### 🏷️ V1.1 - Ligas Privadas (UI Completa)
+
+**Status:** ✅ IMPLEMENTADO E TESTADO  
+**Escopo:** UI de Ligas Privadas para usuários PREMIUM
+
+---
+
+### ✨ Novas Funcionalidades
+
+#### UI de Ligas Privadas
+- **LeaguesPage.jsx**: Página principal com 3 tabs
+  - Minhas Ligas: lista de ligas criadas e participadas
+  - Criar Liga: formulário com nome e campeonato
+  - Entrar: input de código de convite
+- **LeagueDetailPage.jsx**: Detalhes da liga com ranking em tempo real
+- Copiar código de convite com feedback visual
+- Badge "Dono" para criador da liga
+- Contador de ligas (X/2) para usuários PREMIUM
+- Tela de bloqueio para usuários FREE
+
+#### Navegação
+- Novo item "Ligas" no menu principal
+- Rotas /leagues e /leagues/:leagueId
+
+---
+
+### 📊 Dados de Teste Atualizados
+
+| Liga | Código | Campeonato | Membros |
+|------|--------|------------|---------|
+| Liga dos Crias | 1RFA1C | Brasileirão | Mario, Marcos, João |
+| Os Boleiros | XTL7V5 | Serie A | Mario, Marcos |
+
+---
+
+### 🧪 Testes
+
+- **Backend:** 12/12 testes passaram (100%)
+- **Frontend:** Todos os fluxos validados
+
+---
+
 ## [1.0.0] - 2026-01-26
 
 ### 🏷️ V1.0 - Base Estável e Fechada
