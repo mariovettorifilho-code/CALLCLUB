@@ -1,5 +1,59 @@
 # CallClub - Changelog
 
+## [1.1.2] - 2026-01-26
+
+### 🏷️ V1.1.2 - Compartilhamento WhatsApp + Serie A
+
+**Status:** ✅ IMPLEMENTADO E TESTADO (100% backend, 100% frontend)  
+**Escopo:** Botão compartilhar liga via WhatsApp + jogos Serie A seedados
+
+---
+
+### ✨ Novas Funcionalidades
+
+#### Botão "Convidar" via WhatsApp
+- **Localização:** Cards de liga na LeaguesPage e LeagueDetailPage
+- **Cor:** Verde (bg-green-500) com ícone WhatsApp
+- **Mensagem formatada:**
+  ```
+  ⚽ Entra na minha liga no CallClub!
+  
+  🏆 Liga: {nome_liga}
+  📋 Código: {codigo}
+  
+  👉 Acesse: {url}/leagues
+  
+  Bora palpitar juntos! 🔥
+  ```
+
+#### Serie A Seedada
+- 25 jogos criados (5 rodadas × 5 jogos)
+- Rodada 1 finalizada com resultados
+- Palpites de Mario e Marcos para validação
+- Liga "Os Boleiros" agora tem ranking funcional
+
+#### Filtro de Ligas no Perfil
+- ProfilePage agora tem optgroup "👥 Minhas Ligas"
+- Usuário pode filtrar histórico por liga específica
+
+---
+
+### 🐛 Correções
+
+- Corrigido warning de React key duplicada no PredictionsPage
+- Key agora usa: `${championship_id}_${access_type}_${league_id || idx}`
+
+---
+
+### 📊 Dados de Teste Atualizados
+
+| Liga | Código | Campeonato | Ranking |
+|------|--------|------------|---------|
+| Liga dos Crias | 1RFA1C | Brasileirão | Mario (20pts) > Marcos (17pts) |
+| Os Boleiros | XTL7V5 | Serie A | Marcos (15pts) > Mario (14pts) |
+
+---
+
 ## [1.1.1] - 2026-01-26
 
 ### 🏷️ V1.1.1 - Ajustes de UX nas Ligas Privadas
