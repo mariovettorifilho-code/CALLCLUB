@@ -33,7 +33,8 @@ export default function LeaguesPage({ username }) {
       const [userRes, leaguesRes, champsRes] = await Promise.all([
         axios.get(`${API}/user/${username}`),
         axios.get(`${API}/leagues/user/${username}`),
-        axios.get(`${API}/user/${username}/accessible-championships`)
+        // Usa endpoint de campeonatos OFICIAIS para criar liga
+        axios.get(`${API}/user/${username}/official-championships`)
       ]);
       
       setUserInfo(userRes.data);
