@@ -113,14 +113,22 @@
 ### Palpites
 - [x] Fazer palpites antes do jogo começar
 - [x] Editar palpites (antes do jogo)
+- [x] **Bloqueio automático 1 minuto após início do jogo**
 - [x] Ver palpites populares
 - [x] Histórico de palpites no perfil
 
 ### Classificação
 - [x] Classificação Geral (soma do campeonato)
 - [x] Classificação Por Rodada
+- [x] **Atualização imediata após cada jogo finalizado**
 - [x] Mesmas colunas em ambas visões
 - [x] Badge Premium discreto (💎)
+- [x] **Clique no nome para ver palpites do usuário**
+
+### Transparência de Palpites
+- [x] **Modal de palpites de outros usuários**
+- [x] **Palpites só visíveis após jogo finalizado**
+- [x] **Jogos não finalizados mostram "Oculto"**
 
 ### Perfil
 - [x] Estatísticas do usuário
@@ -133,7 +141,7 @@
 - [x] Gerenciar usuários e planos
 - [x] Sincronizar partidas da API
 - [x] Definir resultados manualmente
-- [x] Recalcular pontuações
+- [x] **Cálculo automático de pontos ao finalizar jogo**
 - [x] Ver campeonatos cadastrados
 
 ### Ligas (estrutura pronta)
