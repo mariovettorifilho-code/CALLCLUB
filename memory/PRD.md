@@ -1,9 +1,10 @@
 # CallClub - Product Requirements Document
 ## 🏷️ Versão 1.0 (V1) - FINAL
 
-**Status:** ✅ V1 CONSOLIDADA  
-**Data:** 26/01/2026  
-**Ambiente:** Produção Ready
+**Status:** ✅ V1 CONSOLIDADA E FECHADA  
+**Data de Consolidação:** 26/01/2026  
+**Ambiente:** Produção Ready  
+**Escopo:** 🔒 LOCKED - Não adicionar features sem avançar para V1.1
 
 ---
 
@@ -147,6 +148,27 @@
 ### Ligas (estrutura pronta)
 - [x] Backend: criar, entrar, sair, ranking
 - [ ] Frontend: UI de gerenciamento (V1.1)
+
+---
+
+## 6.1 Features de Tempo Real (V1) 🔒
+
+### Travamento de Palpites
+- [x] **Bloqueio automático 1 minuto após início do jogo**
+- [x] Verificação em tempo real no frontend
+- [x] Bloqueio no backend (dupla validação)
+- [x] UI indica visualmente jogos travados
+
+### Atualização de Rankings
+- [x] **Pontos calculados imediatamente após jogo finalizado**
+- [x] Não aguarda fim da rodada
+- [x] Trigger automático no endpoint `/api/admin/matches/update`
+
+### Transparência de Palpites
+- [x] **Modal para ver palpites de outros usuários**
+- [x] Clique no nome na classificação abre modal
+- [x] **Regra de segurança:** só exibe palpites de jogos finalizados
+- [x] Jogos não finalizados mostram "Oculto"
 
 ---
 

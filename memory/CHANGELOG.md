@@ -2,9 +2,10 @@
 
 ## [1.0.0] - 2026-01-26
 
-### 🏷️ V1.0 - Base Estável
+### 🏷️ V1.0 - Base Estável e Fechada
 
-**Status:** ✅ Consolidado | Produção Ready
+**Status:** ✅ CONSOLIDADO E FECHADO  
+**Escopo:** 🔒 LOCKED - Próximas alterações serão V1.1
 
 ---
 
@@ -38,6 +39,16 @@
 - Sincronização de partidas
 - Definição manual de resultados
 - Recálculo de pontuações
+
+#### Sistema de Tempo Real (Game-by-Game)
+- **Travamento de palpites:** Bloqueio automático 1 minuto após início do jogo
+- **Cálculo imediato:** Pontos calculados quando jogo é marcado como finalizado
+- **Ranking live:** Classificação atualizada jogo a jogo, não por rodada
+
+#### Transparência de Palpites
+- **Modal de visualização:** Clique no nome do usuário na classificação
+- **Regra de privacidade:** Palpites só visíveis após jogo finalizado
+- **Proteção:** Jogos não finalizados exibem "Oculto"
 
 ---
 

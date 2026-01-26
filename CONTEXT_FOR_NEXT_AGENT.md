@@ -1,187 +1,240 @@
-# CallClub - Context for Next Agent
-## 🏷️ Versão 1.0 (V1) - Estado Consolidado
+# CallClub - Contexto para Próximo Agente
 
-**Última atualização:** 26/01/2026  
-**Status:** Produção Ready
+## 🏷️ Versão: 1.0 (V1) - FINAL
+**Data de Consolidação:** 26/01/2026  
+**Status:** ✅ Estável | Produção Ready
 
 ---
 
 ## 1. Visão Geral do Produto
 
-**CallClub** é uma plataforma de palpites esportivos que começou como um projeto entre amigos brasileiros e evoluiu para uma arquitetura global escalável.
+**CallClub** é uma plataforma de palpites esportivos focada em futebol, onde usuários fazem previsões de placares, competem em rankings e podem criar ligas privadas com amigos.
 
-### Propósito
-- Permitir usuários fazerem palpites em partidas de futebol
-- Competir em classificações com amigos
-- Criar ligas privadas para grupos específicos
+### Modelo de Negócio
+- **Freemium** com 3 níveis de plano
+- Foco inicial: mercado brasileiro
+- Visão futura: expansão global multi-esporte
 
-### Fase Atual
-- **Beta fechado** com amigos próximos
-- Todos os beta testers têm plano PREMIUM
-- Foco em validação e refinamento
-
----
-
-## 2. Decisões de Negócio 🔒
-
-### 2.1 Modelo de Planos
-```
-FREE     → Campeonato nacional do país (automático por IP)
-PREMIUM  → +2 campeonatos extras + criar até 2 ligas
-VIP      → Ilimitado (não implementar ainda)
-```
-
-**Decisão:** Beta testers são PREMIUM por padrão para testar todas as features.
-
-### 2.2 Campeonato Carioca
-**REMOVIDO** da V1. Decisão estratégica de focar em campeonatos nacionais de cada país, não regionais.
-
-### 2.3 Sistema de Pontuação
-```
-3 pts = Resultado correto (V/E/D)
-+1 pt = Gols do mandante correto
-+1 pt = Gols do visitante correto
-= 5 pts máximo (placar exato)
-```
-
-**Desempate:** 1º placares exatos → 2º acertos de resultado
+### Público-Alvo Atual
+- Beta testers (amigos próximos do fundador)
+- Todos os beta testers têm plano PREMIUM automaticamente
 
 ---
 
-## 3. O que NÃO deve ser mudado sem validação ⚠️
+## 2. Decisões de Negócio Tomadas (V1)
 
-### 3.1 Regras de Pontuação
-- Sistema de 3+1+1 pontos está validado
-- Critérios de desempate estão definidos
-- **Não alterar** sem aprovação explícita do PO
+### ✅ Aprovadas e Implementadas
 
-### 3.2 Estrutura de Planos
-- FREE/PREMIUM/VIP está definido
-- Limites de ligas (0/2/ilimitado) estão fixos
-- **Não criar** novos planos sem validação
+| Decisão | Justificativa |
+|---------|---------------|
+| Remover Campeonato Carioca | Foco em campeonatos nacionais principais |
+| Plano FREE = campeonato do país | Aumenta adesão inicial sem custo |
+| Beta testers = PREMIUM | Permite testar todas funcionalidades |
+| Travamento 1 min após início | Previne palpites após ver o jogo começar |
+| Pontos calculados por jogo | Rankings atualizados em tempo real |
+| Palpites visíveis só após jogo | Transparência sem spoilers |
 
-### 3.3 Autenticação
-- Login por nome + PIN de 4 dígitos
-- Lista de usuários autorizados no backend
-- **Não implementar** cadastro público sem validação
+### ❌ Rejeitadas/Adiadas
 
-### 3.4 Credenciais de Admin
-- Senha do admin: `callclub2026`
-- **Não alterar** sem comunicar ao PO
-
-### 3.5 Dados dos Beta Testers
-- Mario (2412) e Marcos (6969) são contas de teste oficial
-- Liga "Liga dos Crias" é seed oficial
-- **Não deletar** esses dados
+| Decisão | Status | Motivo |
+|---------|--------|--------|
+| Monetização na V1 | Adiado | Foco em validar produto primeiro |
+| Outros esportes | Futuro (V2+) | Complexidade técnica |
+| Notificações push | Futuro | Requer infraestrutura adicional |
 
 ---
 
-## 4. Arquitetura Técnica
+## 3. Regras Globais do Sistema
 
-### Stack Atual
-| Componente | Tecnologia |
-|------------|------------|
-| Frontend | React 18 + Tailwind CSS |
-| Backend | FastAPI + Motor |
-| Database | MongoDB |
-| API Externa | TheSportsDB |
+### 🔒 Sistema de Pontuação (NÃO ALTERAR)
 
-### Endpoints Críticos
 ```
-POST /api/auth/check-name     → Login
-GET  /api/championships       → Lista campeonatos
-GET  /api/matches/{round}     → Partidas da rodada
-POST /api/predictions         → Salvar palpite
-GET  /api/ranking/detailed/{champ} → Classificação geral
-GET  /api/ranking/round/{round}    → Classificação por rodada
+┌─────────────────────────────────────┐
+│  ACERTO DO RESULTADO (V/E/D) = 3 pts │
+│  + Gols do mandante corretos = +1 pt │
+│  + Gols do visitante corretos = +1 pt│
+│  ────────────────────────────────────│
+│  MÁXIMO POR JOGO = 5 pontos          │
+└─────────────────────────────────────┘
 ```
 
-### Variáveis de Ambiente
-```bash
-# Backend (.env)
-MONGO_URL=...
-DB_NAME=...
+**Critérios de Desempate:**
+1. Total de placares exatos (5 pts)
+2. Total de resultados corretos (3+ pts)
 
-# Frontend (.env)
-REACT_APP_BACKEND_URL=...
+> ⚠️ **LOCKED:** Qualquer alteração no sistema de pontuação deve ser validada pelo Product Owner.
+
+### 🔒 Sistema de Planos (NÃO ALTERAR)
+
+| Plano | Campeonatos | Ligas | Preço |
+|-------|-------------|-------|-------|
+| FREE | 1 (nacional do país) | 0 | Grátis |
+| PREMIUM | 3 (nacional + 2 extras) | 2 | TBD |
+| VIP | Ilimitado | Ilimitado | TBD |
+
+### 🔒 Regras de Palpites (NÃO ALTERAR)
+
+1. **Criação:** Usuário pode criar palpite a qualquer momento antes do jogo
+2. **Edição:** Permitida apenas antes do jogo começar
+3. **Travamento:** Automático 1 minuto após o horário oficial de início
+4. **Visualização:** Palpites de outros usuários só visíveis após jogo finalizado
+5. **Cálculo:** Pontos calculados imediatamente quando jogo é marcado como finalizado
+
+---
+
+## 4. O Que NÃO Deve Ser Alterado Sem Validação
+
+### 🚫 Arquivos Críticos
+
+| Arquivo | Motivo |
+|---------|--------|
+| Sistema de pontuação em `server.py` | Regra de negócio central |
+| Estrutura de planos em `schemas.py` | Modelo de monetização |
+| Horários de travamento | Integridade do jogo |
+| Critérios de desempate | Afeta ranking existente |
+
+### 🚫 Collections MongoDB
+
+| Collection | Campos Críticos |
+|------------|-----------------|
+| `users` | `plan`, `pioneer_number` |
+| `predictions` | `points_earned` (calculado pelo sistema) |
+| `matches` | `is_finished`, `status` |
+
+### 🚫 Fluxos Validados
+
+1. **Login:** Usuário + PIN → JWT → Acesso
+2. **Palpite:** Selecionar jogo → Inserir placar → Salvar (se não travado)
+3. **Ranking:** Soma de pontos → Ordenação → Desempate
+4. **Admin:** Sincronizar → Definir resultado → Calcular pontos
+
+---
+
+## 5. Arquitetura Técnica
+
+### Stack Tecnológico
+```
+Frontend: React 18 + Tailwind CSS + Shadcn/UI
+Backend:  FastAPI + Motor (async MongoDB)
+Database: MongoDB Atlas
+API:      TheSportsDB (dados de partidas)
 ```
 
----
+### Estrutura de Diretórios
+```
+/app/
+├── backend/
+│   ├── server.py              # API principal (~1200 linhas)
+│   ├── models/
+│   │   └── schemas.py         # Pydantic models
+│   └── services/
+│       ├── country_detector.py
+│       └── league_service.py
+├── frontend/
+│   └── src/
+│       ├── pages/
+│       │   ├── HomePage.jsx
+│       │   ├── LoginPage.jsx
+│       │   ├── PredictionsPage.jsx
+│       │   ├── RankingsPage.jsx
+│       │   ├── ProfilePage.jsx
+│       │   └── AdminPage.jsx
+│       └── components/
+│           └── UserPredictionsModal.jsx
+└── memory/
+    ├── PRD.md
+    └── CHANGELOG.md
+```
 
-## 5. Padrões de Código
-
-### Nomenclatura
-- `championship_id` (não `championship`)
-- `round_number` (não `round` sozinho)
-- Português para UI, inglês para código
-
-### MongoDB
-- Sempre excluir `_id` nas respostas
-- Usar `championship_id` como campo padrão
-- Datas em UTC, conversão para Brasília no backend
-
-### Frontend
-- Componentes em `/pages/` para rotas
-- Shadcn/UI em `/components/ui/`
-- Phosphor Icons para ícones
-
----
-
-## 6. Histórico de Problemas Resolvidos
-
-| Problema | Solução | Data |
-|----------|---------|------|
-| position undefined | Fallback no ProfilePage | 25/01/2026 |
-| Timezone incorreto | Conversão UTC-3 no backend | 25/01/2026 |
-| Carioca vs Brasileirão | Removido Carioca | 25/01/2026 |
-| Ranking por rodada incompleto | Mesmas colunas da geral | 26/01/2026 |
-
----
-
-## 7. Próximos Passos Planejados
-
-### V1.1 (Ajustes de UX)
-- UI para criar/entrar em ligas
-- Configuração manual de país
-- Refinamentos visuais
-
-### V1.2 (Expansão)
-- Seletor de campeonatos extras (Premium)
-- Feed de atividades
-
-### V2.0 (Escala)
-- Plano VIP
-- Outros esportes
-- Monetização
+### Collections MongoDB
+- `users` - Usuários, planos, pioneiros
+- `championships` - Campeonatos cadastrados
+- `matches` - Partidas e resultados
+- `predictions` - Palpites dos usuários
+- `leagues` - Ligas privadas
+- `security_logs` - Auditoria
 
 ---
 
-## 8. Contatos e Recursos
+## 6. Endpoints Críticos
 
-### Admin Panel
-- URL: `/admin`
-- Senha: `callclub2026`
+### Palpites
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/save-prediction` | Salva palpite (verifica travamento) |
+| GET | `/api/user-predictions/{username}` | Palpites do usuário (para modal) |
 
-### Usuários de Teste
-- Mario: PIN 2412
-- Marcos: PIN 6969
+### Ranking
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/api/ranking` | Classificação geral |
+| GET | `/api/ranking/round/{round}` | Classificação por rodada |
 
-### Documentação
-- PRD: `/app/memory/PRD.md`
-- Changelog: `/app/memory/CHANGELOG.md`
-- Este arquivo: `/app/CONTEXT_FOR_NEXT_AGENT.md`
-
----
-
-## 9. Regras para Agentes Futuros
-
-1. **Ler este arquivo** antes de qualquer implementação
-2. **Não alterar** regras de pontuação ou planos sem validação
-3. **Não deletar** dados de seed (Mario, Marcos, Liga dos Crias)
-4. **Manter** nomenclatura `championship_id`
-5. **Testar** antes de finalizar qualquer feature
-6. **Documentar** mudanças significativas no CHANGELOG
+### Admin
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/admin/matches/update` | Atualiza resultado e calcula pontos |
+| POST | `/api/admin/sync` | Sincroniza partidas da API |
 
 ---
 
-**CallClub V1.0 - Base Estável ✅**
+## 7. Credenciais de Teste
+
+| Recurso | Acesso |
+|---------|--------|
+| Admin Panel | `/admin` → Senha: `callclub2026` |
+| Usuário 1 | Mario / PIN: `2412` |
+| Usuário 2 | Marcos / PIN: `6969` |
+
+---
+
+## 8. Features da V1 (Completas)
+
+- [x] Login por nome + PIN
+- [x] Sistema de planos (FREE/PREMIUM/VIP)
+- [x] Palpites com travamento automático
+- [x] Ranking geral e por rodada
+- [x] Modal de transparência de palpites
+- [x] Perfil com estatísticas e conquistas
+- [x] Admin panel completo
+- [x] Sistema de ligas (backend)
+
+---
+
+## 9. Roadmap Pós-V1
+
+### V1.1 (Próximo)
+- [ ] UI para criar/entrar em ligas
+- [ ] Seleção manual de país
+- [ ] Ajustes de UX
+
+### V1.2
+- [ ] Feed de atividades
+- [ ] Campeonatos extras funcionais
+
+### V2.0
+- [ ] Plano VIP ativo
+- [ ] Outros esportes
+- [ ] Monetização
+
+---
+
+## 10. Comunicação com o Usuário
+
+**Idioma:** Português (Brasil)  
+**Tom:** Informal e amigável ("mano", "beleza")  
+**Preferência:** Respostas diretas, sem enrolação
+
+---
+
+## 11. Erros Comuns a Evitar
+
+1. **Não mexer em pontuação** sem autorização explícita
+2. **Não confundir preview vs produção** - são bancos diferentes
+3. **Não alterar horários de travamento** - regra de negócio crítica
+4. **Não expor palpites** de jogos não finalizados
+5. **Não assumir timezone** - sempre usar UTC e converter para exibição
+
+---
+
+**CallClub V1.0 © 2026**
