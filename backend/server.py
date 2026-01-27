@@ -1594,6 +1594,53 @@ async def migrate_championship_field(password: str):
     }
 
 
+@api_router.delete("/admin/delete-user/{username}")
+async def admin_delete_user(username: str, password: str):
+    """Deleta um usuário e todos os seus dados"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    # Deletar usuário
+    user_result = await db.users.delete_one({"username": username})
+    
+    # Deletar palpites do usuário
+    preds_result = await db.predictions.delete_many({"username": username})
+    
+    if user_result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Usuário '{username}' não encontrado")
+    
+    return {
+        "success": True,
+        "message": f"Usuário '{username}' deletado com sucesso",
+        "user_deleted": user_result.deleted_count,
+        "predictions_deleted": preds_result.deleted_count
+    }
+
+
+@api_router.post("/admin/reset-user-stats")
+async def admin_reset_user_stats(password: str):
+    """Reseta estatísticas de todos os usuários (pontos, sequências, etc)"""
+    if password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    result = await db.users.update_many(
+        {},
+        {"$set": {
+            "total_points": 0,
+            "perfect_streak": 0,
+            "max_perfect_streak": 0,
+            "correct_results": 0,
+            "perfect_scores": 0
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": "Estatísticas resetadas",
+        "users_updated": result.modified_count
+    }
+
+
 @api_router.get("/admin/remove-carioca")
 async def remove_carioca_data(password: str):
     """Remove todos os dados do Campeonato Carioca"""
