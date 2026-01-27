@@ -1,186 +1,162 @@
 <analysis>**original_problem_statement:**
-The user initiated a major strategic pivot for the CallClub project, transforming it from a simple prediction site for friends into a scalable, global, freemium platform.
+The user initiated a major strategic pivot for the CallClub project, transforming it from a simple prediction site into a scalable, global, freemium platform. This involved defining Free/Premium plans, overhauling the core logic for live game-by-game updates, ensuring prediction transparency, and implementing a full private league system inspired by Cartola. Throughout the process, multiple UI/UX refinements, data consistency checks, and strict domain rule clarifications (Leagues vs. Championships) were requested and implemented, culminating in the app reaching version V1.2.0. The final request was to investigate and fix discrepancies between the preview and a separate production environment.
 
 **PRODUCT REQUIREMENTS:**
-1.  **New Business Model:**
-    *   **Free Plan:** Automatic access to the main national football league of the user's country (detected by IP).
-    *   **Premium Plan:** Allows users to create up to 2 private leagues and access 2 additional global championships.
-    *   **VIP Plan (Future):** More leagues, more championships, and other sports (F1, NBA).
-2.  **Core Logic Overhaul (Game-by-Game Updates):**
-    *   **Prediction Locking:** Predictions for a specific match must lock 1 minute after the official kickoff time.
-    *   **Live Rankings:** Points and classification must be updated immediately after a single match is marked as finished, rather than waiting for the entire round to end.
-3.  **Prediction Transparency:**
-    *   Users can click on another user's name in the classification to view their predictions.
-    *   **Crucial Rule:** Predictions are only visible after the corresponding match has finished. For ongoing or future matches, they must be hidden.
-4.  **UI/UX Refinements:**
-    *   Rename all instances of Ranking to Classificação.
-    *   Add a How it Works section to the homepage with scoring rules.
-    *   Implement a dual-view classification page with Geral (Overall) and Por Rodada (By Round) tabs.
-    *   Add a discreet premium user badge (💎) with a tooltip.
-    *   Clean up UI by removing medals and other distracting icons from the classification and profile pages.
-5.  **Data Seeding & Validation:**
-    *   The user requested test data to be seeded for users Mario and Marcos to validate the entire user flow, from predictions to ranking calculations.
-6.  **Official Versioning:**
-    *   The user requested the current stable state of the project to be documented and consolidated as **V1.0**.
+1.  **Freemium Model:** Free plan for the national league, Premium for private leagues and extra championships.
+2.  **Live Updates:** Predictions lock at kickoff; rankings update immediately after a match finishes.
+3.  **Prediction Transparency:** Users can view others' predictions, but only for finished matches.
+4.  **Private Leagues (V1.1):** Premium users can create/join private leagues, each tied to one official championship. The UI/UX for league rankings must be identical to the main championship rankings (Geral/Por Rodada tabs, same columns, prediction modal).
+5.  **Domain Rule Separation (V1.2):** A strict architectural separation between Championships (where predictions are made) and Ligas (which are just filters/views for rankings). The predictions page must ONLY show official championships.
+6.  **Data Consistency:** All calculations must be based on active, official championships, and any data from removed/old championships must be cleaned from the database to prevent incorrect point summation.
+7.  **Production Parity:** Features must work in both the preview and the user-provided production environments, requiring backward compatibility for API endpoints.
 
 **User's preferred language**:
-The user communicates in **Portuguese (Brazil)**, often using informal terms like mano. The next agent MUST respond in Portuguese (Brazil) and maintain a friendly, collaborative tone.
+The user communicates in **Portuguese (Brazil)**, often using informal terms like mano. The next agent MUST respond in Portuguese (Brazil).
 
 **what currently exists?**
-The application has undergone a significant architectural refactor to support the new global, multi-tenant model. The backend is now modular, with separate directories for models and services. The frontend has been heavily modified to support the new features, including dynamic championship selection, a dual-view classification page, and a new modal for viewing user predictions. The system now operates on a live, game-by-game basis for locking predictions and calculating points. The project has been officially documented as V1.0.
+The application is a full-stack project (React, FastAPI, MongoDB) that has evolved into a sophisticated sports prediction platform. The core features are stable: user authentication, a freemium plan structure, and a complete prediction lifecycle from placing bets to live ranking updates. A comprehensive private league system allows users to create, join (via code or WhatsApp link), and compete in separate rankings. A major refactor has been completed to enforce a strict domain separation, ensuring that Leagues are treated as views on top of Official Championships, which are the sole source for games and predictions. The UI clearly reflects this separation. The backend includes services for league management and data seeding. The project is versioned, with extensive documentation in , , and a .
 
 **Last working item**:
-- **Last item agent was working:** Implementing a critical and complex feature set requested by the user: live, game-by-game updates and a prediction transparency modal. This involved:
-    1.  **Backend:** Implementing logic to lock predictions 1 minute after a match starts and to automatically recalculate points immediately when a single match is marked as finished.
-    2.  **Frontend:** Creating a  component and integrating it into the . Also, updating  to visually represent locked and finished matches.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y (Verified via multiple screenshots showing the working modal with correct data and security rules, as well as the updated predictions page).
-- **Which testing method agent to use?** Manual testing by the user is the next step. If issues are found, use the  to perform a comprehensive test of the backend calculation logic and the frontend conditional rendering.
+- **Last item agent was working:** Fixing a critical production bug where Free users could not see any championships. The agent investigated and found that the production database  collection was missing the  field. A new endpoint () was strictly filtering for this field, causing it to return no data in production. The user approved the agent's plan to fix this.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** After fixing the code, the agent should test the endpoint using a  command pointed at the user's production URL () to verify it returns the expected championship data. No frontend testing is needed for this specific fix.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Final User Verification of Live Update Features (P0 - HIGHEST)**
-    *   **Description:** The latest implemented features (game-by-game locking, live ranking updates, and the prediction transparency modal) are the most complex additions to the application's logic. While the agent has tested them, they are pending final validation from the user in the preview environment.
-    *   **Attempted fixes:** N/A.
-    *   **Next debug checklist:**
-        1.  Await user feedback on the new functionality.
-        2.  If bugs are reported, first check the backend logs for errors during the point calculation process ().
-        3.  Verify the frontend logic in  for opening the modal () and fetching data.
-        4.  Verify the time-based locking logic in  ( function).
-    *   **Why fix this issue and what will be achieved with the fix?** This validates that the core gameplay loop of the application works as the user intends, which is crucial before building any new features.
-    *   **Status:** USER VERIFICATION PENDING
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on other issue:** None.
+- **Issue 1: Production Bug - Free Users See No Championships (P0 - HIGHEST)**
+  - **Description:** The  endpoint in  fails on the production database because it filters for , a field that doesn't exist in the older production data schema. This leaves free users with no championships to make predictions on.
+  - **Attempted fixes:** None yet. The problem has been diagnosed.
+  - **Next debug checklist:**
+    1.  Edit .
+    2.  Locate the  endpoint.
+    3.  Modify the MongoDB query () to be backward-compatible. It should correctly identify official championships if  is  OR if the field does not exist (). This handles both old and new data schemas.
+    4.  Test the fix against the production URL via  to confirm it works.
+  - **Why fix this issue and what will be achieved with the fix?** This is a critical bug blocking the core functionality for free users in the production environment. Fixing it will restore the app's usability for them.
+  - **Status:** IN PROGRESS
+  - **Is recurring issue?** N
+  - **Should Test frontend/backend/both after fix?** Backend.
+  - **Blocked on other issue:** None.
 
 **In progress Task List**:
 None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   **(P0) Implement UI for Private Leagues:** The user has indicated that the next step after the current validation is to build the UI for the Ligas feature. The backend structure is already in place. This will likely involve creating a new page or component where premium users can create a league (generating a code) and where all users can join a league using a code.
+    *   **(P0) Implement Troféu da Rodada:** A gamification feature to highlight the user with the most points in a given round, likely with a trophy icon (🏆) in the classification.
+    *   **(P1) Implement League Notifications:** Notify a league owner when a new member joins.
 *   **Future Tasks:**
-    *   **(P1)** Implement the full VIP plan (UI and logic).
-    *   **(P2)** Add other sports like F1 and NBA.
-    *   **(P2)** Live Activity Feed on the Home Page.
-    *   **(P3)** Notifications/Reminders for users before matches.
-    *   **(P3)** Advanced, personalized statistics for users.
-    *   **(P3)** A system for users to react to each other's predictions.
+    *   **(P1)** Advanced social sharing (Instagram Stories).
+    *   **(P2)** More notification types (prediction reminders, ranking changes).
+    *   **(P2)** Advanced gamification (winning streaks, achievements).
+    *   **(P2)** In-league chat and reactions.
+    *   **(P3)** Implement VIP Plan features and other sports (F1, NBA).
 
 **Completed work in this session**
-- **Architecture & Strategy:**
-  - Migrated backend from a monolith to a modular structure (, ).
-  - Implemented a new data model for , , and .
-  - Removed Campeonato Carioca and migrated all users to the Premium plan.
-- **Core Feature Implementation (Live Updates):**
-  - Backend now locks predictions based on individual match kickoff times.
-  - Backend recalculates points and rankings instantly when a single match is marked as finished.
-  - Created a  to show other users' predictions for finished matches only.
-- **Data Seeding & Validation:**
-  - Successfully seeded test data for users Mario and Marcos, including creating a league, adding predictions for round 1, setting results, and validating the calculated rankings.
-- **UI/UX Enhancements:**
-  - Renamed Ranking to Classificação app-wide.
-  - Added a How it Works section with scoring rules to the .
-  - Implemented a dual-view (Geral/Por Rodada)  with a premium user badge (💎), consistent columns, and cleaner UI.
-  - Removed confusing medal icons from the  avatar.
-- **Bug Fixes:**
-  - Fixed a crash on the  for users without a ranking.
-  - Corrected all  references post-refactor.
-  - Added the missing  endpoint to enable data seeding.
-- **Documentation:**
-  - Officially consolidated and documented the project as **V1.0** by updating , , and creating .
+- **V1.1 - Private Leagues:** Implemented the full lifecycle for private leagues, including creating  and .
+- **V1.1.1 - League UX Parity:** Refactored the  to be identical to the main , with Geral and Por Rodada tabs, all statistics columns, and the user prediction modal.
+- **V1.1.2 - Sharing & Data Seeding:** Added a Share via WhatsApp button for league invites and seeded the database with more test data (Serie A) to validate functionality.
+- **V1.2.0 - Domain Rule Enforcement:** Performed a major refactor to strictly separate Leagues from Championships. Created a new endpoint () and updated  and  to enforce that predictions and general rankings only operate on official championships.
+- **Data Consistency Fix:** Investigated and resolved a critical bug where user points were being incorrectly calculated due to residual data from deleted championships. Ran a cleanup script to remove all orphaned data from the database.
+- **Production Bug Investigation:** Diagnosed the root cause of a discrepancy between the preview and production environments.
 
 **Earlier issues found/mentioned but not fixed**
-None.
+- **Issue 1: React  Dependency Warnings**
+  - **Debug checklist:** Check the frontend logs for warnings like React Hook useEffect has a missing dependency. Add the suggested variables to the dependency arrays in files like  and .
+  - **Why to solve this issue and what will be achieved with this?** Fixes potential stale state bugs and improves code quality.
+  - **Should Test frontend/backend/both after fix:** Frontend.
+  - **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork:** User confusion regarding preview vs. production databases.
-- **Recurrence count:** 3+
-- **Status:** RESOLVED. This was not a point of friction in this session, and the new admin tools for data management and seeding have given the user more direct control, mitigating the underlying problem.
+- **Recurrence count:** 4+
+- **Status:** RECURRED. This was the central theme of the final part of the session, leading to the discovery of the schema mismatch bug. The agent now has context on both environments.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 *   **Frontend:** React, Tailwind CSS
-*   **Backend:** FastAPI, Pydantic, Motor (Async MongoDB driver)
+*   **Backend:** FastAPI, Pydantic, Motor
 *   **Database:** MongoDB
-*   **Architecture:** Modular backend with a service layer, live data updates triggered from API endpoints, time-based conditional logic in the frontend.
+*   **Architecture:** Modular backend, time-based logic, strict domain separation (Leagues vs. Championships).
+*   **Development:** Use of data seeding scripts, database consistency checks, and API backward compatibility to manage multiple environments.
 
 **key DB schema**
 *   **users:** 
 *   **matches:** 
 *   **predictions:** 
-*   **championships:**  (New Collection)
-*   **leagues:**  (New Collection)
+*   **championships:**  (key fields)
+*   **leagues:** 
 
 **changes in tech stack**
 None.
 
 **All files of reference**
-*   : Core logic for live updates and prediction locking.
-*   : Defines the new data structures for the entire application.
-*   : Contains the logic for the dual-view tabs and opening the user predictions modal.
-*   : New component that displays another user's predictions for finished games.
-*   : Implements the UI for locked/finished matches.
-*   : Contains the official V1.0 scope and future roadmap.
-*   : Contains critical business decisions about the V1.0 consolidation.
+*   : Contains the endpoint logic that needs to be fixed for production compatibility. Still a large file needing refactoring.
+*   : Uses the new, separated endpoint for official championships.
+*   : Was refactored to remove leagues from its view.
+*   : Main page for all league interactions.
+*   : Detail page for a specific league's ranking.
+*   : Contains the final QA validation steps and lessons learned.
 
 **Areas that need refactoring**:
-*    is still over 1200 lines long. The admin routes, user routes, and prediction routes could be split into separate FastAPI  files for better maintainability.
-*   The  component has become very large (nearly 400 lines) and manages significant state. The Geral and Por Rodada table views could be extracted into their own sub-components.
+*   **:** This file is over 1200 lines and contains all routes. It urgently needs to be broken down into separate  files (e.g., , , ) for maintainability.
+*   **Hardcoded :** The authentication logic in  relies on a hardcoded Python dictionary for user PINs, which is a major security risk and a source of bugs (as seen with the 'João' login issue). This must be removed in favor of querying the  collection in the database directly.
 
 **key api endpoints**
-*   : Now contains logic to block predictions for matches that have already started.
-*   : **Crucial endpoint.** When a match  is set to 'finished', it now automatically triggers point calculation and ranking updates for all users who predicted that match.
-*   : New endpoint to fetch all predictions for a specific user to populate the transparency modal.
-*   : Updated to return the same detailed statistics as the general ranking endpoint.
-*   : New endpoint to provide the frontend with a list of available championships based on the user's plan.
+*   : **CRITICAL**. Returns only official championships for the predictions page. **THIS IS THE ENDPOINT TO FIX.**
+*   : Returns both official championships and championships accessible via leagues (for classification selectors).
+*   : Gets the detailed ranking for a private league.
+*   : The current primary login endpoint.
 
 **Critical Info for New Agent**
-*   **User Verification is the Top Priority:** The most recent and complex features (live game-by-game updates and the prediction modal) have been implemented but not yet approved by the user. Do not start new features until the user validates this functionality.
-*   **The Project is now V1.0:** The user has officially declared the current state as a stable base. All previous requests have been consolidated. The next set of work should be framed as V1.1.
-*   **Next Task is League UI:** After validation, the user's roadmap points directly to building the user interface for creating and joining private leagues.
-*   **Maintain Portuguese:** The user is Brazilian and prefers an informal, friendly tone (mano). All communication must be in Portuguese (Brazil).
+*   **Production vs. Preview Environments:** There are two distinct environments with different databases and data schemas. The agent's preview is for development, but the user tests against a production URL (). Any database-related changes must consider backward compatibility to avoid breaking production.
+*   **Hardcoded Authentication:** The  dictionary in  is a critical flaw. It overrides database PINs and prevents new users from logging in without a code change. Propose refactoring this away as a high-priority technical debt item.
+*   **Domain Rule: LIGAS ≠ CAMPEONATOS:** This is the most important business logic. Leagues are just user groups that provide a filtered view of a single, official championship's rankings. Predictions are *always* made within an official championship, never a league.
 
 **documents and test reports created in this job**
-*    (Overwritten with V1.0 scope)
-*    (Created)
-*    (Overwritten with V1.0 context)
 *   
-*    (New component file)
+*   
+*   
+*   
+*    (Updated)
+*    (Updated)
+*    (Created)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Asks to implement the logic for the dual-view classification page (Geral/Por Rodada) and other UI cleanups (remove medals, etc.).
-9. **Agent:** Implements the requested UI cleanup and backend endpoint update for the classification page. Provides screenshots for validation.
-8. **User:** Expresses frustration, clarifying that the agent misunderstood and removed a medal from the homepage instead of the profile page. Asks for the fix not to be charged.
-7. **Agent:** Apologizes for the mistake, confirms the medal on the Profile page is indeed removed, and asks for confirmation.
-6. **User:** Uploads a screenshot pointing to the medal icon *on the user's avatar* in the profile, which is tied to the user's level.
-5. **Agent:** Understands the specific icon to be removed, changes the level icons from medals to football-themed emojis (⚽, 🎯, ⭐, 👑), and provides a screenshot of the corrected profile page.
-4. **User:** Asks the agent to consolidate the project's current state as V1.0 by updating documentation (, ) and creating a . Stresses not to implement new features yet.
-3. **Agent:** Completes the documentation task and confirms the V1.0 consolidation.
-2. **User:** **(CURRENT PENDING REQUEST)** Provides detailed requirements for the next major implementation: game-by-game prediction locking, live ranking updates, and a prediction transparency modal for finished games. Asks for this to be deployed to preview for validation.
-1. **Agent:** Completes the full implementation of the game-by-game logic and prediction modal, verifies with screenshots, and is now awaiting user feedback.
+10. User asks for a summary of what has been built.
+9.  Agent provides a detailed summary.
+8.  User asks why Mario and Marcos are premium in preview but free in production.
+7.  Agent explains the difference between the preview and production databases.
+6.  User asks to check if the Brazilian championship is available for free users in production.
+5.  Agent investigates the production URL ().
+4.  Agent identifies the root cause: the production database lacks the  field in the  collection, causing the new endpoint to fail.
+3.  User asks the agent to fix it.
+2.  Agent acknowledges and prepares to edit .
+1.  Agent views the relevant section of  to start the fix.
 
 **Project Health Check:**
-*   **Broken:** None. The application is functional and stable.
-*   **Mocked:** None. All UI mockups have been replaced with fully functional components.
+*   **Broken:** The production environment () is functionally broken for FREE users, as they cannot see or select any championships to make predictions.
+*   **Mocked:** None.
 
 **3rd Party Integrations**
-*   **TheSportsDB:** Used for fetching match data.
-*   **canvas-confetti:** Used for frontend animations.
+*   **TheSportsDB:** Used for fetching match data (via API key in ).
+*   **canvas-confetti:** Frontend library for animations.
+*   **WhatsApp:** Sharing functionality is implemented via a  URL.
 
 **Testing status**
-*   **Testing agent used after significant changes:** YES. The testing agent was used after the major backend refactor, and all 22 backend and 14 frontend tests passed.
-*   **Troubleshoot agent used after agent stuck in loop:** NO
-*   **Test files created:** None in this session.
-*   **Known regressions:** None.
+- **Testing agent used after significant changes:** YES. The agent was used multiple times to validate new features and bug fixes, generating several test reports.
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** None.
+- **Known regressions:** Yes, the V1.2.0 refactor introduced a regression in the production environment due to a schema mismatch.
 
 **Credentials to test flow:**
 *   **Admin Access:** URL: , Password: 
-*   **User Credentials (with seeded data):**
-    *   **Mario:** PIN  (1st place in seeded data)
-    *   **Marcos:** PIN  (2nd place in seeded data)
+*   **User Credentials:**
+    *   **Mario:** PIN  (Premium in Preview, Free in Production)
+    *   **Marcos:** PIN  (Premium in Preview, Free in Production)
+    *   **João:** PIN  (Premium in Preview)
 
 **What agent forgot to execute**
-The agent initially misunderstood which medal icon the user wanted to be removed from the  but corrected this immediately after the user provided a clarifying screenshot. No major tasks were forgotten.</analysis>
+The agent has correctly identified the production bug and located the file to fix but has not yet implemented the code change. The pending  warnings and the critical refactoring of the  dictionary also remain unaddressed.</analysis>
