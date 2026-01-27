@@ -434,12 +434,19 @@ async def get_user_official_championships(username: str):
     plan = user.get("plan", "free")
     national_id = get_user_national_championship(country)
     
-    # Busca APENAS campeonatos oficiais (is_official=True)
     accessible = []
     
     # Campeonato nacional sempre disponível
+    # Compatibilidade: is_official=True OU is_official não existe (dados antigos)
     national = await db.championships.find_one(
-        {"championship_id": national_id, "is_official": True}, 
+        {
+            "championship_id": national_id,
+            "$or": [
+                {"is_official": True},
+                {"is_official": {"$exists": False}},
+                {"is_official": None}
+            ]
+        }, 
         {"_id": 0}
     )
     if national:
@@ -450,7 +457,14 @@ async def get_user_official_championships(username: str):
     if plan in ["premium", "vip"]:
         for champ_id in user.get("extra_championships", []):
             champ = await db.championships.find_one(
-                {"championship_id": champ_id, "is_official": True}, 
+                {
+                    "championship_id": champ_id,
+                    "$or": [
+                        {"is_official": True},
+                        {"is_official": {"$exists": False}},
+                        {"is_official": None}
+                    ]
+                }, 
                 {"_id": 0}
             )
             if champ and champ not in accessible:
