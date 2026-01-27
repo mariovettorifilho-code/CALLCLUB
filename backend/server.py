@@ -1619,11 +1619,12 @@ async def admin_delete_user(username: str, password: str):
 
 @api_router.post("/admin/reset-user-stats")
 async def admin_reset_user_stats(password: str):
-    """Reseta estatísticas de todos os usuários (pontos, sequências, etc)"""
+    """Reseta estatísticas de todos os usuários (pontos, sequências, etc) E deleta todos os palpites"""
     if password != ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    result = await db.users.update_many(
+    # 1. Zerar campos dos usuários
+    users_result = await db.users.update_many(
         {},
         {"$set": {
             "total_points": 0,
@@ -1634,10 +1635,14 @@ async def admin_reset_user_stats(password: str):
         }}
     )
     
+    # 2. Deletar TODOS os palpites
+    preds_result = await db.predictions.delete_many({})
+    
     return {
         "success": True,
-        "message": "Estatísticas resetadas",
-        "users_updated": result.modified_count
+        "message": "Estatísticas e palpites resetados",
+        "users_updated": users_result.modified_count,
+        "predictions_deleted": preds_result.deleted_count
     }
 
 
