@@ -1594,7 +1594,7 @@ async def migrate_championship_field(password: str):
     }
 
 
-@api_router.delete("/admin/delete-user/{username}")
+@api_router.post("/admin/delete-user/{username}")
 async def admin_delete_user(username: str, password: str):
     """Deleta um usuário e todos os seus dados"""
     if password != ADMIN_PASSWORD:
