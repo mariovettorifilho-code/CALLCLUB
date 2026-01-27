@@ -171,6 +171,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleResetUserStats = async () => {
+    if (!window.confirm("⚠️ ATENÇÃO!\n\nIsso vai ZERAR os pontos e sequências de TODOS os usuários!\n\nTem certeza?")) {
+      return;
+    }
+    setMaintenanceLoading(true);
+    setMaintenanceResult(null);
+    try {
+      const res = await axios.post(`${API}/admin/reset-user-stats?password=${password}`);
+      setMaintenanceResult({
+        success: true,
+        title: "Estatísticas Zeradas",
+        message: `${res.data.users_updated} usuários tiveram seus pontos e sequências zerados.`,
+        data: res.data
+      });
+      showNotification("Estatísticas zeradas com sucesso!");
+      loadData();
+    } catch (error) {
+      setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao zerar estatísticas" });
+      showNotification("Erro ao zerar estatísticas", "error");
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  };
+
   const handleFixPredictions = async () => {
     setMaintenanceLoading(true);
     setMaintenanceResult(null);
