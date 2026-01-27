@@ -53,7 +53,7 @@ ADMIN_PASSWORD = "callclub2026"
 # Usuários autorizados com PIN (mantido para compatibilidade)
 AUTHORIZED_USERS = {
     "Mario": "2412",
-    "Marcos": "6969",
+    "Marcos": "1234",
     "João": "3456",
     "Pedro": "4567",
     "Carlos": "1234",
