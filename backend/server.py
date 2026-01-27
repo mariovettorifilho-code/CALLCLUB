@@ -883,7 +883,7 @@ async def get_user_public_predictions(username: str, championship_id: str = "bra
 # ==================== RANKINGS ====================
 @api_router.get("/ranking/detailed/{championship_id}")
 async def get_detailed_ranking(championship_id: str):
-    """Ranking detalhado por campeonato"""
+    """Ranking detalhado por campeonato - TODOS os usuários aparecem"""
     champ = await db.championships.find_one({"championship_id": championship_id})
     total_rounds = champ.get("total_rounds", 38) if champ else 38
     
@@ -891,41 +891,48 @@ async def get_detailed_ranking(championship_id: str):
     current_data = await get_current_round(championship_id)
     current_round = current_data.get("round_number", 1)
     
+    # Busca TODOS os usuários cadastrados (não apenas quem fez palpite)
+    users = await db.users.find(
+        {"is_banned": {"$ne": True}},
+        {"_id": 0, "username": 1, "plan": 1, "pioneer_number": 1}
+    ).to_list(1000)
+    
+    # Inicializa estatísticas para TODOS os usuários
+    user_stats = {}
+    for u in users:
+        user_stats[u['username']] = {
+            "username": u['username'],
+            "total_points": 0,
+            "correct_results": 0,
+            "correct_home_goals": 0,
+            "correct_away_goals": 0,
+            "exact_scores": 0,
+            "total_predictions": 0,
+            "plan": u.get('plan', 'free'),
+            "pioneer_number": u.get('pioneer_number')
+        }
+    
     # Busca palpites do campeonato
     predictions = await db.predictions.find(
         {"championship_id": championship_id},
         {"_id": 0}
     ).to_list(10000)
     
-    # Busca partidas finalizadas
+    # Busca partidas
     matches = await db.matches.find(
         {"championship_id": championship_id},
         {"_id": 0}
     ).to_list(1000)
     matches_dict = {m['match_id']: m for m in matches}
     
-    # Busca info dos usuários
-    users = await db.users.find({}, {"_id": 0, "username": 1, "plan": 1, "pioneer_number": 1}).to_list(1000)
-    user_info = {u['username']: u for u in users}
-    
-    # Calcula estatísticas por usuário
-    user_stats = {}
+    # Calcula estatísticas dos palpites
     for pred in predictions:
         username = pred['username']
         match = matches_dict.get(pred['match_id'], {})
         
+        # Se usuário não está na lista (foi banido ou deletado), ignora
         if username not in user_stats:
-            user_stats[username] = {
-                "username": username,
-                "total_points": 0,
-                "correct_results": 0,
-                "correct_home_goals": 0,
-                "correct_away_goals": 0,
-                "exact_scores": 0,
-                "total_predictions": 0,
-                "plan": user_info.get(username, {}).get('plan', 'free'),
-                "pioneer_number": user_info.get(username, {}).get('pioneer_number')
-            }
+            continue
         
         if match.get('is_finished') and pred.get('points') is not None:
             user_stats[username]['total_predictions'] += 1
@@ -958,10 +965,10 @@ async def get_detailed_ranking(championship_id: str):
         else:
             stats['efficiency'] = 0
     
-    # Ordena ranking
+    # Ordena ranking (pontos > placares exatos > resultados corretos > nome alfabético)
     ranking = sorted(
         user_stats.values(),
-        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']),
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results'], x['username']),
         reverse=True
     )
     
@@ -978,7 +985,28 @@ async def get_detailed_ranking(championship_id: str):
 
 @api_router.get("/ranking/round/{round_number}")
 async def get_round_ranking(round_number: int, championship_id: str = "brasileirao"):
-    """Ranking detalhado de uma rodada específica (mesmas colunas da geral)"""
+    """Ranking de uma rodada específica - TODOS os usuários aparecem"""
+    # Busca TODOS os usuários cadastrados (não apenas quem fez palpite)
+    users = await db.users.find(
+        {"is_banned": {"$ne": True}},
+        {"_id": 0, "username": 1, "plan": 1, "pioneer_number": 1}
+    ).to_list(1000)
+    
+    # Inicializa estatísticas para TODOS os usuários
+    user_stats = {}
+    for u in users:
+        user_stats[u['username']] = {
+            "username": u['username'],
+            "total_points": 0,
+            "correct_results": 0,
+            "correct_home_goals": 0,
+            "correct_away_goals": 0,
+            "exact_scores": 0,
+            "total_predictions": 0,
+            "plan": u.get('plan', 'free'),
+            "pioneer_number": u.get('pioneer_number')
+        }
+    
     # Busca palpites da rodada
     predictions = await db.predictions.find({
         "round_number": round_number,
@@ -993,27 +1021,14 @@ async def get_round_ranking(round_number: int, championship_id: str = "brasileir
     }, {"_id": 0}).to_list(100)
     matches_dict = {m['match_id']: m for m in matches}
     
-    # Busca info dos usuários
-    users = await db.users.find({}, {"_id": 0, "username": 1, "plan": 1}).to_list(1000)
-    user_info = {u['username']: u for u in users}
-    
-    # Calcula estatísticas por usuário
-    user_stats = {}
+    # Calcula estatísticas dos palpites
     for pred in predictions:
         username = pred['username']
         match = matches_dict.get(pred['match_id'], {})
         
+        # Se usuário não está na lista (foi banido ou deletado), ignora
         if username not in user_stats:
-            user_stats[username] = {
-                "username": username,
-                "total_points": 0,
-                "correct_results": 0,
-                "correct_home_goals": 0,
-                "correct_away_goals": 0,
-                "exact_scores": 0,
-                "total_predictions": 0,
-                "plan": user_info.get(username, {}).get('plan', 'free')
-            }
+            continue
         
         # Conta palpite mesmo se jogo não finalizou
         user_stats[username]['total_predictions'] += 1
@@ -1048,10 +1063,10 @@ async def get_round_ranking(round_number: int, championship_id: str = "brasileir
         else:
             stats['efficiency'] = 0
     
-    # Ordena ranking
+    # Ordena ranking (pontos > placares exatos > resultados corretos > nome alfabético)
     ranking = sorted(
         user_stats.values(),
-        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results']),
+        key=lambda x: (x['total_points'], x['exact_scores'], x['correct_results'], x['username']),
         reverse=True
     )
     
