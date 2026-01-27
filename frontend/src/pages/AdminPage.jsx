@@ -172,7 +172,7 @@ export default function AdminPage() {
   };
 
   const handleResetUserStats = async () => {
-    if (!window.confirm("⚠️ ATENÇÃO!\n\nIsso vai ZERAR os pontos e sequências de TODOS os usuários!\n\nTem certeza?")) {
+    if (!window.confirm("⚠️ ATENÇÃO!\n\nIsso vai ZERAR os pontos, sequências E DELETAR TODOS OS PALPITES de TODOS os usuários!\n\nTem certeza?")) {
       return;
     }
     setMaintenanceLoading(true);
@@ -182,10 +182,10 @@ export default function AdminPage() {
       setMaintenanceResult({
         success: true,
         title: "Estatísticas Zeradas",
-        message: `${res.data.users_updated} usuários tiveram seus pontos e sequências zerados.`,
+        message: `${res.data.users_updated} usuários zerados. ${res.data.predictions_deleted} palpites deletados.`,
         data: res.data
       });
-      showNotification("Estatísticas zeradas com sucesso!");
+      showNotification("Estatísticas e palpites zerados com sucesso!");
       loadData();
     } catch (error) {
       setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao zerar estatísticas" });
