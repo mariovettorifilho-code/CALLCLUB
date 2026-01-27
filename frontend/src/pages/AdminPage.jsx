@@ -474,15 +474,15 @@ export default function AdminPage() {
   };
 
   const handleRemoveUser = async (username) => {
-    if (!window.confirm(`Tem certeza que deseja REMOVER ${username}? Esta ação não pode ser desfeita!`)) {
+    if (!window.confirm(`Tem certeza que deseja DELETAR ${username}? Esta ação não pode ser desfeita!`)) {
       return;
     }
     try {
-      await axios.delete(`${API}/admin/remove-user?password=${password}&username=${username}`);
-      showNotification(`${username} removido completamente`, "warning");
+      await axios.post(`${API}/admin/delete-user/${username}?password=${password}`);
+      showNotification(`${username} deletado com sucesso`, "warning");
       loadData();
     } catch (error) {
-      showNotification("Erro ao remover usuário", "error");
+      showNotification(error.response?.data?.detail || "Erro ao deletar usuário", "error");
     }
   };
 
