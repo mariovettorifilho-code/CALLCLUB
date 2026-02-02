@@ -137,8 +137,7 @@ export default function HomePage({ username }) {
   };
 
   const getUserRank = () => {
-    const index = topPlayers.findIndex(p => p.username === username);
-    return index >= 0 ? index + 1 : null;
+    return userPosition;
   };
 
   const getPlanLabel = (plan) => {
