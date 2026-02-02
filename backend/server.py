@@ -1120,6 +1120,32 @@ async def admin_get_stats(password: str):
     }
 
 
+@api_router.post("/admin/update-pin")
+async def admin_update_pin(data: dict):
+    """Atualiza PIN de um usuário"""
+    if data.get("password") != ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    username = data.get("username")
+    new_pin = data.get("new_pin")
+    
+    if not username or not new_pin:
+        raise HTTPException(status_code=400, detail="Username e new_pin são obrigatórios")
+    
+    if len(new_pin) != 4 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN deve ter 4 dígitos numéricos")
+    
+    result = await db.users.update_one(
+        {"username": username},
+        {"$set": {"pin": new_pin}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    return {"success": True, "message": f"PIN de {username} atualizado"}
+
+
 @api_router.post("/admin/add-user")
 async def admin_add_user(data: AdminAddUser):
     """Adiciona novo usuário"""
