@@ -106,7 +106,13 @@ export default function HomePage({ username }) {
       ]);
 
       setCurrentRound(roundRes.data);
-      setTopPlayers(rankingRes.data?.ranking?.slice(0, 5) || []);
+      const fullRanking = rankingRes.data?.ranking || [];
+      setTopPlayers(fullRanking.slice(0, 5));
+      
+      // Encontra posição do usuário no ranking COMPLETO
+      const userIndex = fullRanking.findIndex(p => p.username === username);
+      setUserPosition(userIndex >= 0 ? userIndex + 1 : null);
+      
       setNextMatch(nextMatchRes.data);
     } catch (error) {
       console.error("Erro ao carregar dados do campeonato:", error);
