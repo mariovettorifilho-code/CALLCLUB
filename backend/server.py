@@ -233,43 +233,21 @@ async def check_user_can_access_championship(username: str, championship_id: str
 # ==================== AUTENTICAÇÃO ====================
 @api_router.post("/auth/check-name")
 async def check_name(data: UserLogin, request: Request):
-    """Login por nome e PIN"""
-    if data.username not in AUTHORIZED_USERS:
-        raise HTTPException(status_code=403, detail="Nome não autorizado. Entre em contato com o administrador.")
-    
-    if AUTHORIZED_USERS[data.username] != data.pin:
-        raise HTTPException(status_code=403, detail="PIN incorreto. Tente novamente.")
-    
+    """Login por nome e PIN - consulta APENAS o banco de dados"""
+    # Busca usuário no banco de dados
     user = await db.users.find_one({"username": data.username}, {"_id": 0})
     
-    if user and user.get("is_banned"):
+    if not user:
+        raise HTTPException(status_code=403, detail="Nome não autorizado. Entre em contato com o administrador.")
+    
+    # Verifica PIN do banco de dados
+    if user.get("pin") != data.pin:
+        raise HTTPException(status_code=403, detail="PIN incorreto. Tente novamente.")
+    
+    if user.get("is_banned"):
         raise HTTPException(status_code=403, detail="🚫 Sua conta foi suspensa.")
     
-    # Detecta país por IP se for novo usuário
-    client_ip = request.client.host if request.client else "127.0.0.1"
-    detected_country = await detect_country_by_ip(client_ip)
-    
-    if not user:
-        # Novo usuário - todos são PREMIUM (pioneiros beta)
-        total_users = await db.users.count_documents({})
-        pioneer_num = total_users + 1 if total_users < 100 else None
-        
-        user = {
-            "username": data.username,
-            "plan": "premium",  # Beta testers são premium
-            "country": detected_country,
-            "total_points": 0,
-            "owned_leagues": [],
-            "joined_leagues": [],
-            "extra_championships": [],
-            "achievements": ["pioneer", "beta_tester"] if pioneer_num else ["beta_tester"],
-            "pioneer_number": pioneer_num,
-            "is_banned": False,
-            "created_at": datetime.now(timezone.utc)
-        }
-        await db.users.insert_one(user)
-    
-    # Remove _id antes de retornar
+    # Remove _id antes de retornar (já excluído na query, mas por segurança)
     user.pop("_id", None)
     
     return {
@@ -277,6 +255,7 @@ async def check_name(data: UserLogin, request: Request):
         "username": data.username,
         "user": user
     }
+
 
 
 @api_router.post("/auth/update-country")
