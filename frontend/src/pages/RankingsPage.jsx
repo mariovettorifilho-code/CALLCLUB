@@ -228,17 +228,21 @@ export default function RankingsPage({ username }) {
             </thead>
             <tbody>
               {displayData && displayData.length > 0 ? (
-                displayData.map((player) => {
+                displayData.map((player, index) => {
                   const isCurrentUser = player.username === username;
                   const isPremium = player.plan === "premium" || player.plan === "vip";
                   const position = player.position;
+                  
+                  // Verifica se há empate de pontos com o jogador anterior
+                  const prevPlayer = index > 0 ? displayData[index - 1] : null;
+                  const hasTie = prevPlayer && prevPlayer.total_points === player.total_points;
                   
                   return (
                     <tr
                       key={player.username}
                       className={`${getRowStyle(position, isCurrentUser)} border-b border-paper transition-colors`}
                     >
-                      {/* Posição - apenas texto */}
+                      {/* Posição - em branco se empate */}
                       <td className="px-3 py-4">
                         <span className={`text-lg font-bold ${
                           position === 1 ? "text-yellow-600" :
@@ -246,7 +250,7 @@ export default function RankingsPage({ username }) {
                           position === 3 ? "text-amber-700" :
                           "text-text-secondary"
                         }`}>
-                          {position}º
+                          {hasTie ? "" : `${position}º`}
                         </span>
                       </td>
                       
