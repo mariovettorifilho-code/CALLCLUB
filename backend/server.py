@@ -1087,8 +1087,10 @@ async def admin_get_users(password: str):
     
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
     
+    # PIN já vem do banco de dados, não precisa mais da lista hardcoded
     for user in users:
-        user["pin"] = AUTHORIZED_USERS.get(user.get("username"), "N/A")
+        if not user.get("pin"):
+            user["pin"] = "N/A"  # Só mostra N/A se realmente não tem PIN no banco
     
     return users
 
