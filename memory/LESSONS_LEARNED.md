@@ -39,6 +39,60 @@ if user.get("pin") != data.pin:
 
 ---
 
+## 🎯 Estatísticas do Usuário na Home
+
+### Problema (02/02/2026)
+**Sintoma:** Posição do usuário na classificação sempre mostrava "#-"
+
+**Causa Raiz:** 
+A função `getUserRank()` buscava a posição do usuário apenas nos TOP 5 (`topPlayers`), não no ranking completo.
+
+**Código Problemático:**
+```javascript
+// ❌ ERRADO - Busca só nos top 5
+const getUserRank = () => {
+  const index = topPlayers.findIndex(p => p.username === username);
+  return index >= 0 ? index + 1 : null;
+};
+```
+
+**Solução:**
+```javascript
+// ✅ CORRETO - Busca no ranking completo
+const fullRanking = rankingRes.data?.ranking || [];
+setTopPlayers(fullRanking.slice(0, 5));
+
+// Encontra posição do usuário no ranking COMPLETO
+const userIndex = fullRanking.findIndex(p => p.username === username);
+setUserPosition(userIndex >= 0 ? userIndex + 1 : null);
+```
+
+### Regra de Ouro
+> **Sempre buscar dados do usuário no conjunto COMPLETO, não em subconjuntos filtrados.**
+
+---
+
+## 📊 Exibição de Posição em Empates
+
+### Requisito (02/02/2026)
+Quando usuários têm a mesma pontuação, a posição deve ficar em branco (sem número) visualmente.
+
+**Implementação:**
+```javascript
+// Verifica se há empate de pontos com o jogador anterior
+const prevPlayer = index > 0 ? displayData[index - 1] : null;
+const hasTie = prevPlayer && prevPlayer.total_points === player.total_points;
+
+// Exibe posição ou vazio se empate
+{hasTie ? "" : `${position}º`}
+```
+
+### Regra
+> **Empates de pontuação NÃO mostram número de posição repetido.** 
+> Apenas o primeiro do grupo empatado mostra a posição.
+
+---
+
 ## 📋 Checklist Antes de Deploy
 
 - [ ] Testar login com usuário existente
@@ -46,6 +100,8 @@ if user.get("pin") != data.pin:
 - [ ] Verificar se o Painel Admin está acessível
 - [ ] Testar funcionalidade de adicionar usuário
 - [ ] Testar funcionalidade de deletar usuário
+- [ ] Testar atualização de PIN
+- [ ] Verificar posição do usuário na Home
 
 ---
 
@@ -66,6 +122,10 @@ if user.get("pin") != data.pin:
 ### 4. API de Sincronização com erro
 **Causa:** Limite de requisições da API externa (TheSportsDB)
 **Solução:** Usar "Atualizar Resultados" ou inserir placares manualmente
+
+### 5. Posição "#-" nas estatísticas
+**Causa:** Função buscava posição apenas no TOP 5
+**Solução:** Buscar no ranking completo antes de filtrar
 
 ---
 
@@ -91,7 +151,8 @@ MongoDB (Banco de Dados) ← ÚNICA FONTE DE VERDADE
 | Data | Problema | Impacto | Tempo Resolução |
 |------|----------|---------|-----------------|
 | 27/01/2026 | Login bloqueado | 100% usuários | ~30 min |
+| 02/02/2026 | Posição não aparecia | Visual | ~15 min |
 
 ---
 
-*Última atualização: 27/01/2026*
+*Última atualização: 02/02/2026*
