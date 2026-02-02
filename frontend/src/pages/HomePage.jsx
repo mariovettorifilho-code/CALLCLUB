@@ -21,6 +21,7 @@ export default function HomePage({ username }) {
   const [userInfo, setUserInfo] = useState(null);
   const [userLeagues, setUserLeagues] = useState([]);
   const [countries, setCountries] = useState([]);
+  const [userPosition, setUserPosition] = useState(null);
 
   useEffect(() => {
     loadUserInfo();
