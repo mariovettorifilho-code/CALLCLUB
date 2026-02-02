@@ -1152,16 +1152,17 @@ async def admin_add_user(data: AdminAddUser):
     if data.password != ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    if data.username in AUTHORIZED_USERS:
+    # Verifica se usuário já existe no banco
+    existing = await db.users.find_one({"username": data.username})
+    if existing:
         raise HTTPException(status_code=400, detail="Usuário já existe")
-    
-    AUTHORIZED_USERS[data.username] = data.pin
     
     total = await db.users.count_documents({})
     pioneer = total + 1 if total < 100 else None
     
     await db.users.insert_one({
         "username": data.username,
+        "pin": data.pin,  # Salva PIN no banco de dados
         "plan": data.plan,
         "country": data.country,
         "total_points": 0,
