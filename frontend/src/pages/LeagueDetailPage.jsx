@@ -325,17 +325,21 @@ export default function LeagueDetailPage({ username }) {
             </thead>
             <tbody>
               {displayData && displayData.length > 0 ? (
-                displayData.map((player) => {
+                displayData.map((player, index) => {
                   const isCurrentUser = player.username === username;
                   const isLeagueOwner = player.username === league.owner_username;
                   const position = player.position;
+                  
+                  // Verifica se há empate de pontos com o jogador anterior
+                  const prevPlayer = index > 0 ? displayData[index - 1] : null;
+                  const hasTie = prevPlayer && prevPlayer.total_points === player.total_points;
                   
                   return (
                     <tr
                       key={player.username}
                       className={`${getRowStyle(position, isCurrentUser)} border-b border-paper transition-colors`}
                     >
-                      {/* Posição */}
+                      {/* Posição - em branco se empate */}
                       <td className="px-3 py-4">
                         <span className={`text-lg font-bold ${
                           position === 1 ? "text-yellow-600" :
@@ -343,7 +347,7 @@ export default function LeagueDetailPage({ username }) {
                           position === 3 ? "text-amber-700" :
                           "text-text-secondary"
                         }`}>
-                          {position}º
+                          {hasTie ? "" : `${position}º`}
                         </span>
                       </td>
                       
