@@ -879,13 +879,13 @@ export default function AdminPage() {
                       <input type="file" accept=".json" onChange={handleImportPredictions} className="hidden" />
                     </label>
                     <button
-                      onClick={handleResetUserStats}
+                      onClick={() => handleResetUserStats(null)}
                       disabled={maintenanceLoading}
                       className="flex flex-col items-center gap-2 p-4 bg-red-500/20 rounded-xl hover:bg-red-500/30 transition-colors border border-red-500/30 disabled:opacity-50"
                     >
                       <Broom size={28} className="text-red-400" />
-                      <span className="text-sm font-medium">Zerar Estatísticas</span>
-                      <span className="text-xs text-gray-400">Reset pontos/sequências</span>
+                      <span className="text-sm font-medium">Zerar TODOS</span>
+                      <span className="text-xs text-gray-400">⚠️ Reset global</span>
                     </button>
                   </div>
                 </div>
