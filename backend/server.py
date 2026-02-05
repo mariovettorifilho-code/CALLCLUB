@@ -1706,32 +1706,57 @@ async def admin_delete_user(username: str, password: str):
 
 
 @api_router.post("/admin/reset-user-stats")
-async def admin_reset_user_stats(password: str):
-    """Reseta estatísticas de todos os usuários (pontos, sequências, etc) E deleta todos os palpites"""
+async def admin_reset_user_stats(password: str, username: str = None):
+    """Reseta estatísticas de um usuário específico OU todos (se username não informado)"""
     if password != ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Não autorizado")
     
-    # 1. Zerar campos dos usuários
-    users_result = await db.users.update_many(
-        {},
-        {"$set": {
-            "total_points": 0,
-            "perfect_streak": 0,
-            "max_perfect_streak": 0,
-            "correct_results": 0,
-            "perfect_scores": 0
-        }}
-    )
-    
-    # 2. Deletar TODOS os palpites
-    preds_result = await db.predictions.delete_many({})
-    
-    return {
-        "success": True,
-        "message": "Estatísticas e palpites resetados",
-        "users_updated": users_result.modified_count,
-        "predictions_deleted": preds_result.deleted_count
-    }
+    if username:
+        # Reset INDIVIDUAL - apenas um usuário
+        user_result = await db.users.update_one(
+            {"username": username},
+            {"$set": {
+                "total_points": 0,
+                "perfect_streak": 0,
+                "max_perfect_streak": 0,
+                "correct_results": 0,
+                "perfect_scores": 0
+            }}
+        )
+        
+        if user_result.matched_count == 0:
+            raise HTTPException(status_code=404, detail=f"Usuário '{username}' não encontrado")
+        
+        # Deleta palpites apenas deste usuário
+        preds_result = await db.predictions.delete_many({"username": username})
+        
+        return {
+            "success": True,
+            "message": f"Estatísticas de {username} zeradas",
+            "users_updated": 1,
+            "predictions_deleted": preds_result.deleted_count
+        }
+    else:
+        # Reset GLOBAL - todos os usuários (CUIDADO!)
+        users_result = await db.users.update_many(
+            {},
+            {"$set": {
+                "total_points": 0,
+                "perfect_streak": 0,
+                "max_perfect_streak": 0,
+                "correct_results": 0,
+                "perfect_scores": 0
+            }}
+        )
+        
+        preds_result = await db.predictions.delete_many({})
+        
+        return {
+            "success": True,
+            "message": "Estatísticas de TODOS os usuários zeradas",
+            "users_updated": users_result.modified_count,
+            "predictions_deleted": preds_result.deleted_count
+        }
 
 
 @api_router.get("/admin/remove-carioca")
