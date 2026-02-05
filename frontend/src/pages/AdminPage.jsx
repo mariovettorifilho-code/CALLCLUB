@@ -1584,6 +1584,15 @@ export default function AdminPage() {
                                   {user.is_banned ? <LockOpen size={16} /> : <Lock size={16} />}
                                 </button>
 
+                                {/* Zerar Estatísticas Individual */}
+                                <button
+                                  onClick={() => handleResetUserStats(user.username)}
+                                  className="p-2 rounded-lg bg-gray-700 text-gray-400 hover:bg-orange-500/20 hover:text-orange-400 transition-colors"
+                                  title="Zerar estatísticas deste usuário"
+                                >
+                                  <Broom size={16} />
+                                </button>
+
                                 {/* Remove */}
                                 <button
                                   onClick={() => handleRemoveUser(user.username)}
