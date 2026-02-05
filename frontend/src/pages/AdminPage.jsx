@@ -171,21 +171,35 @@ export default function AdminPage() {
     }
   };
 
-  const handleResetUserStats = async () => {
-    if (!window.confirm("⚠️ ATENÇÃO!\n\nIsso vai ZERAR os pontos, sequências E DELETAR TODOS OS PALPITES de TODOS os usuários!\n\nTem certeza?")) {
+  const handleResetUserStats = async (username = null) => {
+    const message = username 
+      ? `⚠️ Isso vai ZERAR os pontos e DELETAR TODOS OS PALPITES de "${username}".\n\nTem certeza?`
+      : "⚠️ ATENÇÃO MÁXIMA!\n\nIsso vai ZERAR os pontos, sequências E DELETAR TODOS OS PALPITES de TODOS os usuários!\n\nTem certeza ABSOLUTA?";
+    
+    if (!window.confirm(message)) {
       return;
     }
+    
+    // Para reset global, pedir confirmação dupla
+    if (!username && !window.confirm("🚨 ÚLTIMA CONFIRMAÇÃO!\n\nVocê está prestes a apagar TODOS os dados de TODOS os usuários.\n\nDigite 'CONFIRMAR' mentalmente e clique OK.")) {
+      return;
+    }
+    
     setMaintenanceLoading(true);
     setMaintenanceResult(null);
     try {
-      const res = await axios.post(`${API}/admin/reset-user-stats?password=${password}`);
+      const url = username 
+        ? `${API}/admin/reset-user-stats?password=${password}&username=${encodeURIComponent(username)}`
+        : `${API}/admin/reset-user-stats?password=${password}`;
+      
+      const res = await axios.post(url);
       setMaintenanceResult({
         success: true,
-        title: "Estatísticas Zeradas",
-        message: `${res.data.users_updated} usuários zerados. ${res.data.predictions_deleted} palpites deletados.`,
+        title: username ? `Estatísticas de ${username} Zeradas` : "Estatísticas Zeradas",
+        message: `${res.data.users_updated} usuário(s) zerado(s). ${res.data.predictions_deleted} palpites deletados.`,
         data: res.data
       });
-      showNotification("Estatísticas e palpites zerados com sucesso!");
+      showNotification(username ? `Estatísticas de ${username} zeradas!` : "Todas estatísticas zeradas!");
       loadData();
     } catch (error) {
       setMaintenanceResult({ success: false, title: "Erro", message: error.response?.data?.detail || "Erro ao zerar estatísticas" });
