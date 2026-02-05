@@ -308,7 +308,13 @@ async def get_user_profile(username: str):
         if league:
             joined_leagues.append(league)
     
-    # Busca palpites recentes
+    # Busca TODOS os palpites do usuário (não só os últimos 50)
+    all_predictions = await db.predictions.find(
+        {"username": username},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    # Busca palpites recentes para exibição
     predictions = await db.predictions.find(
         {"username": username},
         {"_id": 0}
@@ -329,10 +335,31 @@ async def get_user_profile(username: str):
                 "match_date": match.get("match_date")
             })
     
-    # Calcula estatísticas
-    preds_with_points = [p for p in predictions if p.get("points") is not None]
+    # Calcula estatísticas completas
+    preds_with_points = [p for p in all_predictions if p.get("points") is not None]
     total_points = sum(p.get("points", 0) for p in preds_with_points)
     perfect_scores = sum(1 for p in preds_with_points if p.get("points") == 5)
+    games_played = len(preds_with_points)
+    
+    # Calcula resultados certos (3 ou 5 pontos = acertou o resultado)
+    correct_results = sum(1 for p in preds_with_points if p.get("points", 0) >= 3)
+    
+    # Calcula média por jogo
+    avg_points_per_game = round(total_points / games_played, 1) if games_played > 0 else 0
+    
+    # Calcula aproveitamento (máximo = 5 pts por jogo)
+    accuracy_rate = round((total_points / (games_played * 5)) * 100, 1) if games_played > 0 else 0
+    
+    # Calcula rodadas disputadas e pontos por rodada
+    rounds_played = set()
+    points_by_round = {}
+    for p in preds_with_points:
+        round_num = p.get("round_number")
+        if round_num:
+            rounds_played.add(round_num)
+            if round_num not in points_by_round:
+                points_by_round[round_num] = 0
+            points_by_round[round_num] += p.get("points", 0)
     
     # Limites do plano
     plan = user.get("plan", "free")
@@ -346,7 +373,12 @@ async def get_user_profile(username: str):
         "statistics": {
             "total_points": total_points,
             "perfect_scores": perfect_scores,
-            "games_played": len(preds_with_points)
+            "games_played": games_played,
+            "correct_results": correct_results,
+            "avg_points_per_game": avg_points_per_game,
+            "accuracy_rate": accuracy_rate,
+            "rounds_played": len(rounds_played),
+            "points_by_round": points_by_round
         },
         "plan_info": {
             "plan": plan,
