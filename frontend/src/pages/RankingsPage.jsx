@@ -242,16 +242,29 @@ export default function RankingsPage({ username }) {
                       key={player.username}
                       className={`${getRowStyle(position, isCurrentUser)} border-b border-paper transition-colors`}
                     >
-                      {/* Posição - em branco se empate */}
+                      {/* Posição + Variação */}
                       <td className="px-3 py-4">
-                        <span className={`text-lg font-bold ${
-                          position === 1 ? "text-yellow-600" :
-                          position === 2 ? "text-gray-500" :
-                          position === 3 ? "text-amber-700" :
-                          "text-text-secondary"
-                        }`}>
-                          {hasTie ? "" : `${position}º`}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-lg font-bold ${
+                            position === 1 ? "text-yellow-600" :
+                            position === 2 ? "text-gray-500" :
+                            position === 3 ? "text-amber-700" :
+                            "text-text-secondary"
+                          }`}>
+                            {hasTie ? "" : `${position}º`}
+                          </span>
+                          {/* Variação de posição */}
+                          {player.position_change !== 0 && player.position_change !== undefined && (
+                            <span className={`text-xs font-bold ml-1 ${
+                              player.position_change > 0 ? "text-green-600" : "text-red-600"
+                            }`}>
+                              {player.position_change > 0 ? `↑${player.position_change}` : `↓${Math.abs(player.position_change)}`}
+                            </span>
+                          )}
+                          {player.position_change === 0 && player.previous_position && (
+                            <span className="text-xs text-gray-400 ml-1">■</span>
+                          )}
+                        </div>
                       </td>
                       
                       {/* Nome do usuário - clicável para ver palpites */}
