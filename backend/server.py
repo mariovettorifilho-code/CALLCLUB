@@ -1098,6 +1098,19 @@ async def get_round_ranking(round_number: int, championship_id: str = "brasileir
     for i, user in enumerate(ranking):
         user['position'] = i + 1
     
+    # Adiciona variação de posição (para ranking por rodada, compara com rodada anterior)
+    round_key = f"{championship_id}_round_{round_number}"
+    for user in ranking:
+        username = user['username']
+        user_doc = await db.users.find_one({"username": username}, {"_id": 0, "previous_round_positions": 1})
+        prev_positions = user_doc.get("previous_round_positions", {}) if user_doc else {}
+        prev_pos = prev_positions.get(round_key)
+        
+        if prev_pos is not None:
+            user['position_change'] = prev_pos - user['position']
+        else:
+            user['position_change'] = 0
+    
     return ranking
 
 
