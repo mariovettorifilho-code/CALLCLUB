@@ -152,6 +152,33 @@ MongoDB (Banco de Dados) ← ÚNICA FONTE DE VERDADE
 |------|----------|---------|-----------------|
 | 27/01/2026 | Login bloqueado | 100% usuários | ~30 min |
 | 02/02/2026 | Posição não aparecia | Visual | ~15 min |
+| 02/02/2026 | Estatísticas do Perfil zeradas | Visual | ~20 min |
+
+---
+
+## 🎯 Funcionalidades Implementadas
+
+### Variação de Posição (02/02/2026)
+Mostra se o usuário subiu, desceu ou manteve posição na classificação:
+- **↑7** (verde) = Subiu 7 posições
+- **↓4** (vermelho) = Caiu 4 posições
+- **■** (cinza) = Manteve posição
+
+**Implementação:**
+- Backend salva posição anterior em `user.previous_positions.{championship_id}`
+- Posição é atualizada no `recalculate_all_points()`
+- Frontend exibe a diferença na coluna de posição
+
+### Estatísticas Completas do Perfil (02/02/2026)
+Campos calculados no endpoint `/api/user/{username}`:
+- `total_points`: soma de todos os pontos
+- `perfect_scores`: total de placares exatos
+- `games_played`: jogos com resultado
+- `correct_results`: acertou V/E/D (3+ pts)
+- `avg_points_per_game`: média de pontos
+- `accuracy_rate`: aproveitamento %
+- `rounds_played`: rodadas participadas
+- `points_by_round`: pontos por rodada
 
 ---
 
