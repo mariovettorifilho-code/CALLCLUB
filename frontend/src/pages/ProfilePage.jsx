@@ -298,13 +298,13 @@ export default function ProfilePage({ username }) {
             </div>
             <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <Fire size={24} weight="fill" className="mx-auto mb-1 text-orange-400" />
-              <p className="text-2xl font-mono font-bold">{user.max_perfect_streak || 0}</p>
-              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Sequência</p>
+              <p className="text-2xl font-mono font-bold">{statistics.perfect_scores || 0}</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Placares Exatos</p>
             </div>
             <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <Target size={24} weight="fill" className="mx-auto mb-1 text-red-400" />
-              <p className="text-2xl font-mono font-bold">{statistics.perfect_scores || 0}</p>
-              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Placares Exatos</p>
+              <p className="text-2xl font-mono font-bold">{statistics.correct_results || 0}</p>
+              <p className={`text-xs ${isPremium ? "text-white/80" : "text-bone/80"}`}>Resultados Certos</p>
             </div>
             <div className={`backdrop-blur rounded-lg p-3 text-center ${isPremium ? "bg-white/10" : "bg-bone/10"}`}>
               <ChartBar size={24} weight="fill" className={`mx-auto mb-1 ${isPremium ? "text-white" : "text-bone"}`} />
