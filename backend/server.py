@@ -1556,20 +1556,27 @@ async def admin_recalculate():
 
 
 async def recalculate_all_points():
-    """Recalcula pontos de todos os usuários"""
+    """Recalcula pontos de todos os usuários e atualiza posições anteriores"""
     finished_matches = await db.matches.find({"is_finished": True}, {"_id": 0}).to_list(10000)
     matches_dict = {m['match_id']: m for m in finished_matches}
     
     all_predictions = await db.predictions.find({}).to_list(100000)
     
     user_stats = {}
+    championship_stats = {}  # Para calcular posição por campeonato
     
     for pred in all_predictions:
         username = pred['username']
         match_id = pred['match_id']
+        champ_id = pred.get('championship_id', 'brasileirao')
         
         if username not in user_stats:
             user_stats[username] = {'total_points': 0}
+        
+        if champ_id not in championship_stats:
+            championship_stats[champ_id] = {}
+        if username not in championship_stats[champ_id]:
+            championship_stats[champ_id][username] = 0
         
         if match_id in matches_dict:
             match = matches_dict[match_id]
@@ -1581,13 +1588,27 @@ async def recalculate_all_points():
             )
             
             user_stats[username]['total_points'] += points
+            championship_stats[champ_id][username] += points
     
+    # Atualiza pontos totais dos usuários
     for username, stats in user_stats.items():
         await db.users.update_one(
             {"username": username},
             {"$set": {"total_points": stats['total_points']}},
             upsert=True
         )
+    
+    # Calcula e salva posições por campeonato
+    for champ_id, champ_users in championship_stats.items():
+        # Ordena por pontos
+        sorted_users = sorted(champ_users.items(), key=lambda x: x[1], reverse=True)
+        
+        for position, (username, points) in enumerate(sorted_users, 1):
+            # Atualiza posição anterior para este campeonato
+            await db.users.update_one(
+                {"username": username},
+                {"$set": {f"previous_positions.{champ_id}": position}}
+            )
     
     return len(user_stats)
 
