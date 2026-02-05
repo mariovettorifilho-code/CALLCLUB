@@ -986,6 +986,20 @@ async def get_detailed_ranking(championship_id: str):
     for i, user in enumerate(ranking):
         user['position'] = i + 1
     
+    # Calcula variação de posição (busca posição anterior do banco)
+    for user in ranking:
+        username = user['username']
+        user_doc = await db.users.find_one({"username": username}, {"_id": 0, "previous_positions": 1})
+        prev_positions = user_doc.get("previous_positions", {}) if user_doc else {}
+        prev_pos = prev_positions.get(championship_id)
+        
+        if prev_pos is not None:
+            user['position_change'] = prev_pos - user['position']  # Positivo = subiu, Negativo = caiu
+        else:
+            user['position_change'] = 0  # Novo no ranking
+        
+        user['previous_position'] = prev_pos
+    
     return {
         "championship_id": championship_id,
         "current_round": current_round,
