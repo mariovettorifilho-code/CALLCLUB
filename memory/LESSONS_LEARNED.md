@@ -1,41 +1,39 @@
 # 📚 Lições Aprendidas - CallClub
 
-## 🚨 CRÍTICO: Sistema de Autenticação
+## 🚨 CRÍTICO: NUNCA USAR LISTAS HARDCODED
 
-### Problema (27/01/2026)
-**Sintoma:** Usuários não conseguiam fazer login. Mensagem: "Nome não autorizado"
+### Problema Recorrente (27/01 - 02/02/2026)
+**O sistema usava `AUTHORIZED_USERS` hardcoded em MÚLTIPLOS lugares:**
+1. Login - corrigido em 27/01
+2. Criar palpites - corrigido em 02/02
 
-**Causa Raiz:** 
-O sistema de login usava uma lista `AUTHORIZED_USERS` **hardcoded** no código Python. Quando usuários eram adicionados pelo Painel Admin, eles iam para o banco de dados, mas NÃO eram adicionados na lista hardcoded do código.
+**Impacto:** Usuários criados pelo Admin não conseguiam:
+- Fazer login (corrigido)
+- Fazer palpites (corrigido)
 
-**Código Problemático:**
+### Solução DEFINITIVA
+A lista `AUTHORIZED_USERS` foi **COMPLETAMENTE REMOVIDA** do código.
+
+**TODAS as verificações de usuário agora consultam o BANCO DE DADOS:**
+
 ```python
-# ❌ ERRADO - Lista hardcoded
-AUTHORIZED_USERS = {
-    "Mario": "2412",
-    "Marcos": "1234",
-    # ... apenas esses usuários podiam logar
-}
-
-if data.username not in AUTHORIZED_USERS:
-    raise HTTPException(status_code=403, detail="Nome não autorizado")
-```
-
-**Solução:**
-```python
-# ✅ CORRETO - Consulta o banco de dados
-user = await db.users.find_one({"username": data.username})
-
+# ✅ CORRETO - Sempre verificar no banco
+user = await db.users.find_one({"username": username})
 if not user:
-    raise HTTPException(status_code=403, detail="Nome não autorizado")
-
-if user.get("pin") != data.pin:
-    raise HTTPException(status_code=403, detail="PIN incorreto")
+    raise HTTPException(status_code=403, detail="Usuário não cadastrado")
 ```
 
-### Regra de Ouro
-> **NUNCA use listas hardcoded para autenticação.** 
-> Sempre consulte o banco de dados para validar usuários e senhas.
+### Regras de Ouro - NUNCA VIOLAR
+1. **NUNCA** criar listas hardcoded de usuários, senhas ou PINs
+2. **SEMPRE** consultar o banco de dados para validar usuários
+3. **ANTES de cada deploy**, buscar no código: `grep -rn "hardcoded\|AUTHORIZED" /app/`
+4. **Ao criar novo endpoint** que valida usuário, SEMPRE usar `db.users.find_one()`
+
+### Checklist Obrigatório Antes de Deploy
+- [ ] `grep -rn "AUTHORIZED" /app/backend/` retorna vazio
+- [ ] Testar login com usuário criado pelo Admin
+- [ ] Testar criar palpite com usuário criado pelo Admin
+- [ ] Testar todas as funcionalidades com usuário NÃO hardcoded
 
 ---
 
