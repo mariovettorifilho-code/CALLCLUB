@@ -51,35 +51,6 @@ logger = logging.getLogger(__name__)
 ADMIN_PASSWORD = "callclub2026"
 
 # Usuários autorizados com PIN (mantido para compatibilidade)
-AUTHORIZED_USERS = {
-    "Mario": "2412",
-    "Marcos": "1234",
-    "João": "3456",
-    "Pedro": "4567",
-    "Carlos": "1234",
-    "Lucas": "6789",
-    "Rafael": "7890",
-    "Bruno": "8901",
-    "Fernando": "9012",
-    "Ricardo": "0123",
-    "Paulo": "1111",
-    "Anderson": "2222",
-    "Gabriel": "3333",
-    "Felipe": "4444",
-    "Rodrigo": "5555",
-    "Thiago": "6666",
-    "Marcelo": "7777",
-    "Diego": "8888",
-    "Matheus": "9999",
-    "Vinicius": "1010",
-    "Gustavo": "2020",
-    "Leonardo": "3030",
-    "André": "4040",
-    "Alexandre": "5050",
-    "Renato": "6060",
-    "Fabio": "7070",
-}
-
 # Campeonatos iniciais (para seed)
 INITIAL_CHAMPIONSHIPS = {
     "brasileirao": {
