@@ -339,29 +339,16 @@ export default function LeagueDetailPage({ username }) {
                       key={player.username}
                       className={`${getRowStyle(position, isCurrentUser)} border-b border-paper transition-colors`}
                     >
-                      {/* Posição + Variação */}
+                      {/* Posição - sem variação aqui */}
                       <td className="px-3 py-4">
-                        <div className="flex items-center gap-1">
-                          <span className={`text-lg font-bold ${
-                            position === 1 ? "text-yellow-600" :
-                            position === 2 ? "text-gray-500" :
-                            position === 3 ? "text-amber-700" :
-                            "text-text-secondary"
-                          }`}>
-                            {hasTie ? "" : `${position}º`}
-                          </span>
-                          {/* Variação de posição */}
-                          {player.position_change !== 0 && player.position_change !== undefined && (
-                            <span className={`text-xs font-bold ml-1 ${
-                              player.position_change > 0 ? "text-green-600" : "text-red-600"
-                            }`}>
-                              {player.position_change > 0 ? `↑${player.position_change}` : `↓${Math.abs(player.position_change)}`}
-                            </span>
-                          )}
-                          {player.position_change === 0 && player.previous_position && (
-                            <span className="text-xs text-gray-400 ml-1">■</span>
-                          )}
-                        </div>
+                        <span className={`text-lg font-bold ${
+                          position === 1 ? "text-yellow-600" :
+                          position === 2 ? "text-gray-500" :
+                          position === 3 ? "text-amber-700" :
+                          "text-text-secondary"
+                        }`}>
+                          {hasTie ? "" : `${position}º`}
+                        </span>
                       </td>
                       
                       {/* Nome do usuário - clicável para ver palpites */}
@@ -388,11 +375,24 @@ export default function LeagueDetailPage({ username }) {
                         </div>
                       </td>
                       
-                      {/* Pontos */}
+                      {/* Pontos + Variação de posição */}
                       <td className="px-3 py-4 text-center">
-                        <span className="text-lg font-bold text-pitch-green">
-                          {player.total_points || player.points || 0}
-                        </span>
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-lg font-bold text-pitch-green">
+                            {player.total_points || player.points || 0}
+                          </span>
+                          {/* Variação de posição ao lado dos pontos */}
+                          {player.position_change !== 0 && player.position_change !== undefined && (
+                            <span className={`text-xs font-bold ${
+                              player.position_change > 0 ? "text-green-500" : "text-red-500"
+                            }`}>
+                              {player.position_change > 0 ? `↑${player.position_change}` : `↓${Math.abs(player.position_change)}`}
+                            </span>
+                          )}
+                          {player.position_change === 0 && player.previous_position && (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </div>
                       </td>
                       
                       {/* Resultados */}
