@@ -739,8 +739,13 @@ async def get_match_lock_status(match_id: str):
 @api_router.post("/predictions")
 async def create_prediction(pred: PredictionCreate):
     """Salva um palpite (com verificação de bloqueio por jogo)"""
-    if pred.username not in AUTHORIZED_USERS:
-        raise HTTPException(status_code=403, detail="Usuário não autorizado")
+    # Verifica se usuário existe no BANCO DE DADOS
+    user = await db.users.find_one({"username": pred.username})
+    if not user:
+        raise HTTPException(status_code=403, detail="Usuário não cadastrado")
+    
+    if user.get("is_banned"):
+        raise HTTPException(status_code=403, detail="Usuário banido")
     
     # Busca a partida para verificar bloqueio
     match = await db.matches.find_one({"match_id": pred.match_id})
